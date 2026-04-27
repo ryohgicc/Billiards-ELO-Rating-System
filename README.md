@@ -1,36 +1,151 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Billiards ELO Rating System
 
-## Getting Started
+一个免费、轻量的台球积分系统网站，适合球房、小群体或朋友局自己维护排行榜。
 
-First, run the development server:
+项目特点：
+- 创建球员并维护启用/停用状态
+- 录入两人胜负关系，自动按 `Elo` 计算积分
+- 查看排行榜、比赛历史，并支持删除误录后自动重算
+- 所有数据保存在浏览器本地 `localStorage`
+- 支持导出/导入 JSON 备份
+- 可静态导出并免费部署到 Cloudflare Pages
+
+## 功能概览
+
+### 1. 排行榜
+- 按积分降序展示球员排名
+- 显示积分、胜负场、胜率、最近比赛时间
+- 手机端卡片布局，桌面端表格布局
+
+### 2. 球员管理
+- 新建球员
+- 防止重名
+- 支持停用球员，避免误删导致历史数据失效
+
+### 3. 比赛录入
+- 选择胜者和负者
+- 禁止同一球员对阵自己
+- 录入后立即刷新积分榜
+- 显示本场积分变化
+
+### 4. 比赛历史
+- 按时间倒序展示已录入比赛
+- 支持删除单场比赛
+- 删除后自动从历史回放并重算积分
+
+### 5. 数据设置
+- 修改站点标题
+- 导出 JSON 备份
+- 导入 JSON 恢复
+- 清空当前浏览器中的本地数据
+
+## 积分规则
+
+- 默认初始分：`1000`
+- 默认 `K` 值：`32`
+- 仅记录胜负，不记录比分
+- 每场比赛结束后按 `Elo` 更新双方积分
+- 排名排序规则：
+  - 先按积分降序
+  - 同分时按胜率降序
+  - 再按胜场降序
+  - 最后按创建时间升序
+
+## 技术栈
+
+- [Next.js](https://nextjs.org/)
+- [React](https://react.dev/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Vitest](https://vitest.dev/)
+- 浏览器 `localStorage`
+
+## 本地开发
+
+先安装依赖：
+
+```bash
+npm install
+```
+
+启动开发环境：
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+打开 [http://localhost:3000](http://localhost:3000) 查看网站。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 可用命令
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev
+npm run build
+npm run lint
+npm test
+```
 
-## Learn More
+含义：
+- `npm run dev`：启动本地开发服务
+- `npm run build`：生成生产构建和静态导出
+- `npm run lint`：运行 ESLint
+- `npm test`：运行单元测试
 
-To learn more about Next.js, take a look at the following resources:
+## 部署
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+本项目已经配置：
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```ts
+output: "export"
+```
 
-## Deploy on Vercel
+所以可以直接静态部署。
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Cloudflare Pages
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+推荐设置：
+- Framework preset: `Next.js (Static HTML Export)`
+- Production branch: `main`
+- Build command: `npx next build`
+- Build output directory: `out`
+
+构建成功后，Cloudflare Pages 会自动发布 `out` 目录内容。
+
+## 数据说明
+
+当前版本不使用数据库，数据仅保存在当前浏览器。
+
+这意味着：
+- 换浏览器或换设备后数据不会自动同步
+- 清空浏览器缓存可能导致数据丢失
+- 推荐定期通过“数据设置”页面导出 JSON 做备份
+
+## 测试覆盖
+
+当前包含以下核心测试：
+- Elo 积分变化
+- 比赛历史回放与删除后重算
+- 排行榜排序规则
+- 球员名称校验
+- 比赛录入校验
+- 本地存储导入导出
+
+## 适用场景
+
+适合：
+- 球房内部积分榜
+- 朋友局长期排名
+- 小规模比赛练习积分系统
+
+不适合：
+- 多设备实时同步
+- 复杂权限管理
+- 大型赛事管理
+
+## 后续可扩展方向
+
+- 用户登录
+- 多设备同步
+- 比分/局数录入
+- 多赛季支持
+- 图表统计
+- 云端数据库
