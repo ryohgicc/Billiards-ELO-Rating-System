@@ -31,7 +31,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
     <div className="shell">
       <header className="hero">
         <div>
-          <p className="eyebrow">Billiards ELO Command Center</p>
+          <p className="eyebrow">Billiards Elo 台球榜</p>
           <h1>{state.settings.title}</h1>
           <p className="hero__copy">
             用共享 Elo 数据库管理台球对战，创建球员、录入胜负、自动刷新排名。
