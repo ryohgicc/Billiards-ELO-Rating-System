@@ -1,17 +1,26 @@
 "use client";
 
+import {
+  BookOpen,
+  Clock3,
+  Database,
+  ListOrdered,
+  PlusCircle,
+  Trophy,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { useAppState } from "@/lib/app-state";
 
 const links = [
-  { href: "/", label: "排行榜" },
-  { href: "/matches", label: "录入比赛" },
-  { href: "/players", label: "球员管理" },
-  { href: "/history", label: "比赛历史" },
-  { href: "/settings", label: "数据设置" },
-  { href: "/algorithm", label: "算法说明" },
+  { href: "/", label: "排行榜", icon: ListOrdered },
+  { href: "/matches", label: "录入比赛", icon: PlusCircle },
+  { href: "/players", label: "球员管理", icon: Users },
+  { href: "/history", label: "比赛历史", icon: Clock3 },
+  { href: "/settings", label: "数据设置", icon: Database },
+  { href: "/algorithm", label: "算法说明", icon: BookOpen },
 ];
 
 export function SiteShell({ children }: { children: React.ReactNode }) {
@@ -22,10 +31,10 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
     <div className="shell">
       <header className="hero">
         <div>
-          <p className="eyebrow">Billiards Ladder</p>
+          <p className="eyebrow">Billiards ELO Command Center</p>
           <h1>{state.settings.title}</h1>
           <p className="hero__copy">
-            用本地 Elo 规则管理小范围台球对战，创建球员、录入胜负、自动刷新排名。
+            用共享 Elo 数据库管理台球对战，创建球员、录入胜负、自动刷新排名。
           </p>
         </div>
         <div className="hero__stats">
@@ -39,7 +48,10 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="stat-chip">
             <span>榜首</span>
-            <strong>{rankings[0]?.player.name ?? "待定"}</strong>
+            <strong>
+              <Trophy aria-hidden="true" size={18} />
+              {rankings[0]?.player.name ?? "待定"}
+            </strong>
           </div>
         </div>
       </header>
@@ -48,12 +60,15 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
         {links.map((link) => {
           const isActive = pathname === link.href;
 
+          const Icon = link.icon;
+
           return (
             <Link
               key={link.href}
               href={link.href}
               className={isActive ? "nav-tabs__link nav-tabs__link--active" : "nav-tabs__link"}
             >
+              <Icon aria-hidden="true" size={17} />
               {link.label}
             </Link>
           );

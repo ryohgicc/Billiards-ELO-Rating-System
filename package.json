@@ -12,15 +12,16 @@
     "db:migrate:remote": "wrangler d1 migrations apply billiards-elo-db --remote"
   },
   "dependencies": {
+    "lucide-react": "^1.14.0",
     "next": "16.2.4",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260424.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@cloudflare/workers-types": "^4.20260424.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

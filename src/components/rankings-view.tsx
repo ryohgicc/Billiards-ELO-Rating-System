@@ -8,7 +8,7 @@ export function RankingsView() {
   const { rankings, state, isLoaded } = useAppState();
 
   if (!isLoaded) {
-    return <section className="panel">正在读取本地积分数据...</section>;
+    return <section className="panel">正在读取共享积分数据...</section>;
   }
 
   if (rankings.length === 0) {
