@@ -30,6 +30,14 @@ describe("validatePlayerName", () => {
   it("rejects duplicate names", () => {
     expect(() => validatePlayerName("Alice", players)).toThrowError("球员名称已存在");
   });
+
+  it("allows an unchanged player name when excluding that player", () => {
+    expect(validatePlayerName("  Alice  ", players, "p1")).toBe("Alice");
+  });
+
+  it("rejects names already used by a different player", () => {
+    expect(() => validatePlayerName("Bob", players, "p1")).toThrowError("球员名称已存在");
+  });
 });
 
 describe("validateMatchPlayers", () => {

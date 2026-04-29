@@ -24,14 +24,20 @@ function isMatchRecord(value: unknown): value is MatchRecord {
   );
 }
 
-export function validatePlayerName(name: string, players: Player[]) {
+export function validatePlayerName(name: string, players: Player[], excludedPlayerId?: string) {
   const normalized = name.trim();
 
   if (!normalized) {
     throw new Error("球员名称不能为空");
   }
 
-  if (players.some((player) => player.name.toLowerCase() === normalized.toLowerCase())) {
+  if (
+    players.some(
+      (player) =>
+        player.id !== excludedPlayerId &&
+        player.name.toLowerCase() === normalized.toLowerCase(),
+    )
+  ) {
     throw new Error("球员名称已存在");
   }
 
