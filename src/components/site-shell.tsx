@@ -11,6 +11,7 @@ const links = [
   { href: "/players", label: "球员管理" },
   { href: "/history", label: "比赛历史" },
   { href: "/settings", label: "数据设置" },
+  { href: "/algorithm", label: "算法说明" },
 ];
 
 export function SiteShell({ children }: { children: React.ReactNode }) {
