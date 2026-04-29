@@ -8,10 +8,11 @@ import {
   useState,
 } from "react";
 
+import { api } from "@/lib/api";
 import { DEFAULT_K_FACTOR, DEFAULT_SETTINGS } from "@/lib/constants";
 import { buildMatchTimeline, buildRankings, calculateMatchDelta, replayMatches } from "@/lib/rating";
-import { createEmptyState, importState, loadState, saveState } from "@/lib/storage";
-import type { AppState, MatchRecord, Player } from "@/lib/types";
+import { createEmptyState, importState } from "@/lib/storage";
+import type { AppState, Player } from "@/lib/types";
 import { validateMatchPlayers, validatePlayerName } from "@/lib/validation";
 
 type MatchFeedback = {
@@ -24,42 +25,55 @@ type MatchFeedback = {
 type AppStateContextValue = {
   state: AppState;
   isLoaded: boolean;
+  loadError: string;
   rankings: ReturnType<typeof buildRankings>;
   timeline: ReturnType<typeof buildMatchTimeline>;
   activePlayers: Player[];
-  createPlayer: (name: string) => void;
-  togglePlayer: (playerId: string) => void;
-  addMatch: (winnerId: string, loserId: string) => MatchFeedback;
-  removeMatch: (matchId: string) => void;
-  updateTitle: (title: string) => void;
-  replaceStateFromImport: (payload: string) => void;
-  clearAllData: () => void;
+  createPlayer: (name: string) => Promise<void>;
+  togglePlayer: (playerId: string) => Promise<void>;
+  addMatch: (winnerId: string, loserId: string) => Promise<MatchFeedback>;
+  removeMatch: (matchId: string) => Promise<void>;
+  updateTitle: (title: string) => Promise<void>;
+  replaceStateFromImport: (payload: string) => Promise<void>;
+  clearAllData: () => Promise<void>;
 };
 
 const AppStateContext = createContext<AppStateContextValue | null>(null);
 
-function createId(prefix: string) {
-  return `${prefix}-${crypto.randomUUID()}`;
-}
-
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(createEmptyState);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    startTransition(() => {
-      setState(loadState());
-      setIsLoaded(true);
-    });
+    let isMounted = true;
+
+    api
+      .getState()
+      .then((nextState) => {
+        if (!isMounted) {
+          return;
+        }
+
+        startTransition(() => {
+          setState(nextState);
+          setLoadError("");
+          setIsLoaded(true);
+        });
+      })
+      .catch((error) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setLoadError(error instanceof Error ? error.message : "读取云端数据失败");
+        setIsLoaded(true);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
-
-  useEffect(() => {
-    if (!isLoaded) {
-      return;
-    }
-
-    saveState(state);
-  }, [isLoaded, state]);
 
   const rankings = buildRankings(state.players, state.matches, state.settings.kFactor);
   const timeline = buildMatchTimeline(state.players, state.matches, state.settings.kFactor);
@@ -68,34 +82,18 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const value: AppStateContextValue = {
     state,
     isLoaded,
+    loadError,
     rankings,
     timeline,
     activePlayers,
-    createPlayer(name) {
-      setState((current) => {
-        const normalizedName = validatePlayerName(name, current.players);
-        const player: Player = {
-          id: createId("player"),
-          name: normalizedName,
-          createdAt: new Date().toISOString(),
-          isActive: true,
-        };
-
-        return {
-          ...current,
-          players: [...current.players, player],
-        };
-      });
+    async createPlayer(name) {
+      validatePlayerName(name, state.players);
+      setState(await api.createPlayer(name));
     },
-    togglePlayer(playerId) {
-      setState((current) => ({
-        ...current,
-        players: current.players.map((player) =>
-          player.id === playerId ? { ...player, isActive: !player.isActive } : player,
-        ),
-      }));
+    async togglePlayer(playerId) {
+      setState(await api.togglePlayer(playerId));
     },
-    addMatch(winnerId, loserId) {
+    async addMatch(winnerId, loserId) {
       validateMatchPlayers(winnerId, loserId, state.players);
 
       const snapshots = replayMatches(state.players, state.matches, state.settings.kFactor);
@@ -112,17 +110,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         state.settings.kFactor ?? DEFAULT_K_FACTOR,
       );
 
-      const nextMatch: MatchRecord = {
-        id: createId("match"),
-        winnerId,
-        loserId,
-        createdAt: new Date().toISOString(),
-      };
-
-      setState((current) => ({
-        ...current,
-        matches: [...current.matches, nextMatch],
-      }));
+      setState(await api.createMatch(winnerId, loserId));
 
       return {
         winnerName: winner.player.name,
@@ -131,29 +119,19 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         loserDelta: delta.loserDelta,
       };
     },
-    removeMatch(matchId) {
-      setState((current) => ({
-        ...current,
-        matches: current.matches.filter((match) => match.id !== matchId),
-      }));
+    async removeMatch(matchId) {
+      setState(await api.deleteMatch(matchId));
     },
-    updateTitle(title) {
+    async updateTitle(title) {
       const normalized = title.trim();
-
-      setState((current) => ({
-        ...current,
-        settings: {
-          ...current.settings,
-          title: normalized || DEFAULT_SETTINGS.title,
-        },
-      }));
+      setState(await api.updateTitle(normalized || DEFAULT_SETTINGS.title));
     },
-    replaceStateFromImport(payload) {
+    async replaceStateFromImport(payload) {
       const nextState = importState(payload);
-      setState(nextState);
+      setState(await api.replaceState(nextState));
     },
-    clearAllData() {
-      setState(createEmptyState());
+    async clearAllData() {
+      setState(await api.clearState());
     },
   };
 

@@ -54,7 +54,9 @@ export function HistoryView() {
               className="button button--danger"
               onClick={() => {
                 if (window.confirm("删除后会重算积分，确定继续吗？")) {
-                  removeMatch(entry.id);
+                  removeMatch(entry.id).catch((error) => {
+                    window.alert(error instanceof Error ? error.message : "删除比赛失败");
+                  });
                 }
               }}
               type="button"

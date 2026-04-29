@@ -11,11 +11,11 @@ export function PlayersView() {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     try {
-      createPlayer(name);
+      await createPlayer(name);
       setName("");
       setError("");
     } catch (submissionError) {
@@ -85,7 +85,17 @@ export function PlayersView() {
                 </div>
                 <p>创建时间：{formatDateTime(player.createdAt)}</p>
               </div>
-              <button className="button" onClick={() => togglePlayer(player.id)} type="button">
+              <button
+                className="button"
+                onClick={() => {
+                  togglePlayer(player.id).catch((toggleError) => {
+                    setError(
+                      toggleError instanceof Error ? toggleError.message : "更新球员状态失败",
+                    );
+                  });
+                }}
+                type="button"
+              >
                 {player.isActive ? "停用" : "重新启用"}
               </button>
             </article>

@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-04-29
+
+### Added
+- 新增 Cloudflare Worker API，用于读取和写入共享数据
+- 新增 Cloudflare D1 数据库绑定
+- 新增 D1 初始迁移，包含 `players`、`matches` 和 `settings` 表
+- 新增远程和本地 D1 迁移命令
+- 新增 `wrangler.jsonc` D1 配置，支持部署到 Cloudflare Workers
+
+### Changed
+- 前端状态从浏览器 `localStorage` 改为调用 `/api/*` 云端接口
+- 球员、比赛、设置、导入和清空操作改为写入共享 D1 数据库
+- README 更新为多人共享部署说明
+
+### Tested
+- `npm test`
+- `npm run lint`
+- `npm run build`
+- `npx wrangler deploy --dry-run`
+- `npx wrangler d1 migrations apply billiards-elo-db --local`
+- `npx wrangler d1 migrations apply billiards-elo-db --remote`
+
 ## [0.1.0] - 2026-04-27
 
 ### Added

@@ -5,5 +5,13 @@
   "assets": {
     "directory": "./out",
     "not_found_handling": "single-page-application"
-  }
+  },
+  "main": "./worker/index.ts",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "billiards-elo-db",
+      "database_id": "88a500f0-1991-4c76-b4b9-b20f535ca62c"
+    }
+  ]
 }

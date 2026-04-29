@@ -15,7 +15,7 @@ const links = [
 
 export function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { state, rankings } = useAppState();
+  const { state, rankings, loadError } = useAppState();
 
   return (
     <div className="shell">
@@ -58,6 +58,8 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
           );
         })}
       </nav>
+
+      {loadError ? <p className="feedback feedback--error">{loadError}</p> : null}
 
       <main className="page-frame">{children}</main>
     </div>

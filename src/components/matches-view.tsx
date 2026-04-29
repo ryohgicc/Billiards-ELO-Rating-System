@@ -14,11 +14,11 @@ export function MatchesView() {
   const winnerOptions = activePlayers.filter((player) => player.id !== loserId);
   const loserOptions = activePlayers.filter((player) => player.id !== winnerId);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     try {
-      const result = addMatch(winnerId, loserId);
+      const result = await addMatch(winnerId, loserId);
       setSuccess(
         `${result.winnerName} 记一胜，积分 +${result.winnerDelta}；${result.loserName} 积分 ${result.loserDelta}。`,
       );

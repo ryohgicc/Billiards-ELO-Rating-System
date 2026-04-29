@@ -6,9 +6,9 @@
 - 创建球员并维护启用/停用状态
 - 录入两人胜负关系，自动按 `Elo` 计算积分
 - 查看排行榜、比赛历史，并支持删除误录后自动重算
-- 所有数据保存在浏览器本地 `localStorage`
+- 所有用户共享同一个 Cloudflare D1 数据库
 - 支持导出/导入 JSON 备份
-- 可静态导出并免费部署到 Cloudflare Pages
+- 可部署到 Cloudflare Workers 静态资源站点
 
 ## 功能概览
 
@@ -57,7 +57,8 @@
 - [React](https://react.dev/)
 - [TypeScript](https://www.typescriptlang.org/)
 - [Vitest](https://vitest.dev/)
-- 浏览器 `localStorage`
+- [Cloudflare Workers](https://developers.cloudflare.com/workers/)
+- [Cloudflare D1](https://developers.cloudflare.com/d1/)
 
 ## 本地开发
 
@@ -98,26 +99,35 @@ npm test
 output: "export"
 ```
 
-所以可以直接静态部署。
+同时包含 `wrangler.jsonc`，用于把静态文件和 Worker API 一起部署到 Cloudflare。
 
-### Cloudflare Pages
+### Cloudflare Workers
 
 推荐设置：
-- Framework preset: `Next.js (Static HTML Export)`
 - Production branch: `main`
-- Build command: `npx next build`
-- Build output directory: `out`
+- Build command: `npm run build`
+- Deploy command: `npx wrangler deploy`
+- Root directory: `/`
 
-构建成功后，Cloudflare Pages 会自动发布 `out` 目录内容。
+首次部署前需要创建 D1 数据库，并把 `wrangler.jsonc` 里的 `database_id` 改成自己的数据库 ID。
+
+然后执行远程数据库迁移：
+
+```bash
+npm run db:migrate:remote
+```
+
+迁移成功后，Cloudflare 会发布 `out` 目录中的静态页面，并用 Worker 处理 `/api/*` 数据请求。
 
 ## 数据说明
 
-当前版本不使用数据库，数据仅保存在当前浏览器。
+当前版本使用 Cloudflare D1 作为共享数据库。
 
 这意味着：
-- 换浏览器或换设备后数据不会自动同步
-- 清空浏览器缓存可能导致数据丢失
+- 多个用户打开同一个网站会看到同一份排行榜
+- 任意用户录入比赛后，刷新页面即可看到最新数据
 - 推荐定期通过“数据设置”页面导出 JSON 做备份
+- 当前版本还没有登录和权限控制，知道网址的人都可以编辑数据
 
 ## 测试覆盖
 
@@ -137,15 +147,14 @@ output: "export"
 - 小规模比赛练习积分系统
 
 不适合：
-- 多设备实时同步
 - 复杂权限管理
 - 大型赛事管理
 
 ## 后续可扩展方向
 
 - 用户登录
-- 多设备同步
+- 管理员密码或录入权限
 - 比分/局数录入
 - 多赛季支持
 - 图表统计
-- 云端数据库
+- 数据库后台管理页

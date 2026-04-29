@@ -10,7 +10,7 @@ function TitleEditor({
   onSave,
 }: {
   currentTitle: string;
-  onSave: (title: string) => void;
+  onSave: (title: string) => Promise<void>;
 }) {
   const [title, setTitle] = useState(currentTitle);
 
@@ -22,7 +22,11 @@ function TitleEditor({
       </label>
       <button
         className="button button--primary"
-        onClick={() => onSave(title)}
+        onClick={() => {
+          onSave(title).catch(() => {
+            // Error state is handled by the parent settings view.
+          });
+        }}
         type="button"
       >
         保存标题
@@ -59,8 +63,8 @@ export function SettingsView() {
 
     try {
       const payload = await file.text();
-      replaceStateFromImport(payload);
-      setFeedback("数据导入成功。");
+      await replaceStateFromImport(payload);
+      setFeedback("数据已导入云端。");
       setError("");
     } catch (importError) {
       setError(importError instanceof Error ? importError.message : "导入失败");
@@ -85,10 +89,15 @@ export function SettingsView() {
           <TitleEditor
             key={state.settings.title}
             currentTitle={state.settings.title}
-            onSave={(nextTitle) => {
-              updateTitle(nextTitle);
-              setFeedback("标题已更新。");
-              setError("");
+            onSave={async (nextTitle) => {
+              try {
+                await updateTitle(nextTitle);
+                setFeedback("标题已更新。");
+                setError("");
+              } catch (updateError) {
+                setError(updateError instanceof Error ? updateError.message : "标题更新失败");
+                setFeedback("");
+              }
             }}
           />
         </div>
@@ -132,15 +141,21 @@ export function SettingsView() {
           </div>
         </div>
         <p className="danger-copy">
-          这会删除当前浏览器中的球员、比赛和标题设置。建议先导出 JSON 再执行。
+          这会删除云端数据库中的球员、比赛和标题设置。建议先导出 JSON 再执行。
         </p>
         <button
           className="button button--danger"
           onClick={() => {
             if (window.confirm("确定要清空所有本地数据吗？")) {
-              clearAllData();
-              setFeedback("本地数据已清空。");
-              setError("");
+              clearAllData()
+                .then(() => {
+                  setFeedback("云端数据已清空。");
+                  setError("");
+                })
+                .catch((clearError) => {
+                  setError(clearError instanceof Error ? clearError.message : "清空数据失败");
+                  setFeedback("");
+                });
             }
           }}
           type="button"
