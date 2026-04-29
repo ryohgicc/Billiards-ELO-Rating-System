@@ -7,9 +7,11 @@ import { formatDateTime } from "@/lib/format";
 import { useAppState } from "@/lib/app-state";
 
 export function PlayersView() {
-  const { state, createPlayer, togglePlayer, isLoaded } = useAppState();
+  const { state, createPlayer, togglePlayer, updatePlayerName, isLoaded } = useAppState();
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [editingPlayerId, setEditingPlayerId] = useState("");
+  const [editingName, setEditingName] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -21,6 +23,19 @@ export function PlayersView() {
     } catch (submissionError) {
       setError(
         submissionError instanceof Error ? submissionError.message : "创建球员时发生未知错误",
+      );
+    }
+  }
+
+  async function handleRenameSubmit(playerId: string) {
+    try {
+      await updatePlayerName(playerId, editingName);
+      setEditingPlayerId("");
+      setEditingName("");
+      setError("");
+    } catch (submissionError) {
+      setError(
+        submissionError instanceof Error ? submissionError.message : "更新球员名称失败",
       );
     }
   }
@@ -70,36 +85,117 @@ export function PlayersView() {
         ) : null}
 
         <div className="player-list">
-          {state.players.map((player) => (
-            <article key={player.id} className="player-row">
-              <div>
-                <div className="player-row__title">
-                  <h3>{player.name}</h3>
-                  <span
-                    className={
-                      player.isActive ? "status-pill status-pill--active" : "status-pill"
-                    }
-                  >
-                    {player.isActive ? "启用中" : "已停用"}
-                  </span>
+          {state.players.map((player) => {
+            const isEditing = editingPlayerId === player.id;
+
+            return (
+              <article key={player.id} className="player-row">
+                <div className="player-row__content">
+                  {isEditing ? (
+                    <label className="field player-row__edit-field">
+                      <span>球员名称</span>
+                      <input
+                        autoFocus
+                        value={editingName}
+                        onChange={(event) => setEditingName(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            handleRenameSubmit(player.id).catch((renameError) => {
+                              setError(
+                                renameError instanceof Error
+                                  ? renameError.message
+                                  : "更新球员名称失败",
+                              );
+                            });
+                          }
+
+                          if (event.key === "Escape") {
+                            setEditingPlayerId("");
+                            setEditingName("");
+                            setError("");
+                          }
+                        }}
+                      />
+                    </label>
+                  ) : (
+                    <div className="player-row__title">
+                      <h3>{player.name}</h3>
+                      <span
+                        className={
+                          player.isActive ? "status-pill status-pill--active" : "status-pill"
+                        }
+                      >
+                        {player.isActive ? "启用中" : "已停用"}
+                      </span>
+                    </div>
+                  )}
+                  <p>创建时间：{formatDateTime(player.createdAt)}</p>
                 </div>
-                <p>创建时间：{formatDateTime(player.createdAt)}</p>
-              </div>
-              <button
-                className="button"
-                onClick={() => {
-                  togglePlayer(player.id).catch((toggleError) => {
-                    setError(
-                      toggleError instanceof Error ? toggleError.message : "更新球员状态失败",
-                    );
-                  });
-                }}
-                type="button"
-              >
-                {player.isActive ? "停用" : "重新启用"}
-              </button>
-            </article>
-          ))}
+                <div className="player-row__actions">
+                  {isEditing ? (
+                    <>
+                      <button
+                        className="button button--primary"
+                        onClick={() => {
+                          handleRenameSubmit(player.id).catch((renameError) => {
+                            setError(
+                              renameError instanceof Error
+                                ? renameError.message
+                                : "更新球员名称失败",
+                            );
+                          });
+                        }}
+                        type="button"
+                      >
+                        保存
+                      </button>
+                      <button
+                        className="button"
+                        onClick={() => {
+                          setEditingPlayerId("");
+                          setEditingName("");
+                          setError("");
+                        }}
+                        type="button"
+                      >
+                        取消
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        className="button"
+                        onClick={() => {
+                          setEditingPlayerId(player.id);
+                          setEditingName(player.name);
+                          setError("");
+                        }}
+                        type="button"
+                      >
+                        修改名称
+                      </button>
+                      <button
+                        className="button"
+                        onClick={() => {
+                          togglePlayer(player.id).catch((toggleError) => {
+                            setError(
+                              toggleError instanceof Error
+                                ? toggleError.message
+                                : "更新球员状态失败",
+                            );
+                          });
+                        }}
+                        type="button"
+                      >
+                        {player.isActive ? "停用" : "重新启用"}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
     </div>

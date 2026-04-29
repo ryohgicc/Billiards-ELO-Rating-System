@@ -127,6 +127,20 @@ async function togglePlayer(playerId: string, env: Env) {
   return jsonResponse(await loadState(env.DB));
 }
 
+async function updatePlayerName(playerId: string, request: Request, env: Env) {
+  const body = await readJson(request);
+  const state = await loadState(env.DB);
+  const name = validatePlayerName(String((body as { name?: unknown }).name ?? ""), state.players, playerId);
+
+  if (!state.players.some((player) => player.id === playerId)) {
+    return errorResponse("球员不存在", 404);
+  }
+
+  await env.DB.prepare("UPDATE players SET name = ? WHERE id = ?").bind(name, playerId).run();
+
+  return jsonResponse(await loadState(env.DB));
+}
+
 async function createMatch(request: Request, env: Env) {
   const body = (await readJson(request)) as { winnerId?: unknown; loserId?: unknown };
   const state = await loadState(env.DB);
@@ -227,6 +241,10 @@ const worker = {
       const playerMatch = url.pathname.match(/^\/api\/players\/([^/]+)$/);
       if (playerMatch && request.method === "PATCH") {
         return togglePlayer(playerMatch[1], env);
+      }
+
+      if (playerMatch && request.method === "PUT") {
+        return updatePlayerName(playerMatch[1], request, env);
       }
 
       if (url.pathname === "/api/matches" && request.method === "POST") {

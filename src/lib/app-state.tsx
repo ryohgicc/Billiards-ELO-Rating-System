@@ -31,6 +31,7 @@ type AppStateContextValue = {
   activePlayers: Player[];
   createPlayer: (name: string) => Promise<void>;
   togglePlayer: (playerId: string) => Promise<void>;
+  updatePlayerName: (playerId: string, name: string) => Promise<void>;
   addMatch: (winnerId: string, loserId: string) => Promise<MatchFeedback>;
   removeMatch: (matchId: string) => Promise<void>;
   updateTitle: (title: string) => Promise<void>;
@@ -92,6 +93,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     },
     async togglePlayer(playerId) {
       setState(await api.togglePlayer(playerId));
+    },
+    async updatePlayerName(playerId, name) {
+      validatePlayerName(name, state.players, playerId);
+      setState(await api.updatePlayerName(playerId, name));
     },
     async addMatch(winnerId, loserId) {
       validateMatchPlayers(winnerId, loserId, state.players);

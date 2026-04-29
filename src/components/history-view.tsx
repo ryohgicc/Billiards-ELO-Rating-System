@@ -2,6 +2,7 @@
 
 import { EmptyState } from "@/components/empty-state";
 import { formatDateTime } from "@/lib/format";
+import { groupEntriesByLocalDay } from "@/lib/history";
 import { useAppState } from "@/lib/app-state";
 
 export function HistoryView() {
@@ -22,6 +23,8 @@ export function HistoryView() {
     );
   }
 
+  const dailyGroups = groupEntriesByLocalDay(timeline);
+
   return (
     <section className="panel">
       <div className="section-heading">
@@ -32,38 +35,49 @@ export function HistoryView() {
         <span className="section-note">删除后会自动重算全部积分</span>
       </div>
 
-      <div className="history-list">
-        {timeline.map((entry) => (
-          <article key={entry.id} className="history-card">
-            <div>
-              <div className="history-card__title">
-                <h3>
-                  {entry.winnerName} 胜 {entry.loserName}
-                </h3>
-                <span>{formatDateTime(entry.createdAt)}</span>
-              </div>
-              <p>
-                积分变化：{entry.winnerName} +{entry.winnerDelta} / {entry.loserName}{" "}
-                {entry.loserDelta}
-              </p>
-              <p>
-                当前落点：{entry.winnerRatingAfter} vs {entry.loserRatingAfter}
-              </p>
+      <div className="history-day-list">
+        {dailyGroups.map((group) => (
+          <section key={group.dateKey} className="history-day">
+            <div className="history-day__heading">
+              <h3>{group.dateLabel}</h3>
+              <span className="section-note">{group.entries.length} 场</span>
             </div>
-            <button
-              className="button button--danger"
-              onClick={() => {
-                if (window.confirm("删除后会重算积分，确定继续吗？")) {
-                  removeMatch(entry.id).catch((error) => {
-                    window.alert(error instanceof Error ? error.message : "删除比赛失败");
-                  });
-                }
-              }}
-              type="button"
-            >
-              删除
-            </button>
-          </article>
+
+            <div className="history-list">
+              {group.entries.map((entry) => (
+                <article key={entry.id} className="history-card">
+                  <div>
+                    <div className="history-card__title">
+                      <h3>
+                        {entry.winnerName} 胜 {entry.loserName}
+                      </h3>
+                      <span>{formatDateTime(entry.createdAt)}</span>
+                    </div>
+                    <p>
+                      积分变化：{entry.winnerName} +{entry.winnerDelta} /{" "}
+                      {entry.loserName} {entry.loserDelta}
+                    </p>
+                    <p>
+                      当前落点：{entry.winnerRatingAfter} vs {entry.loserRatingAfter}
+                    </p>
+                  </div>
+                  <button
+                    className="button button--danger"
+                    onClick={() => {
+                      if (window.confirm("删除后会重算积分，确定继续吗？")) {
+                        removeMatch(entry.id).catch((error) => {
+                          window.alert(error instanceof Error ? error.message : "删除比赛失败");
+                        });
+                      }
+                    }}
+                    type="button"
+                  >
+                    删除
+                  </button>
+                </article>
+              ))}
+            </div>
+          </section>
         ))}
       </div>
     </section>

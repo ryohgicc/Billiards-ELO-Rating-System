@@ -32,6 +32,12 @@ export const api = {
       method: "PATCH",
     });
   },
+  updatePlayerName(playerId: string, name: string) {
+    return requestState(`/api/players/${encodeURIComponent(playerId)}`, {
+      method: "PUT",
+      body: JSON.stringify({ name }),
+    });
+  },
   createMatch(winnerId: string, loserId: string) {
     return requestState("/api/matches", {
       method: "POST",
