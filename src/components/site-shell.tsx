@@ -46,24 +46,30 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="hero__visual">
-          <div className="billiards-radar" aria-hidden="true">
-            <span className="billiards-radar__rail" />
-            <span className="billiards-radar__cue" />
-            <span className="billiards-radar__path" />
-            <span className="billiards-ball billiards-ball--cue" />
-            <span className="billiards-ball billiards-ball--eight">8</span>
-            <span className="billiards-ball billiards-ball--gold">9</span>
+          <div className="hero__tactical-board" aria-hidden="true">
+            <span className="tactical-pocket tactical-pocket--tl" />
+            <span className="tactical-pocket tactical-pocket--tr" />
+            <span className="tactical-pocket tactical-pocket--bl" />
+            <span className="tactical-pocket tactical-pocket--br" />
+            <span className="tactical-line tactical-line--cue" />
+            <span className="tactical-line tactical-line--leave" />
+            <span className="tactical-ball tactical-ball--cue" />
+            <span className="tactical-ball tactical-ball--target" />
+            <span className="tactical-ball tactical-ball--next" />
           </div>
           <div className="hero__stats">
             <div className="stat-chip">
+              <span className="stat-chip__ball">1</span>
               <span>球员</span>
               <strong>{state.players.length}</strong>
             </div>
             <div className="stat-chip">
+              <span className="stat-chip__ball">8</span>
               <span>比赛</span>
               <strong>{state.matches.length}</strong>
             </div>
             <div className="stat-chip">
+              <span className="stat-chip__ball">9</span>
               <span>榜首</span>
               <strong>
                 <Trophy aria-hidden="true" size={18} />
