@@ -1,12 +1,13 @@
 "use client";
 
-import { Medal, Trophy } from "lucide-react";
+import { Activity, Gauge, Medal, Trophy } from "lucide-react";
 import { useState } from "react";
 
 import { EmptyState } from "@/components/empty-state";
 import { formatDateTime, formatPercent } from "@/lib/format";
 import { useAppState } from "@/lib/app-state";
 import { groupEntriesByLocalDay } from "@/lib/history";
+import { buildLeaderInsight } from "@/lib/leader-insight";
 import { buildRankingsThroughLocalDay } from "@/lib/rating";
 
 function getPodiumLabel(rank: number) {
@@ -42,6 +43,10 @@ function PodiumBadge({ rank }: { rank: number }) {
   );
 }
 
+function formatSignedValue(value: number) {
+  return value > 0 ? `+${value}` : String(value);
+}
+
 export function RankingsView() {
   const { rankings, state, timeline, isLoaded } = useAppState();
   const dailyGroups = groupEntriesByLocalDay(timeline);
@@ -57,6 +62,7 @@ export function RankingsView() {
           state.settings.kFactor,
         );
   const leader = visibleRankings[0];
+  const leaderInsight = buildLeaderInsight(visibleRankings);
 
   if (!isLoaded) {
     return <section className="panel">正在读取共享积分数据...</section>;
@@ -76,14 +82,69 @@ export function RankingsView() {
   return (
     <div className="stack">
       <section className="panel spotlight">
-        <div>
-          <p className="eyebrow">{selectedViewKey === "overall" ? "当前榜首" : "当日榜首"}</p>
-          <h2>{leader.player.name}</h2>
+        <div className="spotlight__content">
+          <div className="spotlight__identity">
+            <span className="spotlight__rank">#1</span>
+            <div>
+              <p className="eyebrow">
+                {selectedViewKey === "overall" ? "当前榜首" : "当日榜首"}
+              </p>
+              <h2>{leader.player.name}</h2>
+            </div>
+          </div>
+
+          <div className="spotlight__brief">
+            <span>{leaderInsight.headline}</span>
+            <strong>{leaderInsight.subline}</strong>
+          </div>
+
+          <div className="spotlight__power">
+            <div>
+              <span>ELO POWER</span>
+              <strong>{formatSignedValue(leaderInsight.ratingGain)}</strong>
+            </div>
+            <div className="spotlight__power-track" aria-hidden="true">
+              <span style={{ width: `${leaderInsight.dominancePercent}%` }} />
+            </div>
+          </div>
         </div>
+
         <div className="spotlight__meta">
-          <span>{leader.rating} 分</span>
-          <span>{leader.wins} 胜</span>
-          <span>{leader.losses} 负</span>
+          <span>
+            <Gauge aria-hidden="true" size={16} />
+            <strong>{leader.rating}</strong>
+            积分
+          </span>
+          <span>
+            <Activity aria-hidden="true" size={16} />
+            <strong>{formatSignedValue(leaderInsight.ratingGain)}</strong>
+            净增
+          </span>
+          <span>
+            <strong>
+              {leader.wins}-{leader.losses}
+            </strong>
+            战绩
+          </span>
+          <span>
+            <strong>{formatPercent(leader.winRate)}</strong>
+            胜率
+          </span>
+          <span>
+            <strong>
+              {leaderInsight.leadOverSecond === null
+                ? "待挑战"
+                : `+${leaderInsight.leadOverSecond}`}
+            </strong>
+            领先
+          </span>
+          <span>
+            <strong>{formatDateTime(leader.lastMatchAt)}</strong>
+            最近比赛
+          </span>
+        </div>
+        <div className="spotlight__watermark" aria-hidden="true">
+          #01
         </div>
       </section>
 
