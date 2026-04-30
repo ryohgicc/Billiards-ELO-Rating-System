@@ -4,6 +4,7 @@ import {
   BookOpen,
   Clock3,
   Database,
+  GraduationCap,
   ListOrdered,
   PlusCircle,
   Trophy,
@@ -19,6 +20,7 @@ const links = [
   { href: "/matches", label: "录入比赛", icon: PlusCircle },
   { href: "/players", label: "球员管理", icon: Users },
   { href: "/history", label: "比赛历史", icon: Clock3 },
+  { href: "/academy", label: "台球学堂", icon: GraduationCap },
   { href: "/settings", label: "数据设置", icon: Database },
   { href: "/algorithm", label: "算法说明", icon: BookOpen },
 ];
@@ -30,28 +32,44 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="shell">
       <header className="hero">
-        <div>
+        <div className="hero__content">
           <p className="eyebrow">Billiards Elo 台球榜</p>
           <h1>{state.settings.title}</h1>
           <p className="hero__copy">
             用共享 Elo 数据库管理台球对战，创建球员、录入胜负、自动刷新排名。
           </p>
+          <div className="hero__badges" aria-label="台球元素">
+            <span>8 BALL</span>
+            <span>CUE LINE</span>
+            <span>BREAK POINT</span>
+          </div>
         </div>
-        <div className="hero__stats">
-          <div className="stat-chip">
-            <span>球员</span>
-            <strong>{state.players.length}</strong>
+
+        <div className="hero__visual">
+          <div className="billiards-radar" aria-hidden="true">
+            <span className="billiards-radar__rail" />
+            <span className="billiards-radar__cue" />
+            <span className="billiards-radar__path" />
+            <span className="billiards-ball billiards-ball--cue" />
+            <span className="billiards-ball billiards-ball--eight">8</span>
+            <span className="billiards-ball billiards-ball--gold">9</span>
           </div>
-          <div className="stat-chip">
-            <span>比赛</span>
-            <strong>{state.matches.length}</strong>
-          </div>
-          <div className="stat-chip">
-            <span>榜首</span>
-            <strong>
-              <Trophy aria-hidden="true" size={18} />
-              {rankings[0]?.player.name ?? "待定"}
-            </strong>
+          <div className="hero__stats">
+            <div className="stat-chip">
+              <span>球员</span>
+              <strong>{state.players.length}</strong>
+            </div>
+            <div className="stat-chip">
+              <span>比赛</span>
+              <strong>{state.matches.length}</strong>
+            </div>
+            <div className="stat-chip">
+              <span>榜首</span>
+              <strong>
+                <Trophy aria-hidden="true" size={18} />
+                {rankings[0]?.player.name ?? "待定"}
+              </strong>
+            </div>
           </div>
         </div>
       </header>
