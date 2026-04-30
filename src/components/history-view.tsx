@@ -1,12 +1,18 @@
 "use client";
 
+import { useState } from "react";
+
 import { EmptyState } from "@/components/empty-state";
 import { formatDateTime } from "@/lib/format";
-import { groupEntriesByLocalDay } from "@/lib/history";
+import { groupEntriesByLocalDay, summarizeDailyRatingMovement } from "@/lib/history";
 import { useAppState } from "@/lib/app-state";
 
 export function HistoryView() {
   const { timeline, removeMatch, isLoaded } = useAppState();
+  const dailyGroups = groupEntriesByLocalDay(timeline);
+  const [selectedDateKey, setSelectedDateKey] = useState(dailyGroups[0]?.dateKey ?? "");
+  const selectedGroup = dailyGroups.find((group) => group.dateKey === selectedDateKey) ?? dailyGroups[0];
+  const dailyMovement = summarizeDailyRatingMovement(selectedGroup?.entries ?? []);
 
   if (!isLoaded) {
     return <section className="panel">正在读取比赛历史...</section>;
@@ -23,8 +29,6 @@ export function HistoryView() {
     );
   }
 
-  const dailyGroups = groupEntriesByLocalDay(timeline);
-
   return (
     <section className="panel">
       <div className="section-heading">
@@ -35,16 +39,48 @@ export function HistoryView() {
         <span className="section-note">删除后会自动重算全部积分</span>
       </div>
 
-      <div className="history-day-list">
+      <div className="date-switcher" aria-label="按日期查看比赛历史">
         {dailyGroups.map((group) => (
-          <section key={group.dateKey} className="history-day">
+          <button
+            key={group.dateKey}
+            aria-pressed={group.dateKey === selectedGroup?.dateKey}
+            className={
+              group.dateKey === selectedGroup?.dateKey
+                ? "date-switcher__button date-switcher__button--active"
+                : "date-switcher__button"
+            }
+            onClick={() => setSelectedDateKey(group.dateKey)}
+            type="button"
+          >
+            <span>{group.dateLabel}</span>
+            <strong>{group.entries.length} 场</strong>
+          </button>
+        ))}
+      </div>
+
+      <div className="daily-movement">
+        <div className="daily-movement__item daily-movement__item--gain">
+          <span>上升第一</span>
+          <strong>{dailyMovement.topGain?.playerName ?? "暂无"}</strong>
+          <p>{dailyMovement.topGain ? `+${dailyMovement.topGain.delta}` : "0"}</p>
+        </div>
+        <div className="daily-movement__item daily-movement__item--drop">
+          <span>下降第一</span>
+          <strong>{dailyMovement.topDrop?.playerName ?? "暂无"}</strong>
+          <p>{dailyMovement.topDrop?.delta ?? 0}</p>
+        </div>
+      </div>
+
+      {selectedGroup ? (
+        <div className="history-day-list">
+          <section className="history-day">
             <div className="history-day__heading">
-              <h3>{group.dateLabel}</h3>
-              <span className="section-note">{group.entries.length} 场</span>
+              <h3>{selectedGroup.dateLabel}</h3>
+              <span className="section-note">{selectedGroup.entries.length} 场</span>
             </div>
 
             <div className="history-list">
-              {group.entries.map((entry) => (
+              {selectedGroup.entries.map((entry) => (
                 <article key={entry.id} className="history-card">
                   <div>
                     <div className="history-card__title">
@@ -78,8 +114,8 @@ export function HistoryView() {
               ))}
             </div>
           </section>
-        ))}
-      </div>
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2026-04-29
+
+### Added
+- 新增 `AGENTS.md`，记录项目架构、开发命令、Cloudflare D1 部署注意事项、UI 风格和 git 安全约定，方便后续 agent 接手维护。
+
 ## [0.2.0] - 2026-04-29
 
 ### Added

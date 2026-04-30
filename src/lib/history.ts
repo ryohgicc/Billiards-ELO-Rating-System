@@ -2,6 +2,18 @@ type EntryWithDate = {
   createdAt: string;
 };
 
+type EntryWithRatingMovement = {
+  winnerName: string;
+  loserName: string;
+  winnerDelta: number;
+  loserDelta: number;
+};
+
+export type DailyRatingMovementLeader = {
+  playerName: string;
+  delta: number;
+};
+
 export function groupEntriesByLocalDay<Entry extends EntryWithDate>(entries: Entry[]) {
   const groups: Array<{
     dateKey: string;
@@ -36,4 +48,33 @@ export function groupEntriesByLocalDay<Entry extends EntryWithDate>(entries: Ent
   }
 
   return groups;
+}
+
+export function summarizeDailyRatingMovement<Entry extends EntryWithRatingMovement>(
+  entries: Entry[],
+) {
+  const totals = new Map<string, number>();
+
+  for (const entry of entries) {
+    totals.set(entry.winnerName, (totals.get(entry.winnerName) ?? 0) + entry.winnerDelta);
+    totals.set(entry.loserName, (totals.get(entry.loserName) ?? 0) + entry.loserDelta);
+  }
+
+  let topGain: DailyRatingMovementLeader | null = null;
+  let topDrop: DailyRatingMovementLeader | null = null;
+
+  for (const [playerName, delta] of totals) {
+    if (!topGain || delta > topGain.delta) {
+      topGain = { playerName, delta };
+    }
+
+    if (!topDrop || delta < topDrop.delta) {
+      topDrop = { playerName, delta };
+    }
+  }
+
+  return {
+    topGain,
+    topDrop,
+  };
 }
