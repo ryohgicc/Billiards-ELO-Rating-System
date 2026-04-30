@@ -48,17 +48,14 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
         <div className="hero__visual">
           <div className="hero__stats">
             <div className="stat-chip">
-              <span className="stat-chip__ball">1</span>
               <span>球员</span>
               <strong>{state.players.length}</strong>
             </div>
             <div className="stat-chip">
-              <span className="stat-chip__ball">8</span>
               <span>比赛</span>
               <strong>{state.matches.length}</strong>
             </div>
             <div className="stat-chip">
-              <span className="stat-chip__ball">9</span>
               <span>榜首</span>
               <strong>
                 <Trophy aria-hidden="true" size={18} />
