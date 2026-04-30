@@ -1,7 +1,7 @@
 import { DEFAULT_SETTINGS } from "../src/lib/constants";
 import type { AppState, MatchRecord, Player } from "../src/lib/types";
 import { assertImportStateShape, validateMatchPlayers, validatePlayerName } from "../src/lib/validation";
-import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
+import type { D1Database, D1PreparedStatement, ExecutionContext } from "@cloudflare/workers-types";
 
 type Env = {
   DB: D1Database;
@@ -28,6 +28,14 @@ type SettingRow = {
 
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
+  "cache-control": "no-store",
+};
+
+const STATE_CACHE_TTL_SECONDS = 10;
+const STATE_CACHE_HEADERS = {
+  "cache-control": `public, max-age=${STATE_CACHE_TTL_SECONDS}, s-maxage=${STATE_CACHE_TTL_SECONDS}`,
+  "cdn-cache-control": `max-age=${STATE_CACHE_TTL_SECONDS}`,
+  "cloudflare-cdn-cache-control": `max-age=${STATE_CACHE_TTL_SECONDS}`,
 };
 
 function jsonResponse(payload: unknown, init?: ResponseInit) {
@@ -95,6 +103,41 @@ async function loadState(db: D1Database): Promise<AppState> {
   };
 }
 
+function stateCacheKey(request: Request) {
+  const url = new URL(request.url);
+  url.pathname = "/api/state";
+  url.search = "";
+
+  return new Request(url.toString(), { method: "GET" });
+}
+
+async function cachedStateResponse(request: Request, env: Env, ctx: ExecutionContext) {
+  const cache = (caches as CacheStorage & { default: Cache }).default;
+  const cacheKey = stateCacheKey(request);
+  const cached = await cache.match(cacheKey);
+
+  if (cached) {
+    return cached;
+  }
+
+  const response = jsonResponse(await loadState(env.DB), {
+    headers: STATE_CACHE_HEADERS,
+  });
+
+  ctx.waitUntil(cache.put(cacheKey, response.clone()));
+
+  return response;
+}
+
+async function clearStateCache(request: Request) {
+  await (caches as CacheStorage & { default: Cache }).default.delete(stateCacheKey(request));
+}
+
+async function freshStateResponse(request: Request, env: Env, init?: ResponseInit) {
+  await clearStateCache(request);
+  return jsonResponse(await loadState(env.DB), init);
+}
+
 async function createPlayer(request: Request, env: Env) {
   const body = await readJson(request);
   const state = await loadState(env.DB);
@@ -111,10 +154,10 @@ async function createPlayer(request: Request, env: Env) {
     .bind(player.id, player.name, player.createdAt)
     .run();
 
-  return jsonResponse(await loadState(env.DB), { status: 201 });
+  return freshStateResponse(request, env, { status: 201 });
 }
 
-async function togglePlayer(playerId: string, env: Env) {
+async function togglePlayer(playerId: string, request: Request, env: Env) {
   const result = await env.DB
     .prepare("UPDATE players SET is_active = CASE is_active WHEN 1 THEN 0 ELSE 1 END WHERE id = ?")
     .bind(playerId)
@@ -124,7 +167,7 @@ async function togglePlayer(playerId: string, env: Env) {
     return errorResponse("球员不存在", 404);
   }
 
-  return jsonResponse(await loadState(env.DB));
+  return freshStateResponse(request, env);
 }
 
 async function updatePlayerName(playerId: string, request: Request, env: Env) {
@@ -138,7 +181,7 @@ async function updatePlayerName(playerId: string, request: Request, env: Env) {
 
   await env.DB.prepare("UPDATE players SET name = ? WHERE id = ?").bind(name, playerId).run();
 
-  return jsonResponse(await loadState(env.DB));
+  return freshStateResponse(request, env);
 }
 
 async function createMatch(request: Request, env: Env) {
@@ -154,17 +197,17 @@ async function createMatch(request: Request, env: Env) {
     .bind(createId("match"), winnerId, loserId, new Date().toISOString())
     .run();
 
-  return jsonResponse(await loadState(env.DB), { status: 201 });
+  return freshStateResponse(request, env, { status: 201 });
 }
 
-async function deleteMatch(matchId: string, env: Env) {
+async function deleteMatch(matchId: string, request: Request, env: Env) {
   const result = await env.DB.prepare("DELETE FROM matches WHERE id = ?").bind(matchId).run();
 
   if (!result.meta.changes) {
     return errorResponse("比赛记录不存在", 404);
   }
 
-  return jsonResponse(await loadState(env.DB));
+  return freshStateResponse(request, env);
 }
 
 async function updateSettings(request: Request, env: Env) {
@@ -176,7 +219,7 @@ async function updateSettings(request: Request, env: Env) {
     .bind(title)
     .run();
 
-  return jsonResponse(await loadState(env.DB));
+  return freshStateResponse(request, env);
 }
 
 async function replaceState(request: Request, env: Env) {
@@ -206,10 +249,10 @@ async function replaceState(request: Request, env: Env) {
 
   await env.DB.batch(statements);
 
-  return jsonResponse(await loadState(env.DB));
+  return freshStateResponse(request, env);
 }
 
-async function clearState(env: Env) {
+async function clearState(request: Request, env: Env) {
   await env.DB.batch([
     env.DB.prepare("DELETE FROM matches"),
     env.DB.prepare("DELETE FROM players"),
@@ -222,16 +265,16 @@ async function clearState(env: Env) {
       .bind("kFactor", String(DEFAULT_SETTINGS.kFactor)),
   ]);
 
-  return jsonResponse(await loadState(env.DB));
+  return freshStateResponse(request, env);
 }
 
 const worker = {
-  async fetch(request: Request, env: Env) {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url);
 
     try {
       if (url.pathname === "/api/state" && request.method === "GET") {
-        return jsonResponse(await loadState(env.DB));
+        return cachedStateResponse(request, env, ctx);
       }
 
       if (url.pathname === "/api/players" && request.method === "POST") {
@@ -240,7 +283,7 @@ const worker = {
 
       const playerMatch = url.pathname.match(/^\/api\/players\/([^/]+)$/);
       if (playerMatch && request.method === "PATCH") {
-        return togglePlayer(playerMatch[1], env);
+        return togglePlayer(playerMatch[1], request, env);
       }
 
       if (playerMatch && request.method === "PUT") {
@@ -253,7 +296,7 @@ const worker = {
 
       const matchMatch = url.pathname.match(/^\/api\/matches\/([^/]+)$/);
       if (matchMatch && request.method === "DELETE") {
-        return deleteMatch(matchMatch[1], env);
+        return deleteMatch(matchMatch[1], request, env);
       }
 
       if (url.pathname === "/api/settings" && request.method === "PUT") {
@@ -265,7 +308,7 @@ const worker = {
       }
 
       if (url.pathname === "/api/state" && request.method === "DELETE") {
-        return clearState(env);
+        return clearState(request, env);
       }
 
       return errorResponse("接口不存在", 404);

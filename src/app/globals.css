@@ -32,7 +32,15 @@ body {
     radial-gradient(circle at 18% 0%, rgba(55, 241, 151, 0.1), transparent 28rem),
     radial-gradient(circle at 82% 14%, rgba(255, 216, 77, 0.055), transparent 24rem),
     linear-gradient(180deg, #070908 0%, #030404 46%, #020202 100%);
-  font-family: var(--font-sans), "PingFang SC", "Hiragino Sans GB", sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Microsoft YaHei",
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -163,18 +171,14 @@ button {
   position: relative;
   display: grid;
   gap: 0.75rem;
-  align-content: end;
-  min-height: 250px;
+  align-content: center;
+  min-height: 170px;
   padding: 1rem;
   border: 1px solid rgba(55, 241, 151, 0.12);
   border-radius: 16px;
   background:
-    linear-gradient(90deg, rgba(55, 241, 151, 0.06) 1px, transparent 1px),
-    linear-gradient(rgba(55, 241, 151, 0.045) 1px, transparent 1px),
-    radial-gradient(circle at 24% 76%, rgba(255, 255, 255, 0.09), transparent 1.8rem),
-    radial-gradient(circle at 76% 30%, rgba(255, 216, 77, 0.09), transparent 2.8rem),
-    rgba(3, 5, 4, 0.42);
-  background-size: 38px 38px, 38px 38px, auto, auto, auto;
+    linear-gradient(135deg, rgba(55, 241, 151, 0.08), rgba(255, 216, 77, 0.035)),
+    rgba(3, 5, 4, 0.62);
 }
 
 .hero__stats {
@@ -183,102 +187,6 @@ button {
   display: grid;
   gap: 0.75rem;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.hero__tactical-board {
-  position: absolute;
-  inset: 1rem;
-  border: 1px solid rgba(55, 241, 151, 0.16);
-  border-radius: 12px;
-  opacity: 0.72;
-  pointer-events: none;
-}
-
-.hero__tactical-board::before {
-  position: absolute;
-  left: 12%;
-  top: 18%;
-  width: 74%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.42), transparent);
-  content: "";
-  transform: rotate(-19deg);
-}
-
-.tactical-pocket {
-  position: absolute;
-  width: 0.72rem;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.58);
-}
-
-.tactical-pocket--tl {
-  left: -0.36rem;
-  top: -0.36rem;
-}
-
-.tactical-pocket--tr {
-  right: -0.36rem;
-  top: -0.36rem;
-}
-
-.tactical-pocket--bl {
-  left: -0.36rem;
-  bottom: -0.36rem;
-}
-
-.tactical-pocket--br {
-  right: -0.36rem;
-  bottom: -0.36rem;
-}
-
-.tactical-line {
-  position: absolute;
-  height: 2px;
-  transform-origin: left center;
-}
-
-.tactical-line--cue {
-  left: 20%;
-  top: 64%;
-  width: 40%;
-  transform: rotate(-24deg);
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.46), transparent);
-}
-
-.tactical-line--leave {
-  left: 47%;
-  top: 45%;
-  width: 33%;
-  transform: rotate(-8deg);
-  border-top: 2px dashed rgba(55, 241, 151, 0.42);
-}
-
-.tactical-ball {
-  position: absolute;
-  width: 1.05rem;
-  aspect-ratio: 1;
-  border-radius: 50%;
-}
-
-.tactical-ball--cue {
-  left: 22%;
-  top: 56%;
-  background: rgba(245, 242, 231, 0.82);
-}
-
-.tactical-ball--target {
-  left: 61%;
-  top: 35%;
-  background: rgba(8, 8, 8, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.tactical-ball--next {
-  right: 17%;
-  top: 55%;
-  background: rgba(255, 216, 77, 0.86);
 }
 
 .stat-chip__ball {
@@ -1015,6 +923,7 @@ button {
 .academy-hero p,
 .academy-card p,
 .academy-daily p,
+.academy-dispute-card p,
 .academy-tip p {
   color: var(--muted);
   line-height: 1.8;
@@ -1134,6 +1043,7 @@ button {
 }
 
 .academy-tip-grid,
+.academy-dispute-grid,
 .academy-position-grid {
   display: grid;
   gap: 0.8rem;
@@ -1141,6 +1051,7 @@ button {
 }
 
 .academy-card,
+.academy-dispute-card,
 .academy-tip,
 .academy-daily,
 .academy-position-card {
@@ -1165,9 +1076,71 @@ button {
 }
 
 .academy-card h3,
+.academy-dispute-card h3,
 .academy-tip h3,
 .academy-daily h3 {
   color: var(--text);
+}
+
+.academy-dispute-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.academy-dispute-card {
+  display: flex;
+  gap: 0.75rem;
+  min-height: 10rem;
+  padding: 0.95rem;
+}
+
+.academy-dispute-card svg {
+  flex: 0 0 auto;
+  color: var(--gold);
+}
+
+.academy-dispute-card div {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.academy-dispute-card span {
+  color: rgba(255, 216, 77, 0.72);
+  font-size: 0.83rem;
+  line-height: 1.6;
+}
+
+.academy-principles {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 0.95rem;
+  padding: 1rem;
+  border: 1px solid rgba(55, 241, 151, 0.18);
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(55, 241, 151, 0.08), transparent 48%),
+    rgba(5, 8, 7, 0.72);
+}
+
+.academy-principles > div {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.academy-principles svg {
+  color: var(--accent);
+}
+
+.academy-principles h3 {
+  color: var(--text);
+}
+
+.academy-principles ol {
+  display: grid;
+  gap: 0.55rem;
+  padding-left: 1.15rem;
+  color: var(--muted);
+  line-height: 1.7;
 }
 
 .academy-split {
@@ -1337,6 +1310,7 @@ button {
   .formula-grid,
   .academy-grid,
   .academy-tip-grid,
+  .academy-dispute-grid,
   .academy-position-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.5rem;
@@ -1497,6 +1471,7 @@ button {
   .academy-split,
   .academy-grid,
   .academy-tip-grid,
+  .academy-dispute-grid,
   .academy-position-grid {
     grid-template-columns: 1fr;
   }

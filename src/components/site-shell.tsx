@@ -46,17 +46,6 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="hero__visual">
-          <div className="hero__tactical-board" aria-hidden="true">
-            <span className="tactical-pocket tactical-pocket--tl" />
-            <span className="tactical-pocket tactical-pocket--tr" />
-            <span className="tactical-pocket tactical-pocket--bl" />
-            <span className="tactical-pocket tactical-pocket--br" />
-            <span className="tactical-line tactical-line--cue" />
-            <span className="tactical-line tactical-line--leave" />
-            <span className="tactical-ball tactical-ball--cue" />
-            <span className="tactical-ball tactical-ball--target" />
-            <span className="tactical-ball tactical-ball--next" />
-          </div>
           <div className="hero__stats">
             <div className="stat-chip">
               <span className="stat-chip__ball">1</span>

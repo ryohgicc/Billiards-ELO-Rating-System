@@ -1,4 +1,14 @@
-import { Brain, Clock, Crosshair, Route, ShieldCheck, Sparkles, Target } from "lucide-react";
+import {
+  AlertTriangle,
+  Brain,
+  CheckCircle2,
+  Clock,
+  Crosshair,
+  Route,
+  ShieldCheck,
+  Sparkles,
+  Target,
+} from "lucide-react";
 
 const ruleCards = [
   {
@@ -19,7 +29,7 @@ const ruleCards = [
   {
     title: "黑八争议",
     label: "Final ball",
-    body: "打黑八前先确认袋口。多数规则里，黑八进错袋、母球同时落袋、先碰错球都可能判负。",
+    body: "打黑八前先确认袋口、先碰目标球、母球不能落袋。黑八提前进、进错袋、打黑八犯规，通常都按严重犯规或直接负局处理。",
   },
   {
     title: "9 球简明规则",
@@ -31,6 +41,76 @@ const ruleCards = [
     label: "Safety",
     body: "没有高把握进攻时，把母球藏住或让对手只剩远台薄球，往往比硬拼更能赢局。",
   },
+];
+
+const disputeCards = [
+  {
+    title: "开球进黑八",
+    ruling: "赛前要约定重开、胜局或摆回黑八继续。民间局最建议重开，减少吵架。",
+    note: "如果同时母球落袋，通常不能算胜局。",
+  },
+  {
+    title: "开球有球进袋",
+    ruling: "不要急着定组。常见处理是继续击球，等非开球杆合法进球后再确认全色或花色。",
+    note: "也有场地按开球进什么就选什么，必须赛前说清。",
+  },
+  {
+    title: "球组还没确认",
+    ruling: "未定组时先碰任意非黑八目标球都可，合法进球后确定球组；直接碰黑八一般不算合法选择。",
+    note: "如果一杆同时进全色和花色，通常由击球方选择球组。",
+  },
+  {
+    title: "黑八提前进",
+    ruling: "自己的目标球还没清完就打进黑八，多数规则直接判负。",
+    note: "无论是故意、误进还是连带进，都应按同一口径处理。",
+  },
+  {
+    title: "黑八进错袋",
+    ruling: "采用指定袋规则时，黑八进了非指定袋通常判负；不指定袋玩法则按赛前约定。",
+    note: "打黑八前最好口头报袋，尤其是组合、翻袋、传球。",
+  },
+  {
+    title: "黑八和母球同落",
+    ruling: "即使黑八进了指定袋，母球同时落袋也通常判负。",
+    note: "黑八局最常见争议之一，建议默认从严。",
+  },
+  {
+    title: "犯规后能否打黑八",
+    ruling: "如果自己目标球已清完，获得自由球后可以摆母球打黑八；仍要先合法碰黑八并按约定入袋。",
+    note: "如果目标球没清完，不能借自由球直接打黑八赢局。",
+  },
+  {
+    title: "没有球碰库",
+    ruling: "母球先合法碰到目标球后，若没有任何球进袋，也没有任何球碰库，通常判犯规。",
+    note: "轻贴、轻推、防守球都要注意这一条。",
+  },
+  {
+    title: "先碰错球",
+    ruling: "母球第一碰不是自己的目标球，通常犯规；打黑八阶段第一碰必须是黑八。",
+    note: "传球、借球、组合球也看母球第一碰。",
+  },
+  {
+    title: "贴库球争议",
+    ruling: "目标球贴库时，击打后通常需要有球进袋，或母球/目标球/其他球再次碰库才算合法。",
+    note: "开打前先声明“这颗贴库”，双方确认会省很多事。",
+  },
+  {
+    title: "推杆、连击、二次触球",
+    ruling: "杆头长时间推着母球、近距离连续碰母球，通常判犯规。",
+    note: "母球和目标球距离很近时，抬高杆尾或薄切更安全。",
+  },
+  {
+    title: "身体或衣物碰球",
+    ruling: "手、衣服、球杆非杆头部分碰到台面上的球，通常犯规；是否复位由双方按赛前规则处理。",
+    note: "移动球后先停下来确认，别继续出杆扩大争议。",
+  },
+];
+
+const disputePrinciples = [
+  "先看赛前约定，再看场地规则；没有约定时，按更常见、更容易执行的口径处理。",
+  "争议发生时先暂停，不要补杆；双方确认球位和事实后再继续。",
+  "只争事实，不争情绪：第一碰哪颗、有没有进袋、有没有碰库、母球是否落袋。",
+  "无法确认就重摆或重打该局，比带着不服继续打更公平。",
 ];
 
 const drills = [
@@ -79,7 +159,8 @@ export function AcademyView() {
             规则、技巧、走位、训练和比赛心法都放在一个快速扫读的内容库里。上场前看一眼，少一点随手打，多一点主动控制。
           </p>
           <div className="academy-hero__stats">
-            <span>6 条规则</span>
+            <span>18 条规则</span>
+            <span>12 个争议场景</span>
             <span>6 个技巧</span>
             <span>4 套训练</span>
           </div>
@@ -108,6 +189,41 @@ export function AcademyView() {
               <p>{card.body}</p>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">China 8-Ball</p>
+            <h2>中 8 争议球处理</h2>
+          </div>
+          <span className="section-note">先停杆，再判定</span>
+        </div>
+
+        <div className="academy-dispute-grid">
+          {disputeCards.map((card) => (
+            <article key={card.title} className="academy-dispute-card">
+              <AlertTriangle aria-hidden="true" size={18} />
+              <div>
+                <h3>{card.title}</h3>
+                <p>{card.ruling}</p>
+                <span>{card.note}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="academy-principles">
+          <div>
+            <CheckCircle2 aria-hidden="true" size={20} />
+            <h3>判定原则</h3>
+          </div>
+          <ol>
+            {disputePrinciples.map((principle) => (
+              <li key={principle}>{principle}</li>
+            ))}
+          </ol>
         </div>
       </section>
 
