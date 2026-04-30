@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildRankings,
+  buildRankingsThroughLocalDay,
   calculateMatchDelta,
   replayMatches,
 } from "@/lib/rating";
@@ -132,5 +133,43 @@ describe("buildRankings", () => {
     expect(rankings[0].rank).toBe(1);
     expect(rankings[0].winRate).toBe(1);
     expect(rankings[2].losses).toBe(2);
+  });
+});
+
+describe("buildRankingsThroughLocalDay", () => {
+  it("builds a ranking snapshot through the end of the selected local day", () => {
+    const matches: MatchRecord[] = [
+      {
+        id: "m1",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-27T11:00:00.000Z",
+      },
+      {
+        id: "m2",
+        winnerId: "p2",
+        loserId: "p1",
+        createdAt: "2026-04-28T11:00:00.000Z",
+      },
+    ];
+
+    const snapshot = buildRankingsThroughLocalDay(players.slice(0, 2), matches, "2026-04-27");
+
+    expect(snapshot.map((entry) => entry.player.id)).toEqual(["p1", "p2"]);
+    expect(snapshot[0].rating).toBe(1016);
+    expect(snapshot[1].rating).toBe(984);
+  });
+
+  it("excludes players created after the selected local day", () => {
+    const futurePlayer: Player = {
+      id: "p4",
+      name: "Dana",
+      createdAt: "2026-04-28T10:00:00.000Z",
+      isActive: true,
+    };
+
+    const snapshot = buildRankingsThroughLocalDay([...players, futurePlayer], [], "2026-04-27");
+
+    expect(snapshot.map((entry) => entry.player.id)).toEqual(["p1", "p2", "p3"]);
   });
 });

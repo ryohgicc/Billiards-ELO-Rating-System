@@ -1,10 +1,13 @@
 "use client";
 
 import { Medal, Trophy } from "lucide-react";
+import { useState } from "react";
 
 import { EmptyState } from "@/components/empty-state";
 import { formatDateTime, formatPercent } from "@/lib/format";
 import { useAppState } from "@/lib/app-state";
+import { groupEntriesByLocalDay } from "@/lib/history";
+import { buildRankingsThroughLocalDay } from "@/lib/rating";
 
 function getPodiumLabel(rank: number) {
   if (rank === 1) {
@@ -40,7 +43,20 @@ function PodiumBadge({ rank }: { rank: number }) {
 }
 
 export function RankingsView() {
-  const { rankings, state, isLoaded } = useAppState();
+  const { rankings, state, timeline, isLoaded } = useAppState();
+  const dailyGroups = groupEntriesByLocalDay(timeline);
+  const [selectedViewKey, setSelectedViewKey] = useState("overall");
+  const selectedDateGroup = dailyGroups.find((group) => group.dateKey === selectedViewKey);
+  const visibleRankings =
+    selectedViewKey === "overall"
+      ? rankings
+      : buildRankingsThroughLocalDay(
+          state.players,
+          state.matches,
+          selectedViewKey,
+          state.settings.kFactor,
+        );
+  const leader = visibleRankings[0];
 
   if (!isLoaded) {
     return <section className="panel">正在读取共享积分数据...</section>;
@@ -61,13 +77,13 @@ export function RankingsView() {
     <div className="stack">
       <section className="panel spotlight">
         <div>
-          <p className="eyebrow">当前榜首</p>
-          <h2>{rankings[0].player.name}</h2>
+          <p className="eyebrow">{selectedViewKey === "overall" ? "当前榜首" : "当日榜首"}</p>
+          <h2>{leader.player.name}</h2>
         </div>
         <div className="spotlight__meta">
-          <span>{rankings[0].rating} 分</span>
-          <span>{rankings[0].wins} 胜</span>
-          <span>{rankings[0].losses} 负</span>
+          <span>{leader.rating} 分</span>
+          <span>{leader.wins} 胜</span>
+          <span>{leader.losses} 负</span>
         </div>
       </section>
 
@@ -77,11 +93,45 @@ export function RankingsView() {
             <p className="eyebrow">Live Ranking</p>
             <h2>积分排行榜</h2>
           </div>
-          <span className="section-note">K 值 {state.settings.kFactor}</span>
+          <span className="section-note">
+            {selectedDateGroup?.dateLabel ?? "总榜"} · K 值 {state.settings.kFactor}
+          </span>
+        </div>
+
+        <div className="date-switcher" aria-label="按日期查看积分排行榜">
+          <button
+            aria-pressed={selectedViewKey === "overall"}
+            className={
+              selectedViewKey === "overall"
+                ? "date-switcher__button date-switcher__button--active"
+                : "date-switcher__button"
+            }
+            onClick={() => setSelectedViewKey("overall")}
+            type="button"
+          >
+            <span>总榜</span>
+            <strong>{rankings.length} 人</strong>
+          </button>
+          {dailyGroups.map((group) => (
+            <button
+              key={group.dateKey}
+              aria-pressed={group.dateKey === selectedViewKey}
+              className={
+                group.dateKey === selectedViewKey
+                  ? "date-switcher__button date-switcher__button--active"
+                  : "date-switcher__button"
+              }
+              onClick={() => setSelectedViewKey(group.dateKey)}
+              type="button"
+            >
+              <span>{group.dateLabel}</span>
+              <strong>截至当天</strong>
+            </button>
+          ))}
         </div>
 
         <div className="ranking-list ranking-list--mobile">
-          {rankings.map((entry) => (
+          {visibleRankings.map((entry) => (
             <article
               key={entry.player.id}
               className={
@@ -123,7 +173,7 @@ export function RankingsView() {
               </tr>
             </thead>
             <tbody>
-              {rankings.map((entry) => (
+              {visibleRankings.map((entry) => (
                 <tr
                   key={entry.player.id}
                   className={

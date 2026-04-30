@@ -104,6 +104,28 @@ export function buildRankings(
   }));
 }
 
+function getLocalDateKey(value: string) {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+export function buildRankingsThroughLocalDay(
+  players: Player[],
+  matches: MatchRecord[],
+  dateKey: string,
+  kFactor = 32,
+): RankingEntry[] {
+  return buildRankings(
+    players.filter((player) => getLocalDateKey(player.createdAt) <= dateKey),
+    matches.filter((match) => getLocalDateKey(match.createdAt) <= dateKey),
+    kFactor,
+  );
+}
+
 export function buildMatchTimeline(
   players: Player[],
   matches: MatchRecord[],
