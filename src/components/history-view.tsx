@@ -5,14 +5,21 @@ import { useState } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { formatDateTime } from "@/lib/format";
 import { groupEntriesByLocalDay, summarizeDailyRatingMovement } from "@/lib/history";
+import { formatMatchMomentLabel } from "@/lib/match-moments";
 import { useAppState } from "@/lib/app-state";
 
 export function HistoryView() {
-  const { timeline, removeMatch, isLoaded } = useAppState();
+  const { timeline, removeMatch, isLoaded, state } = useAppState();
   const dailyGroups = groupEntriesByLocalDay(timeline);
   const [selectedDateKey, setSelectedDateKey] = useState(dailyGroups[0]?.dateKey ?? "");
   const selectedGroup = dailyGroups.find((group) => group.dateKey === selectedDateKey) ?? dailyGroups[0];
   const dailyMovement = summarizeDailyRatingMovement(selectedGroup?.entries ?? []);
+  const aiReviewsByMatchId = Object.fromEntries(
+    state.aiReviews.map((review) => [review.matchId, review]),
+  );
+  const latestPendingMatchId = [...state.matches]
+    .filter((match) => !aiReviewsByMatchId[match.id])
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0]?.id;
 
   if (!isLoaded) {
     return <section className="panel">正在读取比赛历史...</section>;
@@ -96,6 +103,41 @@ export function HistoryView() {
                     <p>
                       当前落点：{entry.winnerRatingAfter} vs {entry.loserRatingAfter}
                     </p>
+                    {entry.winnerMoments.length > 0 || entry.loserMoments.length > 0 ? (
+                      <div className="badge-list">
+                        {entry.winnerMoments.map((moment) => (
+                          <span key={`${entry.id}-winner-${moment}`} className="badge badge--glory">
+                            胜者 · {formatMatchMomentLabel(moment)}
+                          </span>
+                        ))}
+                        {entry.loserMoments.map((moment) => (
+                          <span key={`${entry.id}-loser-${moment}`} className="badge badge--chaos">
+                            负者 · {formatMatchMomentLabel(moment)}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                    {aiReviewsByMatchId[entry.id]?.review ? (
+                      <>
+                        <p className="history-card__review">
+                          AI 锐评：{aiReviewsByMatchId[entry.id]?.review}
+                        </p>
+                        {aiReviewsByMatchId[entry.id]?.winnerEvaluation ? (
+                          <p className="history-card__review">
+                            胜者赛后评价：{aiReviewsByMatchId[entry.id]?.winnerEvaluation}
+                          </p>
+                        ) : null}
+                        {aiReviewsByMatchId[entry.id]?.loserEvaluation ? (
+                          <p className="history-card__review">
+                            负者赛后评价：{aiReviewsByMatchId[entry.id]?.loserEvaluation}
+                          </p>
+                        ) : null}
+                      </>
+                    ) : entry.id === latestPendingMatchId ? (
+                      <p className="history-card__review">AI 锐评与双方赛后评价生成中...</p>
+                    ) : null}
+                    {entry.winnerNote ? <p>胜者备注：{entry.winnerNote}</p> : null}
+                    {entry.loserNote ? <p>负者备注：{entry.loserNote}</p> : null}
                   </div>
                   <button
                     className="button button--danger"

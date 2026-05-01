@@ -6,6 +6,10 @@ export function createEmptyState(): AppState {
   return {
     players: [],
     matches: [],
+    photos: [],
+    aiProfiles: [],
+    aiReviews: [],
+    aiModels: [],
     settings: DEFAULT_SETTINGS,
   };
 }

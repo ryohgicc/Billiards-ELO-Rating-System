@@ -2,6 +2,7 @@
 
 import { ChangeEvent, useRef, useState } from "react";
 
+import { formatDateTime } from "@/lib/format";
 import { exportState } from "@/lib/storage";
 import { useAppState } from "@/lib/app-state";
 
@@ -37,9 +38,26 @@ function TitleEditor({
 
 export function SettingsView() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const { state, updateTitle, replaceStateFromImport, clearAllData } = useAppState();
+  const {
+    state,
+    updateTitle,
+    replaceAiModels,
+    resetAiModel,
+    replaceStateFromImport,
+    clearAllData,
+  } = useAppState();
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
+  const [aiModelsInput, setAiModelsInput] = useState("");
+  const [isEditingAiModels, setIsEditingAiModels] = useState(false);
+  const persistedAiModelsInput = state.aiModels.map((entry) => entry.model).join("\n");
+
+  function normalizeAiModelInput(raw: string) {
+    return raw
+      .split(/[\n,]/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
 
   function handleExport() {
     const blob = new Blob([exportState(state)], { type: "application/json" });
@@ -101,6 +119,101 @@ export function SettingsView() {
             }}
           />
         </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">AI Routing</p>
+            <h2>AI Key 与模型池</h2>
+          </div>
+          <span className="section-note">{state.aiModels.length} 个模型记录</span>
+        </div>
+
+        <div className="algorithm-copy">
+          <p>
+            本地开发把 `OPENAI_API_KEY` 和 `OPENAI_API_URL=https://aihubmix.com/v1` 写进
+            `.dev.vars`。你如果习惯写 `OPEN_AI_URL`，现在也兼容。
+          </p>
+          <p>
+            生产环境建议用 `wrangler secret put OPENAI_API_KEY`，`OPENAI_API_URL` 可配成普通变量或 secret。
+            模型名单不走环境变量，直接存在数据库里；Worker 会按名单轮询，某个模型调用失败就自动停用。
+          </p>
+        </div>
+
+        <label className="field">
+          <span>模型列表</span>
+          <textarea
+            onChange={(event) => {
+              setAiModelsInput(event.target.value);
+              setIsEditingAiModels(true);
+            }}
+            placeholder={"例如：\nfree-gpt-4o-mini\nfree-gemini-2.0-flash\nfree-deepseek-v3"}
+            rows={6}
+            value={isEditingAiModels ? aiModelsInput : persistedAiModelsInput}
+          />
+        </label>
+        <div className="button-row">
+          <button
+            className="button button--primary"
+            onClick={() => {
+              replaceAiModels(
+                normalizeAiModelInput(isEditingAiModels ? aiModelsInput : persistedAiModelsInput),
+              )
+                .then(() => {
+                  setAiModelsInput("");
+                  setIsEditingAiModels(false);
+                  setFeedback("AI 模型池已更新。");
+                  setError("");
+                })
+                .catch((updateError) => {
+                  setError(updateError instanceof Error ? updateError.message : "模型池更新失败");
+                  setFeedback("");
+                });
+            }}
+            type="button"
+          >
+            保存模型池
+          </button>
+        </div>
+
+        {state.aiModels.length > 0 ? (
+          <div className="preview-factor-list">
+            {state.aiModels.map((entry) => (
+              <article key={entry.model} className="preview-factor-card">
+                <strong>{entry.model}</strong>
+                <p>
+                  状态：{entry.isEnabled ? "可用" : "已停用"} · 失败 {entry.failureCount} 次
+                </p>
+                <p>
+                  上次尝试：{formatDateTime(entry.lastTriedAt)} · 上次成功：{formatDateTime(entry.lastSucceededAt)}
+                </p>
+                {entry.lastError ? <p>最近错误：{entry.lastError}</p> : null}
+                {!entry.isEnabled ? (
+                  <button
+                    className="button"
+                    onClick={() => {
+                      resetAiModel(entry.model)
+                        .then(() => {
+                          setFeedback(`模型 ${entry.model} 已重新启用。`);
+                          setError("");
+                        })
+                        .catch((resetError) => {
+                          setError(resetError instanceof Error ? resetError.message : "重新启用模型失败");
+                          setFeedback("");
+                        });
+                    }}
+                    type="button"
+                  >
+                    重新启用
+                  </button>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="algorithm-note">当前还没配置 AI 模型池，录比赛时不会生成 AI 画像和锐评。</p>
+        )}
       </section>
 
       <section className="panel">

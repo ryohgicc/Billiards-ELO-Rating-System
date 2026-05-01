@@ -1,0 +1,4 @@
+ALTER TABLE matches ADD COLUMN winner_moments TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE matches ADD COLUMN loser_moments TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE matches ADD COLUMN winner_note TEXT NOT NULL DEFAULT '';
+ALTER TABLE matches ADD COLUMN loser_note TEXT NOT NULL DEFAULT '';

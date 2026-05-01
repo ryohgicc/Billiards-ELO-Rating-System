@@ -1,10 +1,12 @@
 "use client";
 
 import { Activity, Gauge, Medal, Trophy } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import { EmptyState } from "@/components/empty-state";
-import { formatDateTime, formatPercent } from "@/lib/format";
+import { PlayerPhotoFrame } from "@/components/player-photo-frame";
+import { formatCurrency, formatDateTime, formatPercent } from "@/lib/format";
 import { useAppState } from "@/lib/app-state";
 import { groupEntriesByLocalDay } from "@/lib/history";
 import { buildLeaderInsight } from "@/lib/leader-insight";
@@ -48,7 +50,7 @@ function formatSignedValue(value: number) {
 }
 
 export function RankingsView() {
-  const { rankings, state, timeline, isLoaded } = useAppState();
+  const { rankings, state, timeline, isLoaded, profilesByPlayerId } = useAppState();
   const dailyGroups = groupEntriesByLocalDay(timeline);
   const [selectedViewKey, setSelectedViewKey] = useState("overall");
   const selectedDateGroup = dailyGroups.find((group) => group.dateKey === selectedViewKey);
@@ -63,6 +65,7 @@ export function RankingsView() {
         );
   const leader = visibleRankings[0];
   const leaderInsight = buildLeaderInsight(visibleRankings);
+  const leaderProfile = leader ? profilesByPlayerId[leader.player.id] : null;
 
   if (!isLoaded) {
     return <section className="panel">正在读取共享积分数据...</section>;
@@ -82,6 +85,16 @@ export function RankingsView() {
   return (
     <div className="stack">
       <section className="panel spotlight">
+        {leaderProfile ? (
+          <PlayerPhotoFrame
+            compact
+            href={`/preview?player=${encodeURIComponent(leader.player.id)}`}
+            photo={leaderProfile.featuredPhoto}
+            photoCount={leaderProfile.photoCount}
+            playerId={leader.player.id}
+            playerName={leader.player.name}
+          />
+        ) : null}
         <div className="spotlight__content">
           <div className="spotlight__identity">
             <span className="spotlight__rank">#1</span>
@@ -89,7 +102,22 @@ export function RankingsView() {
               <p className="eyebrow">
                 {selectedViewKey === "overall" ? "当前榜首" : "当日榜首"}
               </p>
-              <h2>{leader.player.name}</h2>
+              <h2>
+                <Link href={`/preview?player=${encodeURIComponent(leader.player.id)}`}>
+                  {leader.player.name}
+                </Link>
+              </h2>
+              {leaderProfile?.title ? (
+                <span
+                  className={
+                    leaderProfile.title.category === "legend"
+                      ? "title-pill title-pill--legend"
+                      : "title-pill title-pill--fun"
+                  }
+                >
+                  {leaderProfile.title.label}
+                </span>
+              ) : null}
             </div>
           </div>
 
@@ -142,6 +170,10 @@ export function RankingsView() {
             <strong>{formatDateTime(leader.lastMatchAt)}</strong>
             最近比赛
           </span>
+          <span>
+            <strong>{leaderProfile ? formatCurrency(leaderProfile.marketValue.amountUsd) : "暂无"}</strong>
+            身价
+          </span>
         </div>
         <div className="spotlight__watermark" aria-hidden="true">
           #01
@@ -192,33 +224,56 @@ export function RankingsView() {
         </div>
 
         <div className="ranking-list ranking-list--mobile">
-          {visibleRankings.map((entry) => (
-            <article
-              key={entry.player.id}
-              className={
-                entry.rank <= 3
-                  ? `ranking-card ranking-card--podium ranking-card--rank-${entry.rank}`
-                  : "ranking-card"
-              }
-            >
-              <div className="ranking-card__top">
-                <span className="ranking-card__rank">#{entry.rank}</span>
-                <div>
-                  <div className="ranking-card__name">
-                    <h3>{entry.player.name}</h3>
-                    <PodiumBadge rank={entry.rank} />
+          {visibleRankings.map((entry) => {
+            const profile = profilesByPlayerId[entry.player.id];
+
+            return (
+              <article
+                key={entry.player.id}
+                className={
+                  entry.rank <= 3
+                    ? `ranking-card ranking-card--podium ranking-card--rank-${entry.rank}`
+                    : "ranking-card"
+                }
+              >
+                {profile ? (
+                  <PlayerPhotoFrame
+                    compact
+                    href={`/preview?player=${encodeURIComponent(entry.player.id)}`}
+                    photo={profile.featuredPhoto}
+                    photoCount={profile.photoCount}
+                    playerId={entry.player.id}
+                    playerName={entry.player.name}
+                  />
+                ) : null}
+                <div className="ranking-card__top">
+                  <span className="ranking-card__rank">#{entry.rank}</span>
+                  <div>
+                    <div className="ranking-card__name">
+                      <h3>
+                        <Link href={`/preview?player=${encodeURIComponent(entry.player.id)}`}>
+                          {entry.player.name}
+                        </Link>
+                      </h3>
+                      <PodiumBadge rank={entry.rank} />
+                    </div>
+                    {profile?.title ? (
+                      <p className="ranking-card__title-note">{profile.title.label}</p>
+                    ) : null}
+                    <p>最近比赛：{formatDateTime(entry.lastMatchAt)}</p>
                   </div>
-                  <p>最近比赛：{formatDateTime(entry.lastMatchAt)}</p>
+                  <strong>{entry.rating}</strong>
                 </div>
-                <strong>{entry.rating}</strong>
-              </div>
-              <div className="ranking-card__stats">
-                <span>{entry.wins} 胜</span>
-                <span>{entry.losses} 负</span>
-                <span>胜率 {formatPercent(entry.winRate)}</span>
-              </div>
-            </article>
-          ))}
+                <div className="ranking-card__stats">
+                  <span>{entry.wins} 胜</span>
+                  <span>{entry.losses} 负</span>
+                  <span>胜率 {formatPercent(entry.winRate)}</span>
+                  <span>最长连胜 {profile?.bestWinStreak ?? 0}</span>
+                  <span>身价 {profile ? formatCurrency(profile.marketValue.amountUsd) : "暂无"}</span>
+                </div>
+              </article>
+            );
+          })}
         </div>
 
         <div className="table-wrap">
@@ -234,30 +289,53 @@ export function RankingsView() {
               </tr>
             </thead>
             <tbody>
-              {visibleRankings.map((entry) => (
-                <tr
-                  key={entry.player.id}
-                  className={
-                    entry.rank <= 3
-                      ? `ranking-table__row ranking-table__row--rank-${entry.rank}`
-                      : "ranking-table__row"
-                  }
-                >
-                  <td>
-                    <span className="ranking-rank-cell">
-                      #{entry.rank}
-                      <PodiumBadge rank={entry.rank} />
-                    </span>
-                  </td>
-                  <td>{entry.player.name}</td>
-                  <td>{entry.rating}</td>
-                  <td>
-                    {entry.wins}-{entry.losses}
-                  </td>
-                  <td>{formatPercent(entry.winRate)}</td>
-                  <td>{formatDateTime(entry.lastMatchAt)}</td>
-                </tr>
-              ))}
+              {visibleRankings.map((entry) => {
+                const profile = profilesByPlayerId[entry.player.id];
+
+                return (
+                  <tr
+                    key={entry.player.id}
+                    className={
+                      entry.rank <= 3
+                        ? `ranking-table__row ranking-table__row--rank-${entry.rank}`
+                        : "ranking-table__row"
+                    }
+                  >
+                    <td>
+                      <span className="ranking-rank-cell">
+                        #{entry.rank}
+                        <PodiumBadge rank={entry.rank} />
+                      </span>
+                    </td>
+                    <td>
+                      <div className="ranking-table__player">
+                        {profile ? (
+                          <PlayerPhotoFrame
+                            compact
+                            href={`/preview?player=${encodeURIComponent(entry.player.id)}`}
+                            photo={profile.featuredPhoto}
+                            photoCount={profile.photoCount}
+                            playerId={entry.player.id}
+                            playerName={entry.player.name}
+                          />
+                        ) : null}
+                        <div className="ranking-table__player-meta">
+                          <Link href={`/preview?player=${encodeURIComponent(entry.player.id)}`}>
+                            {entry.player.name}
+                          </Link>
+                          {profile?.title ? <small>{profile.title.label}</small> : null}
+                        </div>
+                      </div>
+                    </td>
+                    <td>{entry.rating}</td>
+                    <td>
+                      {entry.wins}-{entry.losses}
+                    </td>
+                    <td>{formatPercent(entry.winRate)}</td>
+                    <td>{formatDateTime(entry.lastMatchAt)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

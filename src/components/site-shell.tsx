@@ -4,6 +4,7 @@ import {
   BookOpen,
   Clock3,
   Database,
+  Eye,
   GraduationCap,
   ListOrdered,
   PlusCircle,
@@ -18,6 +19,7 @@ import { useAppState } from "@/lib/app-state";
 const links = [
   { href: "/", label: "排行榜", icon: ListOrdered },
   { href: "/matches", label: "录入比赛", icon: PlusCircle },
+  { href: "/preview", label: "球员预览", icon: Eye },
   { href: "/players", label: "球员管理", icon: Users },
   { href: "/history", label: "比赛历史", icon: Clock3 },
   { href: "/academy", label: "台球学堂", icon: GraduationCap },

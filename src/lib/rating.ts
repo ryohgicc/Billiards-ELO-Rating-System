@@ -1,5 +1,11 @@
 import { DEFAULT_RATING } from "@/lib/constants";
-import type { MatchRecord, Player, PlayerStats, RankingEntry } from "@/lib/types";
+import type {
+  MatchRecord,
+  MatchTimelineEntry,
+  Player,
+  PlayerStats,
+  RankingEntry,
+} from "@/lib/types";
 
 function getExpectedScore(playerRating: number, opponentRating: number) {
   return 1 / (1 + 10 ** ((opponentRating - playerRating) / 400));
@@ -26,6 +32,10 @@ function createInitialStats(players: Player[]) {
       rating: DEFAULT_RATING,
       wins: 0,
       losses: 0,
+      currentWinStreak: 0,
+      currentLossStreak: 0,
+      bestWinStreak: 0,
+      worstLossStreak: 0,
       lastMatchAt: undefined,
     };
 
@@ -55,10 +65,16 @@ export function replayMatches(
 
     winner.rating += delta.winnerDelta;
     winner.wins += 1;
+    winner.currentWinStreak += 1;
+    winner.currentLossStreak = 0;
+    winner.bestWinStreak = Math.max(winner.bestWinStreak, winner.currentWinStreak);
     winner.lastMatchAt = match.createdAt;
 
     loser.rating += delta.loserDelta;
     loser.losses += 1;
+    loser.currentLossStreak += 1;
+    loser.currentWinStreak = 0;
+    loser.worstLossStreak = Math.max(loser.worstLossStreak, loser.currentLossStreak);
     loser.lastMatchAt = match.createdAt;
   }
 
@@ -130,7 +146,7 @@ export function buildMatchTimeline(
   players: Player[],
   matches: MatchRecord[],
   kFactor = 32,
-) {
+): MatchTimelineEntry[] {
   const stats = createInitialStats(players);
   const playerMap = Object.fromEntries(players.map((player) => [player.id, player]));
 
@@ -147,7 +163,7 @@ export function buildMatchTimeline(
       }
 
       const delta = calculateMatchDelta(winner.rating, loser.rating, kFactor);
-      const entry = {
+      const entry: MatchTimelineEntry = {
         ...match,
         winnerName: winnerPlayer.name,
         loserName: loserPlayer.name,
@@ -159,9 +175,15 @@ export function buildMatchTimeline(
 
       winner.rating += delta.winnerDelta;
       winner.wins += 1;
+      winner.currentWinStreak += 1;
+      winner.currentLossStreak = 0;
+      winner.bestWinStreak = Math.max(winner.bestWinStreak, winner.currentWinStreak);
       winner.lastMatchAt = match.createdAt;
       loser.rating += delta.loserDelta;
       loser.losses += 1;
+      loser.currentLossStreak += 1;
+      loser.currentWinStreak = 0;
+      loser.worstLossStreak = Math.max(loser.worstLossStreak, loser.currentLossStreak);
       loser.lastMatchAt = match.createdAt;
 
       return entry;
