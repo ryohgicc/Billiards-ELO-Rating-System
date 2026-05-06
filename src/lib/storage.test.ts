@@ -71,6 +71,7 @@ describe("storage helpers", () => {
           playerId: "p1",
           imageData: "data:image/png;base64,abc123",
           createdAt: "2026-04-27T10:05:00.000Z",
+          role: "default",
         },
       ],
       aiProfiles: [

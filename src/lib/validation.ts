@@ -10,6 +10,7 @@ import {
   MAX_PLAYER_PHOTOS_PER_UPLOAD,
   isPlayerPhotoDataUrl,
   normalizePlayerPhotoImageData,
+  normalizePlayerPhotoRole,
 } from "@/lib/player-photos";
 import type {
   AiModelConfig,
@@ -42,7 +43,8 @@ function isPlayerPhoto(value: unknown): value is PlayerPhoto {
     typeof value.playerId === "string" &&
     typeof value.imageData === "string" &&
     isPlayerPhotoDataUrl(value.imageData) &&
-    typeof value.createdAt === "string"
+    typeof value.createdAt === "string" &&
+    (value.role === "default" || value.role === "victory" || value.role === "defeat")
   );
 }
 
@@ -133,6 +135,7 @@ function normalizeImportedPlayerPhoto(value: unknown): PlayerPhoto | null {
     playerId: value.playerId,
     imageData,
     createdAt: value.createdAt,
+    role: normalizePlayerPhotoRole(value.role),
   };
 }
 
@@ -277,7 +280,7 @@ export function validateMatchDetails(value: {
   };
 }
 
-export function validatePlayerPhotoPayload(value: { images?: unknown }, existingCount = 0) {
+export function validatePlayerPhotoPayload(value: { images?: unknown; role?: unknown }, existingCount = 0) {
   if (!Array.isArray(value.images) || value.images.length === 0) {
     throw new Error("请选择至少一张照片");
   }
@@ -290,7 +293,8 @@ export function validatePlayerPhotoPayload(value: { images?: unknown }, existing
     throw new Error(`每位球员最多保留 ${MAX_PLAYER_PHOTOS_PER_PLAYER} 张照片`);
   }
 
-  return value.images.map((image, index) => {
+  const role = normalizePlayerPhotoRole(value.role);
+  const images = value.images.map((image, index) => {
     if (typeof image !== "string" || !isPlayerPhotoDataUrl(image.trim())) {
       throw new Error(`第 ${index + 1} 张照片格式不正确`);
     }
@@ -303,6 +307,11 @@ export function validatePlayerPhotoPayload(value: { images?: unknown }, existing
 
     return normalized;
   });
+
+  return {
+    images,
+    role,
+  };
 }
 
 export function validateAiModelList(value: { models?: unknown }) {

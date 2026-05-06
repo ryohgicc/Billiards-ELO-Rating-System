@@ -282,7 +282,22 @@ describe("validatePlayerPhotoPayload", () => {
       validatePlayerPhotoPayload({
         images: ["data:image/jpeg;base64,abc", "data:image/png;base64,def"],
       }),
-    ).toEqual(["data:image/jpeg;base64,abc", "data:image/png;base64,def"]);
+    ).toEqual({
+      images: ["data:image/jpeg;base64,abc", "data:image/png;base64,def"],
+      role: "default",
+    });
+  });
+
+  it("accepts victory and defeat photo roles", () => {
+    expect(
+      validatePlayerPhotoPayload({
+        images: ["data:image/jpeg;base64,abc"],
+        role: "victory",
+      }),
+    ).toEqual({
+      images: ["data:image/jpeg;base64,abc"],
+      role: "victory",
+    });
   });
 
   it("rejects invalid images", () => {

@@ -11,6 +11,7 @@ import type {
   PlayerAiProfile,
   PlayerMarketValue,
   PlayerPhoto,
+  PlayerPhotoRole,
   PlayerProfile,
   PlayerRecentForm,
   PlayerRecentMatch,
@@ -383,6 +384,38 @@ function buildRecentForm(recentMatches: PlayerRecentMatch[]): PlayerRecentForm {
   );
 }
 
+function findLatestMatchRole(playerId: string, timeline: MatchTimelineEntry[]): PlayerPhotoRole {
+  const latestMatch = timeline.find(
+    (entry) => entry.winnerId === playerId || entry.loserId === playerId,
+  );
+
+  if (!latestMatch) {
+    return "default";
+  }
+
+  return latestMatch.winnerId === playerId ? "victory" : "defeat";
+}
+
+function pickResultAwareFeaturedPhoto(
+  photos: PlayerPhoto[],
+  latestMatchRole: PlayerPhotoRole,
+  seed: string,
+) {
+  const resultPhotos = photos.filter((photo) => photo.role === latestMatchRole);
+
+  if (resultPhotos.length > 0) {
+    return pickFeaturedPhoto(resultPhotos, seed);
+  }
+
+  const defaultPhotos = photos.filter((photo) => photo.role === "default");
+
+  if (defaultPhotos.length > 0) {
+    return pickFeaturedPhoto(defaultPhotos, seed);
+  }
+
+  return pickFeaturedPhoto(photos, seed);
+}
+
 function roundMarketValue(value: number) {
   return Math.round(value / 50) * 50;
 }
@@ -565,8 +598,10 @@ export function buildPlayerProfiles(
     const notableMoments = buildNotableMoments(context.momentCounts);
     const marketValue = buildMarketValue(context, title, recentForm);
     const playerPhotos = photosByPlayerId[player.id] ?? [];
-    const featuredPhoto = pickFeaturedPhoto(
+    const latestMatchRole = findLatestMatchRole(player.id, timeline);
+    const featuredPhoto = pickResultAwareFeaturedPhoto(
       playerPhotos,
+      latestMatchRole,
       `${photoSeed}:${player.id}:${playerPhotos.length}`,
     );
 

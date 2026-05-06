@@ -1,10 +1,19 @@
-import type { PlayerPhoto } from "@/lib/types";
+import type { PlayerPhoto, PlayerPhotoRole } from "@/lib/types";
 
 export const MAX_PLAYER_PHOTOS_PER_UPLOAD = 6;
 export const MAX_PLAYER_PHOTOS_PER_PLAYER = 24;
 export const MAX_PLAYER_PHOTO_DIMENSION = 1080;
 export const PLAYER_PHOTO_OUTPUT_QUALITY = 0.82;
 export const MAX_PLAYER_PHOTO_DATA_URL_LENGTH = 1_600_000;
+
+export function normalizePlayerPhotoRole(value: unknown): PlayerPhotoRole {
+  return value === "victory" || value === "defeat" ? value : "default";
+}
+
+export function getPlayerPhotoCanvasOutputType(fileType: string) {
+  void fileType;
+  return "image/jpeg";
+}
 
 function hashString(input: string) {
   let hash = 0;
@@ -103,11 +112,14 @@ export async function preparePlayerPhotoPayload(files: FileList | File[]) {
         throw new Error("浏览器不支持照片处理");
       }
 
+      context.fillStyle = "#f4f7f2";
+      context.fillRect(0, 0, width, height);
       context.drawImage(image, 0, 0, width, height);
+      const outputType = getPlayerPhotoCanvasOutputType(file.type);
       const imageData =
-        file.type === "image/png"
-          ? canvas.toDataURL("image/png")
-          : canvas.toDataURL("image/jpeg", PLAYER_PHOTO_OUTPUT_QUALITY);
+        outputType === "image/jpeg"
+          ? canvas.toDataURL(outputType, PLAYER_PHOTO_OUTPUT_QUALITY)
+          : canvas.toDataURL(outputType);
 
       if (imageData.length > MAX_PLAYER_PHOTO_DATA_URL_LENGTH) {
         throw new Error("照片过大，请换一张更小的图片");

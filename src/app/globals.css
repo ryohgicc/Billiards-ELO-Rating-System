@@ -1088,6 +1088,11 @@ button {
   align-self: stretch;
 }
 
+.player-photo-upload-grid {
+  display: grid;
+  gap: 0.45rem;
+}
+
 .player-row__title,
 .history-card__title {
   display: flex;

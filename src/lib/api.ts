@@ -1,4 +1,4 @@
-import type { AppState, MatchMomentKey } from "@/lib/types";
+import type { AppState, MatchMomentKey, PlayerPhotoRole } from "@/lib/types";
 
 async function requestState(path: string, init?: RequestInit): Promise<AppState> {
   const response = await fetch(path, {
@@ -38,10 +38,10 @@ export const api = {
       body: JSON.stringify({ name }),
     });
   },
-  createPlayerPhotos(playerId: string, images: string[]) {
+  createPlayerPhotos(playerId: string, images: string[], role: PlayerPhotoRole = "default") {
     return requestState(`/api/players/${encodeURIComponent(playerId)}/photos`, {
       method: "POST",
-      body: JSON.stringify({ images }),
+      body: JSON.stringify({ images, role }),
     });
   },
   createMatch(

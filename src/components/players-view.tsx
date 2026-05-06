@@ -8,6 +8,7 @@ import { PlayerPhotoFrame } from "@/components/player-photo-frame";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { preparePlayerPhotoPayload } from "@/lib/player-photos";
 import { useAppState } from "@/lib/app-state";
+import type { PlayerPhotoRole } from "@/lib/types";
 
 export function PlayersView() {
   const {
@@ -24,7 +25,7 @@ export function PlayersView() {
   const [error, setError] = useState("");
   const [editingPlayerId, setEditingPlayerId] = useState("");
   const [editingName, setEditingName] = useState("");
-  const [uploadingPlayerId, setUploadingPlayerId] = useState("");
+  const [uploadingPhotoTarget, setUploadingPhotoTarget] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -53,22 +54,28 @@ export function PlayersView() {
     }
   }
 
-  async function handlePhotoUpload(playerId: string, files: FileList | null) {
+  async function handlePhotoUpload(
+    playerId: string,
+    role: PlayerPhotoRole,
+    files: FileList | null,
+  ) {
     if (!files || files.length === 0) {
       return;
     }
 
+    const uploadTarget = `${playerId}:${role}`;
+
     try {
-      setUploadingPlayerId(playerId);
+      setUploadingPhotoTarget(uploadTarget);
       const images = await preparePlayerPhotoPayload(files);
-      await addPlayerPhotos(playerId, images);
+      await addPlayerPhotos(playerId, images, role);
       setError("");
     } catch (submissionError) {
       setError(
         submissionError instanceof Error ? submissionError.message : "上传球员照片失败",
       );
     } finally {
-      setUploadingPlayerId("");
+      setUploadingPhotoTarget("");
     }
   }
 
@@ -138,20 +145,40 @@ export function PlayersView() {
                       playerId={player.id}
                       playerName={player.name}
                     />
-                    <label className="button" htmlFor={`player-photo-${player.id}`}>
-                      {uploadingPlayerId === player.id ? "上传中..." : "新增照片"}
-                    </label>
-                    <input
-                      className="sr-only"
-                      id={`player-photo-${player.id}`}
-                      multiple
-                      onChange={(event) => {
-                        handlePhotoUpload(player.id, event.target.files).catch(() => undefined);
-                        event.target.value = "";
-                      }}
-                      type="file"
-                      accept="image/*"
-                    />
+                    <div className="player-photo-upload-grid">
+                      {[
+                        ["default", "新增照片"],
+                        ["victory", "胜利图片"],
+                        ["defeat", "失败图片"],
+                      ].map(([role, label]) => {
+                        const photoRole = role as PlayerPhotoRole;
+                        const inputId = `player-photo-${photoRole}-${player.id}`;
+                        const isUploading = uploadingPhotoTarget === `${player.id}:${photoRole}`;
+
+                        return (
+                          <div key={photoRole}>
+                            <label className="button" htmlFor={inputId}>
+                              {isUploading ? "上传中..." : label}
+                            </label>
+                            <input
+                              className="sr-only"
+                              id={inputId}
+                              multiple={photoRole === "default"}
+                              onChange={(event) => {
+                                handlePhotoUpload(
+                                  player.id,
+                                  photoRole,
+                                  event.target.files,
+                                ).catch(() => undefined);
+                                event.target.value = "";
+                              }}
+                              type="file"
+                              accept="image/*"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 ) : null}
                 <div className="player-row__content">
