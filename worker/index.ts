@@ -256,26 +256,53 @@ function stateCacheKey(request: Request) {
   return new Request(url.toString(), { method: "GET" });
 }
 
-async function cachedStateResponse(request: Request, env: Env, ctx: ExecutionContext) {
-  const cache = (caches as CacheStorage & { default: Cache }).default;
-  const cacheKey = stateCacheKey(request);
-  const cached = await cache.match(cacheKey);
+function stateCache() {
+  return (caches as CacheStorage & { default?: Cache }).default;
+}
 
-  if (cached) {
-    return cached;
+async function cachedStateResponse(request: Request, env: Env, ctx: ExecutionContext) {
+  const cache = stateCache();
+  const cacheKey = stateCacheKey(request);
+
+  if (cache) {
+    try {
+      const cached = await cache.match(cacheKey);
+
+      if (cached) {
+        return cached;
+      }
+    } catch (error) {
+      console.warn("State cache read failed", error);
+    }
   }
 
   const response = jsonResponse(await loadState(env.DB), {
     headers: STATE_CACHE_HEADERS,
   });
 
-  ctx.waitUntil(cache.put(cacheKey, response.clone()));
+  if (cache) {
+    ctx.waitUntil(
+      cache.put(cacheKey, response.clone()).catch((error) => {
+        console.warn("State cache write failed", error);
+      }),
+    );
+  }
 
   return response;
 }
 
 async function clearStateCache(request: Request) {
-  await (caches as CacheStorage & { default: Cache }).default.delete(stateCacheKey(request));
+  const cache = stateCache();
+
+  if (!cache) {
+    return;
+  }
+
+  try {
+    await cache.delete(stateCacheKey(request));
+  } catch (error) {
+    console.warn("State cache delete failed", error);
+  }
 }
 
 async function freshStateResponse(request: Request, env: Env, init?: ResponseInit) {
