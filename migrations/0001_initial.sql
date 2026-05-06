@@ -25,4 +25,4 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 INSERT OR IGNORE INTO settings (key, value) VALUES ('title', '台球积分榜');
-INSERT OR IGNORE INTO settings (key, value) VALUES ('kFactor', '32');
+INSERT OR IGNORE INTO settings (key, value) VALUES ('kFactor', '100');

@@ -1,4 +1,4 @@
-import { DEFAULT_RATING } from "@/lib/constants";
+import { DEFAULT_K_FACTOR, DEFAULT_RATING } from "@/lib/constants";
 import type {
   MatchRecord,
   MatchTimelineEntry,
@@ -14,10 +14,13 @@ function getExpectedScore(playerRating: number, opponentRating: number) {
 export function calculateMatchDelta(
   winnerRating: number,
   loserRating: number,
-  kFactor = 32,
+  kFactor = DEFAULT_K_FACTOR,
 ) {
   const winnerExpectedScore = getExpectedScore(winnerRating, loserRating);
-  const winnerDelta = Math.round(kFactor * (1 - winnerExpectedScore));
+  const baseDelta = kFactor * (1 - winnerExpectedScore);
+  const upsetGap = Math.max(0, loserRating - winnerRating);
+  const upsetMultiplier = 1 + Math.min(1.2, 0.75 * (upsetGap / 400) ** 1.15);
+  const winnerDelta = Math.round(Math.min(160, Math.max(5, baseDelta * upsetMultiplier)));
 
   return {
     winnerDelta,
@@ -46,7 +49,7 @@ function createInitialStats(players: Player[]) {
 export function replayMatches(
   players: Player[],
   matches: MatchRecord[],
-  kFactor = 32,
+  kFactor = DEFAULT_K_FACTOR,
 ) {
   const stats = createInitialStats(players);
   const sortedMatches = [...matches].sort((left, right) =>
@@ -84,7 +87,7 @@ export function replayMatches(
 export function buildRankings(
   players: Player[],
   matches: MatchRecord[],
-  kFactor = 32,
+  kFactor = DEFAULT_K_FACTOR,
 ): RankingEntry[] {
   const stats = Object.values(replayMatches(players, matches, kFactor))
     .filter((entry) => entry.player.isActive)
@@ -133,7 +136,7 @@ export function buildRankingsThroughLocalDay(
   players: Player[],
   matches: MatchRecord[],
   dateKey: string,
-  kFactor = 32,
+  kFactor = DEFAULT_K_FACTOR,
 ): RankingEntry[] {
   return buildRankings(
     players.filter((player) => getLocalDateKey(player.createdAt) <= dateKey),
@@ -145,7 +148,7 @@ export function buildRankingsThroughLocalDay(
 export function buildMatchTimeline(
   players: Player[],
   matches: MatchRecord[],
-  kFactor = 32,
+  kFactor = DEFAULT_K_FACTOR,
 ): MatchTimelineEntry[] {
   const stats = createInitialStats(players);
   const playerMap = Object.fromEntries(players.map((player) => [player.id, player]));

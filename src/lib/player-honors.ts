@@ -1,4 +1,4 @@
-import { DEFAULT_RATING } from "@/lib/constants";
+import { DEFAULT_K_FACTOR, DEFAULT_RATING } from "@/lib/constants";
 import { MATCH_MOMENT_OPTIONS, formatMatchMomentLabel } from "@/lib/match-moments";
 import { pickFeaturedPhoto } from "@/lib/player-photos";
 import { buildMatchTimeline, replayMatches } from "@/lib/rating";
@@ -525,7 +525,7 @@ export function buildPlayerProfiles(
   players: Player[],
   matches: MatchRecord[],
   photos: PlayerPhoto[] = [],
-  kFactor = 32,
+  kFactor = DEFAULT_K_FACTOR,
   photoSeed = "default-photo-seed",
 ): Record<string, PlayerProfile> {
   const stats = replayMatches(players, matches, kFactor);

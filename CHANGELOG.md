@@ -9,6 +9,8 @@ All notable changes to this project will be documented in this file.
 - 新增 D1 迁移 `0007_player_photo_roles.sql`，为 `player_photos` 增加照片用途字段。
 
 ### Changed
+- 积分算法升级为激进 Elo：默认 K 值改为 `100`，同分胜负变化 `50` 分，低分爆冷击败高分会额外放大，单场变化封顶 `160` 分。
+- 历史积分继续从胜负记录回放重算，线上 D1 `settings.kFactor` 需要同步为 `100` 才会让现有数据使用新算法。
 - 球员管理照片上传区域只保留“上传胜利图片”和“上传失败图片”两个按钮，并收紧列表左侧照片布局。
 - 积分榜照片缩略图隐藏图片上的名字、首字母和照片数量文字。
 
