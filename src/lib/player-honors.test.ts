@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildPlayerProfiles, mergeAiProfilesIntoPlayerProfiles } from "@/lib/player-honors";
-import type { MatchRecord, Player, PlayerAiProfile } from "@/lib/types";
+import type { MatchRecord, Player, PlayerAiProfile, PlayerPhoto } from "@/lib/types";
 
 const players: Player[] = [
   {
@@ -143,5 +143,66 @@ describe("buildPlayerProfiles", () => {
 
     expect(merged.p2.titleSource).toBe("rules");
     expect(merged.p2.title?.label).not.toBe("过期旧称号");
+  });
+
+  it("uses the latest match result to pick victory or defeat photos", () => {
+    const photos: PlayerPhoto[] = [
+      {
+        id: "p1-default",
+        playerId: "p1",
+        imageData: "data:image/jpeg;base64,default",
+        createdAt: "2026-04-27T10:05:00.000Z",
+        role: "default",
+      },
+      {
+        id: "p1-victory",
+        playerId: "p1",
+        imageData: "data:image/jpeg;base64,victory",
+        createdAt: "2026-04-27T10:06:00.000Z",
+        role: "victory",
+      },
+      {
+        id: "p1-defeat",
+        playerId: "p1",
+        imageData: "data:image/jpeg;base64,defeat",
+        createdAt: "2026-04-27T10:07:00.000Z",
+        role: "defeat",
+      },
+    ];
+
+    const winningProfiles = buildPlayerProfiles(
+      players,
+      [
+        createMatch({
+          id: "m1",
+          winnerId: "p1",
+          loserId: "p2",
+          createdAt: "2026-04-27T11:00:00.000Z",
+        }),
+      ],
+      photos,
+    );
+
+    const losingProfiles = buildPlayerProfiles(
+      players,
+      [
+        createMatch({
+          id: "m1",
+          winnerId: "p1",
+          loserId: "p2",
+          createdAt: "2026-04-27T11:00:00.000Z",
+        }),
+        createMatch({
+          id: "m2",
+          winnerId: "p2",
+          loserId: "p1",
+          createdAt: "2026-04-27T11:10:00.000Z",
+        }),
+      ],
+      photos,
+    );
+
+    expect(winningProfiles.p1.featuredPhoto?.id).toBe("p1-victory");
+    expect(losingProfiles.p1.featuredPhoto?.id).toBe("p1-defeat");
   });
 });

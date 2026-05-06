@@ -1,7 +1,7 @@
 import { DEFAULT_SETTINGS } from "../src/lib/constants";
 import { normalizeMatchMomentKeys, normalizeMatchNote } from "../src/lib/match-moments";
 import { buildPlayerProfiles } from "../src/lib/player-honors";
-import { normalizePlayerPhotoImageData } from "../src/lib/player-photos";
+import { normalizePlayerPhotoImageData, normalizePlayerPhotoRole } from "../src/lib/player-photos";
 import type {
   AiModelConfig,
   AppState,
@@ -53,6 +53,7 @@ type PlayerPhotoRow = {
   player_id: string;
   image_data: string;
   created_at: string;
+  role: string | null;
 };
 
 type PlayerAiProfileRow = {
@@ -142,7 +143,7 @@ async function loadState(db: D1Database): Promise<AppState> {
       .all<MatchRow>(),
     db
       .prepare(
-        "SELECT id, player_id, image_data, created_at FROM player_photos ORDER BY created_at ASC",
+        "SELECT id, player_id, image_data, created_at, role FROM player_photos ORDER BY created_at ASC",
       )
       .all<PlayerPhotoRow>(),
     db
@@ -186,6 +187,7 @@ async function loadState(db: D1Database): Promise<AppState> {
     playerId: row.player_id,
     imageData: normalizePlayerPhotoImageData(row.image_data),
     createdAt: row.created_at,
+    role: normalizePlayerPhotoRole(row.role),
   }));
 
   const aiProfiles: PlayerAiProfile[] = (aiProfilesResult.results ?? []).map((row) => ({
@@ -664,19 +666,25 @@ async function createPlayerPhotos(playerId: string, request: Request, env: Env) 
     return errorResponse("球员不存在", 404);
   }
 
-  const images = validatePlayerPhotoPayload(
+  const photoPayload = validatePlayerPhotoPayload(
     body,
     state.photos.filter((photo) => photo.playerId === playerId).length,
   );
   const now = new Date().toISOString();
 
   await env.DB.batch(
-    images.map((imageData, index) =>
+    photoPayload.images.map((imageData, index) =>
       env.DB
         .prepare(
-          "INSERT INTO player_photos (id, player_id, image_data, created_at) VALUES (?, ?, ?, ?)",
+          "INSERT INTO player_photos (id, player_id, image_data, created_at, role) VALUES (?, ?, ?, ?, ?)",
         )
-        .bind(createId("photo"), playerId, imageData, new Date(Date.parse(now) + index).toISOString()),
+        .bind(
+          createId("photo"),
+          playerId,
+          imageData,
+          new Date(Date.parse(now) + index).toISOString(),
+          photoPayload.role,
+        ),
     ),
   );
 
@@ -806,8 +814,8 @@ async function replaceState(request: Request, env: Env) {
     ),
     ...state.photos.map((photo) =>
       env.DB
-        .prepare("INSERT INTO player_photos (id, player_id, image_data, created_at) VALUES (?, ?, ?, ?)")
-        .bind(photo.id, photo.playerId, photo.imageData, photo.createdAt),
+        .prepare("INSERT INTO player_photos (id, player_id, image_data, created_at, role) VALUES (?, ?, ?, ?, ?)")
+        .bind(photo.id, photo.playerId, photo.imageData, photo.createdAt, photo.role),
     ),
     ...state.aiProfiles.map((profile) => buildPlayerAiProfileUpsertStatement(env.DB, profile)),
     ...state.aiReviews.map((review) => buildMatchAiReviewUpsertStatement(env.DB, review)),

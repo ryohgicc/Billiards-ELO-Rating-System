@@ -15,7 +15,7 @@ import { DEFAULT_K_FACTOR, DEFAULT_SETTINGS } from "@/lib/constants";
 import { buildPlayerProfiles, mergeAiProfilesIntoPlayerProfiles } from "@/lib/player-honors";
 import { buildMatchTimeline, buildRankings, calculateMatchDelta, replayMatches } from "@/lib/rating";
 import { createEmptyState, importState } from "@/lib/storage";
-import type { AppState, MatchMomentKey, Player, PlayerProfile } from "@/lib/types";
+import type { AppState, MatchMomentKey, Player, PlayerPhotoRole, PlayerProfile } from "@/lib/types";
 import {
   validateAiModelList,
   validateMatchDetails,
@@ -62,7 +62,7 @@ type AppStateContextValue = {
   createPlayer: (name: string) => Promise<void>;
   togglePlayer: (playerId: string) => Promise<void>;
   updatePlayerName: (playerId: string, name: string) => Promise<void>;
-  addPlayerPhotos: (playerId: string, images: string[]) => Promise<void>;
+  addPlayerPhotos: (playerId: string, images: string[], role?: PlayerPhotoRole) => Promise<void>;
   replaceAiModels: (models: string[]) => Promise<void>;
   resetAiModel: (model: string) => Promise<void>;
   addMatch: (payload: {
@@ -221,12 +221,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       validatePlayerName(name, state.players, playerId);
       applyServerState(await api.updatePlayerName(playerId, name));
     },
-    async addPlayerPhotos(playerId, images) {
-      validatePlayerPhotoPayload(
-        { images },
+    async addPlayerPhotos(playerId, images, role = "default") {
+      const payload = validatePlayerPhotoPayload(
+        { images, role },
         state.photos.filter((photo) => photo.playerId === playerId).length,
       );
-      applyServerState(await api.createPlayerPhotos(playerId, images));
+      applyServerState(await api.createPlayerPhotos(playerId, payload.images, payload.role));
     },
     async replaceAiModels(models) {
       const normalized = validateAiModelList({ models });

@@ -73,6 +73,7 @@ If cloning for another Cloudflare account, update `database_id` in `wrangler.jso
 - Validate both client-side and Worker-side inputs.
 - Do not persist computed rankings to D1 unless the architecture is intentionally changed.
 - Avoid unrelated refactors when making feature changes.
+- Whenever code is changed, also update the changelog and README to reflect the change before claiming the work is complete.
 
 ## UI Guidance
 

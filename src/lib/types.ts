@@ -10,7 +10,10 @@ export type PlayerPhoto = {
   playerId: string;
   imageData: string;
   createdAt: string;
+  role: PlayerPhotoRole;
 };
+
+export type PlayerPhotoRole = "default" | "victory" | "defeat";
 
 export type PlayerAiProfile = {
   playerId: string;
