@@ -12,6 +12,7 @@ type PlayerPhotoFrameProps = {
   photoCount?: number;
   href?: string;
   compact?: boolean;
+  hideText?: boolean;
 };
 
 function PlayerPhotoFrameInner({
@@ -19,6 +20,7 @@ function PlayerPhotoFrameInner({
   photo,
   photoCount = 0,
   compact = false,
+  hideText = false,
 }: Omit<PlayerPhotoFrameProps, "playerId" | "href">) {
   return (
     <div className={compact ? "player-photo-frame player-photo-frame--compact" : "player-photo-frame"}>
@@ -31,13 +33,15 @@ function PlayerPhotoFrameInner({
         />
       ) : (
         <div className="player-photo-frame__placeholder" aria-hidden="true">
-          <span>{playerName.slice(0, 1).toUpperCase()}</span>
+          {hideText ? null : <span>{playerName.slice(0, 1).toUpperCase()}</span>}
         </div>
       )}
-      <div className="player-photo-frame__overlay">
-        <strong>{playerName}</strong>
-        <span>{photoCount > 0 ? `${photoCount} 张照片轮播中` : "暂无照片"}</span>
-      </div>
+      {hideText ? null : (
+        <div className="player-photo-frame__overlay">
+          <strong>{playerName}</strong>
+          <span>{photoCount > 0 ? `${photoCount} 张照片轮播中` : "暂无照片"}</span>
+        </div>
+      )}
     </div>
   );
 }

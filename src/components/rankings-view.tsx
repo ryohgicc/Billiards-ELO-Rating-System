@@ -88,6 +88,7 @@ export function RankingsView() {
         {leaderProfile ? (
           <PlayerPhotoFrame
             compact
+            hideText
             href={`/preview?player=${encodeURIComponent(leader.player.id)}`}
             photo={leaderProfile.featuredPhoto}
             photoCount={leaderProfile.photoCount}
@@ -239,6 +240,7 @@ export function RankingsView() {
                 {profile ? (
                   <PlayerPhotoFrame
                     compact
+                    hideText
                     href={`/preview?player=${encodeURIComponent(entry.player.id)}`}
                     photo={profile.featuredPhoto}
                     photoCount={profile.photoCount}
@@ -312,6 +314,7 @@ export function RankingsView() {
                         {profile ? (
                           <PlayerPhotoFrame
                             compact
+                            hideText
                             href={`/preview?player=${encodeURIComponent(entry.player.id)}`}
                             photo={profile.featuredPhoto}
                             photoCount={profile.photoCount}

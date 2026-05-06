@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - 球员管理照片上传区域只保留“上传胜利图片”和“上传失败图片”两个按钮，并收紧列表左侧照片布局。
+- 积分榜照片缩略图隐藏图片上的名字、首字母和照片数量文字。
 
 ### Fixed
 - 修复 PNG 上传后可能因为 data URL 过大或透明背景导致显示异常的问题，上传处理统一输出 JPEG data URL。
