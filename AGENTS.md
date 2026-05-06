@@ -46,11 +46,14 @@ npx wrangler deploy --dry-run
 D1 migrations:
 
 ```bash
+npx wrangler d1 migrations list billiards-elo-db --remote
 npm run db:migrate:local
 npm run db:migrate:remote
+npx wrangler d1 migrations list billiards-elo-db --remote
 ```
 
 Run the remote migration only when schema changes are ready for the production Cloudflare D1 database.
+Before or after deploying any Worker code that reads new D1 tables/columns, always check the remote migration list, apply pending migrations, and verify it reports `No migrations to apply`. Do not deploy schema-dependent Worker changes without the matching remote D1 migration.
 
 ## Deployment Notes
 
@@ -64,6 +67,12 @@ The current D1 binding is:
 - Database name: `billiards-elo-db`
 
 If cloning for another Cloudflare account, update `database_id` in `wrangler.jsonc`.
+
+D1 deployment safety:
+- If `worker/index.ts`, `src/lib/types.ts`, validation, import/export logic, or anything under `migrations/` changes D1 schema expectations, run `npx wrangler d1 migrations list billiards-elo-db --remote` before deployment.
+- If any migration is pending, run `npm run db:migrate:remote` before or together with deployment.
+- After migration, run `npx wrangler d1 migrations list billiards-elo-db --remote` again and confirm `No migrations to apply`.
+- A Worker that reads a column/table before the remote D1 migration is applied will make `/api/state` fail with 500.
 
 ## Code Style
 

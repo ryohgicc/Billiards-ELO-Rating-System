@@ -134,8 +134,12 @@ output: "export"
 然后执行远程数据库迁移：
 
 ```bash
+npx wrangler d1 migrations list billiards-elo-db --remote
 npm run db:migrate:remote
+npx wrangler d1 migrations list billiards-elo-db --remote
 ```
+
+第二次检查必须显示 `No migrations to apply`。如果 Worker 代码已经读取新表或新字段，但远程 D1 迁移还没应用，`/api/state` 会直接返回 500。
 
 迁移成功后，Cloudflare 会发布 `out` 目录中的静态页面，并用 Worker 处理 `/api/*` 数据请求。
 
