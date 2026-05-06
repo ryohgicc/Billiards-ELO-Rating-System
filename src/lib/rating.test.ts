@@ -29,6 +29,16 @@ const players: Player[] = [
   },
 ];
 
+function createMatch(match: Omit<MatchRecord, "winnerMoments" | "loserMoments" | "winnerNote" | "loserNote">): MatchRecord {
+  return {
+    ...match,
+    winnerMoments: [],
+    loserMoments: [],
+    winnerNote: "",
+    loserNote: "",
+  };
+}
+
 describe("calculateMatchDelta", () => {
   it("gives the winner and loser equal opposite rating changes", () => {
     const result = calculateMatchDelta(1000, 1000);
@@ -50,18 +60,18 @@ describe("calculateMatchDelta", () => {
 describe("replayMatches", () => {
   it("starts new players at 1000 and accumulates match history in order", () => {
     const matches: MatchRecord[] = [
-      {
+      createMatch({
         id: "m1",
         winnerId: "p1",
         loserId: "p2",
         createdAt: "2026-04-27T11:00:00.000Z",
-      },
-      {
+      }),
+      createMatch({
         id: "m2",
         winnerId: "p2",
         loserId: "p1",
         createdAt: "2026-04-27T11:05:00.000Z",
-      },
+      }),
     ];
 
     const result = replayMatches(players.slice(0, 2), matches);
@@ -70,30 +80,32 @@ describe("replayMatches", () => {
     expect(result.p2.rating).toBe(1001);
     expect(result.p1.wins).toBe(1);
     expect(result.p1.losses).toBe(1);
+    expect(result.p1.bestWinStreak).toBe(1);
+    expect(result.p1.worstLossStreak).toBe(1);
     expect(result.p2.wins).toBe(1);
     expect(result.p2.losses).toBe(1);
   });
 
   it("rebuilds ratings consistently after a match is removed", () => {
     const matches: MatchRecord[] = [
-      {
+      createMatch({
         id: "m1",
         winnerId: "p1",
         loserId: "p2",
         createdAt: "2026-04-27T11:00:00.000Z",
-      },
-      {
+      }),
+      createMatch({
         id: "m2",
         winnerId: "p3",
         loserId: "p1",
         createdAt: "2026-04-27T11:10:00.000Z",
-      },
-      {
+      }),
+      createMatch({
         id: "m3",
         winnerId: "p2",
         loserId: "p3",
         createdAt: "2026-04-27T11:20:00.000Z",
-      },
+      }),
     ];
 
     const withoutMiddle = replayMatches(players, matches.filter((match) => match.id !== "m2"));
@@ -102,29 +114,71 @@ describe("replayMatches", () => {
     expect(withoutMiddle.p2.rating).toBe(1001);
     expect(withoutMiddle.p3.rating).toBe(983);
   });
+
+  it("tracks longest win and loss streaks per player", () => {
+    const matches: MatchRecord[] = [
+      createMatch({
+        id: "m1",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-27T11:00:00.000Z",
+      }),
+      createMatch({
+        id: "m2",
+        winnerId: "p1",
+        loserId: "p3",
+        createdAt: "2026-04-27T11:10:00.000Z",
+      }),
+      createMatch({
+        id: "m3",
+        winnerId: "p3",
+        loserId: "p1",
+        createdAt: "2026-04-27T11:20:00.000Z",
+      }),
+      createMatch({
+        id: "m4",
+        winnerId: "p3",
+        loserId: "p2",
+        createdAt: "2026-04-27T11:30:00.000Z",
+      }),
+      createMatch({
+        id: "m5",
+        winnerId: "p3",
+        loserId: "p2",
+        createdAt: "2026-04-27T11:40:00.000Z",
+      }),
+    ];
+
+    const result = replayMatches(players, matches);
+
+    expect(result.p1.bestWinStreak).toBe(2);
+    expect(result.p1.worstLossStreak).toBe(1);
+    expect(result.p2.worstLossStreak).toBe(3);
+    expect(result.p3.bestWinStreak).toBe(3);
+  });
 });
 
 describe("buildRankings", () => {
   it("sorts by rating, then win rate, then wins, then creation order", () => {
     const matches: MatchRecord[] = [
-      {
+      createMatch({
         id: "m1",
         winnerId: "p1",
         loserId: "p2",
         createdAt: "2026-04-27T11:00:00.000Z",
-      },
-      {
+      }),
+      createMatch({
         id: "m2",
         winnerId: "p1",
         loserId: "p3",
         createdAt: "2026-04-27T11:10:00.000Z",
-      },
-      {
+      }),
+      createMatch({
         id: "m3",
         winnerId: "p2",
         loserId: "p3",
         createdAt: "2026-04-27T11:20:00.000Z",
-      },
+      }),
     ];
 
     const rankings = buildRankings(players, matches);
@@ -139,18 +193,18 @@ describe("buildRankings", () => {
 describe("buildRankingsThroughLocalDay", () => {
   it("builds a ranking snapshot through the end of the selected local day", () => {
     const matches: MatchRecord[] = [
-      {
+      createMatch({
         id: "m1",
         winnerId: "p1",
         loserId: "p2",
         createdAt: "2026-04-27T11:00:00.000Z",
-      },
-      {
+      }),
+      createMatch({
         id: "m2",
         winnerId: "p2",
         loserId: "p1",
         createdAt: "2026-04-28T11:00:00.000Z",
-      },
+      }),
     ];
 
     const snapshot = buildRankingsThroughLocalDay(players.slice(0, 2), matches, "2026-04-27");

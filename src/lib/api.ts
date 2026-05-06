@@ -1,4 +1,4 @@
-import type { AppState } from "@/lib/types";
+import type { AppState, MatchMomentKey } from "@/lib/types";
 
 async function requestState(path: string, init?: RequestInit): Promise<AppState> {
   const response = await fetch(path, {
@@ -18,8 +18,8 @@ async function requestState(path: string, init?: RequestInit): Promise<AppState>
 }
 
 export const api = {
-  getState() {
-    return requestState("/api/state");
+  getState(options?: { noStore?: boolean }) {
+    return requestState("/api/state", options?.noStore ? { cache: "no-store" } : undefined);
   },
   createPlayer(name: string) {
     return requestState("/api/players", {
@@ -38,10 +38,30 @@ export const api = {
       body: JSON.stringify({ name }),
     });
   },
-  createMatch(winnerId: string, loserId: string) {
+  createPlayerPhotos(playerId: string, images: string[]) {
+    return requestState(`/api/players/${encodeURIComponent(playerId)}/photos`, {
+      method: "POST",
+      body: JSON.stringify({ images }),
+    });
+  },
+  createMatch(
+    winnerId: string,
+    loserId: string,
+    winnerMoments: MatchMomentKey[],
+    loserMoments: MatchMomentKey[],
+    winnerNote: string,
+    loserNote: string,
+  ) {
     return requestState("/api/matches", {
       method: "POST",
-      body: JSON.stringify({ winnerId, loserId }),
+      body: JSON.stringify({
+        winnerId,
+        loserId,
+        winnerMoments,
+        loserMoments,
+        winnerNote,
+        loserNote,
+      }),
     });
   },
   deleteMatch(matchId: string) {
@@ -53,6 +73,22 @@ export const api = {
     return requestState("/api/settings", {
       method: "PUT",
       body: JSON.stringify({ title }),
+    });
+  },
+  replaceAiModels(models: string[]) {
+    return requestState("/api/ai-models", {
+      method: "PUT",
+      body: JSON.stringify({ models }),
+    });
+  },
+  resetAiModel(model: string) {
+    return requestState(`/api/ai-models/${encodeURIComponent(model)}/reset`, {
+      method: "POST",
+    });
+  },
+  backfillPendingAi(limit = 1) {
+    return requestState(`/api/ai/backfill?limit=${encodeURIComponent(String(limit))}`, {
+      method: "POST",
     });
   },
   replaceState(state: AppState) {

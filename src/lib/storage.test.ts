@@ -9,9 +9,32 @@ import {
 } from "@/lib/storage";
 import type { AppState } from "@/lib/types";
 
+function createStorageMock() {
+  const store = new Map<string, string>();
+
+  return {
+    getItem(key: string) {
+      return store.has(key) ? store.get(key)! : null;
+    },
+    setItem(key: string, value: string) {
+      store.set(key, value);
+    },
+    removeItem(key: string) {
+      store.delete(key);
+    },
+    clear() {
+      store.clear();
+    },
+  };
+}
+
 describe("storage helpers", () => {
   beforeEach(() => {
-    localStorage.clear();
+    Object.defineProperty(window, "localStorage", {
+      value: createStorageMock(),
+      configurable: true,
+    });
+    window.localStorage.clear();
   });
 
   it("returns an empty state when nothing has been saved", () => {
@@ -36,6 +59,51 @@ describe("storage helpers", () => {
           winnerId: "p1",
           loserId: "p2",
           createdAt: "2026-04-27T11:00:00.000Z",
+          winnerMoments: ["clearance_runout"],
+          loserMoments: ["scratch_black_8"],
+          winnerNote: "开球后一路收完",
+          loserNote: "黑八翻车",
+        },
+      ],
+      photos: [
+        {
+          id: "photo-1",
+          playerId: "p1",
+          imageData: "data:image/png;base64,abc123",
+          createdAt: "2026-04-27T10:05:00.000Z",
+        },
+      ],
+      aiProfiles: [
+        {
+          playerId: "p1",
+          titleLabel: "火力全开",
+          titleCategory: "legend",
+          titleReason: "连胜势头凶猛。",
+          evaluation: "状态灼热，球房里最像大热门的那一个。",
+          marketValueUsd: 12600,
+          updatedAt: "2026-04-27T11:05:00.000Z",
+          model: "gpt-5.4-mini",
+        },
+      ],
+      aiReviews: [
+        {
+          matchId: "m1",
+          review: "Alice 这一局像是把 Bob 直接打进了片尾字幕。",
+          winnerEvaluation: "Alice 这一局越打越像今晚的主角。",
+          loserEvaluation: "Bob 后半段心态先于黑八一起掉线了。",
+          updatedAt: "2026-04-27T11:05:00.000Z",
+          model: "gpt-5.4-mini",
+        },
+      ],
+      aiModels: [
+        {
+          model: "free-gpt-4o-mini",
+          isEnabled: true,
+          failureCount: 0,
+          lastError: "",
+          lastTriedAt: "2026-04-27T11:05:00.000Z",
+          lastSucceededAt: "2026-04-27T11:05:00.000Z",
+          createdAt: "2026-04-27T10:00:00.000Z",
         },
       ],
       settings: {

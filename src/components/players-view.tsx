@@ -1,17 +1,30 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 
 import { EmptyState } from "@/components/empty-state";
-import { formatDateTime } from "@/lib/format";
+import { PlayerPhotoFrame } from "@/components/player-photo-frame";
+import { formatCurrency, formatDateTime } from "@/lib/format";
+import { preparePlayerPhotoPayload } from "@/lib/player-photos";
 import { useAppState } from "@/lib/app-state";
 
 export function PlayersView() {
-  const { state, createPlayer, togglePlayer, updatePlayerName, isLoaded } = useAppState();
+  const {
+    state,
+    createPlayer,
+    togglePlayer,
+    updatePlayerName,
+    addPlayerPhotos,
+    isLoaded,
+    profilesByPlayerId,
+  } =
+    useAppState();
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [editingPlayerId, setEditingPlayerId] = useState("");
   const [editingName, setEditingName] = useState("");
+  const [uploadingPlayerId, setUploadingPlayerId] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,6 +50,25 @@ export function PlayersView() {
       setError(
         submissionError instanceof Error ? submissionError.message : "更新球员名称失败",
       );
+    }
+  }
+
+  async function handlePhotoUpload(playerId: string, files: FileList | null) {
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    try {
+      setUploadingPlayerId(playerId);
+      const images = await preparePlayerPhotoPayload(files);
+      await addPlayerPhotos(playerId, images);
+      setError("");
+    } catch (submissionError) {
+      setError(
+        submissionError instanceof Error ? submissionError.message : "上传球员照片失败",
+      );
+    } finally {
+      setUploadingPlayerId("");
     }
   }
 
@@ -87,9 +119,41 @@ export function PlayersView() {
         <div className="player-list">
           {state.players.map((player) => {
             const isEditing = editingPlayerId === player.id;
+            const profile = profilesByPlayerId[player.id];
+            const currentTrend =
+              (profile?.currentWinStreak ?? 0) > 0
+                ? `当前 ${profile?.currentWinStreak} 连胜`
+                : (profile?.currentLossStreak ?? 0) > 0
+                  ? `当前 ${profile?.currentLossStreak} 连败`
+                  : "当前暂无连串";
 
             return (
               <article key={player.id} className="player-row">
+                {profile ? (
+                  <div className="player-row__media">
+                    <PlayerPhotoFrame
+                      href={`/preview?player=${encodeURIComponent(player.id)}`}
+                      photo={profile.featuredPhoto}
+                      photoCount={profile.photoCount}
+                      playerId={player.id}
+                      playerName={player.name}
+                    />
+                    <label className="button" htmlFor={`player-photo-${player.id}`}>
+                      {uploadingPlayerId === player.id ? "上传中..." : "新增照片"}
+                    </label>
+                    <input
+                      className="sr-only"
+                      id={`player-photo-${player.id}`}
+                      multiple
+                      onChange={(event) => {
+                        handlePhotoUpload(player.id, event.target.files).catch(() => undefined);
+                        event.target.value = "";
+                      }}
+                      type="file"
+                      accept="image/*"
+                    />
+                  </div>
+                ) : null}
                 <div className="player-row__content">
                   {isEditing ? (
                     <label className="field player-row__edit-field">
@@ -120,7 +184,23 @@ export function PlayersView() {
                     </label>
                   ) : (
                     <div className="player-row__title">
-                      <h3>{player.name}</h3>
+                      <h3>
+                        <Link href={`/preview?player=${encodeURIComponent(player.id)}`}>
+                          {player.name}
+                        </Link>
+                      </h3>
+                      {profile?.title ? (
+                        <span
+                          className={
+                            profile.title.category === "legend"
+                              ? "title-pill title-pill--legend"
+                              : "title-pill title-pill--fun"
+                          }
+                        >
+                          {profile.title.label}
+                        </span>
+                      ) : null}
+                      {profile?.aiModel ? <span className="section-note">AI 重估中台词已生效</span> : null}
                       <span
                         className={
                           player.isActive ? "status-pill status-pill--active" : "status-pill"
@@ -131,6 +211,46 @@ export function PlayersView() {
                     </div>
                   )}
                   <p>创建时间：{formatDateTime(player.createdAt)}</p>
+                  {profile ? (
+                    <>
+                      <div className="player-row__meta">
+                        <span>身价 {profile ? formatCurrency(profile.marketValue.amountUsd) : "$0"}</span>
+                        <span>照片 {profile.photoCount} 张</span>
+                        <span>{currentTrend}</span>
+                        <span>最长连胜 {profile.bestWinStreak}</span>
+                        <span>最长连败 {profile.worstLossStreak}</span>
+                      </div>
+                      {profile.title ? (
+                        <p className="player-row__note">称号说明：{profile.title.reason}</p>
+                      ) : null}
+                      <p className="player-row__note">
+                        {profile.aiModel ? "AI 评价" : "估值判断"}：{profile.evaluation}
+                      </p>
+                      {profile.aiModel ? (
+                        <p className="player-row__note">AI 模型：{profile.aiModel}</p>
+                      ) : null}
+                      {profile.achievements.length > 0 ? (
+                        <div className="badge-list">
+                          {profile.achievements.slice(0, 4).map((achievement) => (
+                            <span
+                              key={achievement.key}
+                              className={
+                                achievement.tone === "glory"
+                                  ? "badge badge--glory"
+                                  : "badge badge--chaos"
+                              }
+                              title={achievement.detail}
+                            >
+                              {achievement.label}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                      {profile.aiHooks.length > 0 ? (
+                        <p className="player-row__note">AI 素材：{profile.aiHooks.join(" · ")}</p>
+                      ) : null}
+                    </>
+                  ) : null}
                 </div>
                 <div className="player-row__actions">
                   {isEditing ? (
