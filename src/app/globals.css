@@ -282,10 +282,10 @@ button {
 .spotlight {
   position: relative;
   overflow: hidden;
-  display: flex;
-  justify-content: space-between;
-  gap: 2rem;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(118px, 0.16fr) minmax(320px, 0.46fr) minmax(420px, 0.38fr);
+  gap: 0.85rem;
+  align-items: stretch;
   min-height: 208px;
   border-color: var(--line-strong);
   background:
@@ -330,14 +330,23 @@ button {
 
 .spotlight__content {
   display: grid;
-  gap: 1rem;
-  min-width: min(560px, 100%);
+  grid-template-rows: auto minmax(68px, 1fr) auto;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.85rem;
+  border: 1px solid rgba(55, 241, 151, 0.13);
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(55, 241, 151, 0.11), transparent 54%),
+    rgba(255, 255, 255, 0.035);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .spotlight__identity {
-  display: flex;
-  gap: 0.9rem;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.8rem;
+  align-items: start;
 }
 
 .spotlight__rank {
@@ -357,16 +366,19 @@ button {
 .spotlight h2 {
   margin-top: 0.2rem;
   color: var(--accent);
-  font-size: clamp(2.7rem, 7vw, 5rem);
+  font-size: clamp(2.35rem, 4.8vw, 4.6rem);
   line-height: 1.05;
   text-shadow: 0 0 28px rgba(55, 241, 151, 0.22);
 }
 
 .spotlight__brief {
-  display: flex;
+  display: grid;
   gap: 0.6rem;
-  align-items: center;
-  flex-wrap: wrap;
+  align-content: center;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.16);
   color: var(--muted);
 }
 
@@ -383,7 +395,10 @@ button {
 .spotlight__power {
   display: grid;
   gap: 0.5rem;
-  max-width: 520px;
+  padding: 0.72rem 0.85rem;
+  border: 1px solid rgba(55, 241, 151, 0.1);
+  border-radius: 12px;
+  background: rgba(5, 8, 6, 0.56);
 }
 
 .spotlight__power > div:first-child {
@@ -420,9 +435,9 @@ button {
 
 .spotlight__meta {
   display: grid;
-  grid-template-columns: repeat(3, minmax(105px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.65rem;
-  width: min(520px, 100%);
+  min-width: 0;
 }
 
 .spotlight__meta span {
@@ -445,6 +460,7 @@ button {
   color: var(--text);
   font-size: 1.08rem;
   line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 
 .spotlight__watermark {
@@ -1211,6 +1227,16 @@ button {
   flex: 0 0 auto;
 }
 
+.spotlight > .player-photo-frame__link {
+  width: 100%;
+}
+
+.spotlight > .player-photo-frame__link .player-photo-frame--compact {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+
 .preview-spotlight {
   display: grid;
   gap: 1rem;
@@ -1813,6 +1839,15 @@ button {
 }
 
 @media (max-width: 1180px) {
+  .spotlight {
+    grid-template-columns: minmax(112px, 0.18fr) minmax(280px, 1fr);
+  }
+
+  .spotlight__meta {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .player-row {
     grid-template-columns: minmax(8.25rem, 10rem) minmax(0, 1fr);
   }
@@ -1965,12 +2000,18 @@ button {
   }
 
   .spotlight {
+    grid-template-columns: minmax(5.8rem, 0.34fr) minmax(0, 1fr);
     gap: 0.75rem;
     min-height: auto;
   }
 
+  .spotlight > .player-photo-frame__link .player-photo-frame--compact {
+    height: auto;
+    min-height: 0;
+  }
+
   .spotlight h2 {
-    font-size: 2.4rem;
+    font-size: clamp(2rem, 12vw, 2.4rem);
     word-break: break-word;
   }
 
@@ -1988,7 +2029,17 @@ button {
     padding: 0.5rem 0.6rem;
   }
 
+  .spotlight__content {
+    padding: 0.7rem;
+  }
+
+  .spotlight__brief,
+  .spotlight__power {
+    padding: 0.65rem;
+  }
+
   .spotlight__meta {
+    grid-column: 1 / -1;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
