@@ -8,6 +8,9 @@ All notable changes to this project will be documented in this file.
 - 球员照片新增普通、胜利、失败用途，最近一场赢球自动展示胜利图，输球自动展示失败图。
 - 新增 D1 迁移 `0007_player_photo_roles.sql`，为 `player_photos` 增加照片用途字段。
 
+### Changed
+- 球员管理照片上传区域只保留“上传胜利图片”和“上传失败图片”两个按钮，并收紧列表左侧照片布局。
+
 ### Fixed
 - 修复 PNG 上传后可能因为 data URL 过大或透明背景导致显示异常的问题，上传处理统一输出 JPEG data URL。
 

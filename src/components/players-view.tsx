@@ -147,9 +147,8 @@ export function PlayersView() {
                     />
                     <div className="player-photo-upload-grid">
                       {[
-                        ["default", "新增照片"],
-                        ["victory", "胜利图片"],
-                        ["defeat", "失败图片"],
+                        ["victory", "上传胜利图片"],
+                        ["defeat", "上传失败图片"],
                       ].map(([role, label]) => {
                         const photoRole = role as PlayerPhotoRole;
                         const inputId = `player-photo-${photoRole}-${player.id}`;
