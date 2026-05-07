@@ -1523,6 +1523,104 @@ button {
   transform: translateY(-1px);
 }
 
+.reservation-hero {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.48fr);
+  align-items: stretch;
+  border-color: rgba(255, 216, 77, 0.18);
+  background:
+    radial-gradient(circle at 88% 20%, rgba(255, 216, 77, 0.12), transparent 10rem),
+    linear-gradient(135deg, rgba(55, 241, 151, 0.08), transparent 58%),
+    var(--panel);
+}
+
+.reservation-hero__copy {
+  display: grid;
+  gap: 0.6rem;
+  align-content: center;
+}
+
+.reservation-hero__copy h2 {
+  color: var(--accent);
+  font-size: clamp(2rem, 4vw, 3.6rem);
+  line-height: 1.06;
+}
+
+.reservation-hero__copy p,
+.reservation-card p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.reservation-hero__meta {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.reservation-hero__meta span {
+  display: grid;
+  gap: 0.3rem;
+  min-height: 5.7rem;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    rgba(5, 7, 6, 0.74);
+  color: var(--muted);
+}
+
+.reservation-hero__meta svg {
+  color: var(--accent);
+}
+
+.reservation-hero__meta strong {
+  color: var(--text);
+  font-size: 1.25rem;
+  line-height: 1.1;
+}
+
+.reservation-list {
+  display: none;
+}
+
+.reservation-card {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent),
+    rgba(9, 11, 10, 0.86);
+}
+
+.reservation-card__order {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.2rem;
+  aspect-ratio: 1;
+  border: 1px solid rgba(55, 241, 151, 0.26);
+  border-radius: 50%;
+  background: rgba(55, 241, 151, 0.1);
+  color: var(--accent);
+  font-weight: 900;
+}
+
+.reservation-card h3 {
+  color: var(--text);
+  font-size: 1.08rem;
+}
+
+.reservation-table-wrap code,
+.algorithm-copy code {
+  color: var(--gold);
+}
+
 .danger-copy {
   margin-bottom: 1rem;
   color: var(--muted);
@@ -2126,6 +2224,7 @@ button {
   }
 
   .academy-hero,
+  .reservation-hero,
   .preview-spotlight,
   .preview-workbench,
   .preview-detail__hero,
@@ -2180,6 +2279,19 @@ button {
   .preview-photo-strip__thumb {
     width: 4rem;
     height: 4rem;
+  }
+
+  .reservation-hero__copy h2 {
+    font-size: 2rem;
+  }
+
+  .reservation-hero__meta {
+    grid-template-columns: 1fr;
+  }
+
+  .reservation-list {
+    display: grid;
+    gap: 0.65rem;
   }
 
   .academy-hero__cue {

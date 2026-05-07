@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Added
+- 新增预约 tab，每天本地 0 点按启用球员名单生成公开透明的随机上场顺序，并在页面说明日期种子、FNV-1a 签号和排序规则。
+
 ## [0.2.2] - 2026-05-06
 
 ### Added
