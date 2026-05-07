@@ -11,7 +11,7 @@ const DEFAULT_OPENAI_MODEL = "gpt-5.4-mini";
 const DEFAULT_OPENAI_API_URL = "https://api.openai.com/v1";
 const MIN_AI_MARKET_VALUE = 500;
 const MAX_AI_MARKET_VALUE = 30000;
-const AI_REQUEST_TIMEOUT_MS = 12000;
+const AI_REQUEST_TIMEOUT_MS = 60000;
 const PLAIN_JSON_OUTPUT_NOTICE =
   "禁止输出思考过程、<think> 标签、markdown 代码块或额外解释。只输出一个 JSON 对象。";
 
@@ -173,53 +173,6 @@ function buildPlainJsonPrompt(match: MatchRecord, winner: PlayerBundle, loser: P
   return [PLAIN_JSON_OUTPUT_NOTICE, "", buildPrompt(match, winner, loser)].join("\n");
 }
 
-function buildResponseSchema() {
-  return {
-    type: "object",
-    properties: {
-      winner_profile: {
-        type: "object",
-        properties: {
-          title_label: { type: "string" },
-          title_category: { type: "string", enum: ["legend", "fun"] },
-          title_reason: { type: "string" },
-          evaluation: { type: "string" },
-          market_value_usd: { type: "integer" },
-        },
-        required: [
-          "title_label",
-          "title_category",
-          "title_reason",
-          "evaluation",
-          "market_value_usd",
-        ],
-        additionalProperties: false,
-      },
-      loser_profile: {
-        type: "object",
-        properties: {
-          title_label: { type: "string" },
-          title_category: { type: "string", enum: ["legend", "fun"] },
-          title_reason: { type: "string" },
-          evaluation: { type: "string" },
-          market_value_usd: { type: "integer" },
-        },
-        required: [
-          "title_label",
-          "title_category",
-          "title_reason",
-          "evaluation",
-          "market_value_usd",
-        ],
-        additionalProperties: false,
-      },
-      match_review: { type: "string" },
-    },
-    required: ["winner_profile", "loser_profile", "match_review"],
-    additionalProperties: false,
-  };
-}
-
 function extractJsonPayloadText(value: string) {
   const trimmed = stripModelThinkingArtifacts(value).trim();
   const fencedMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
@@ -318,7 +271,7 @@ function readMarketValueField(value: Record<string, unknown>) {
     }
   }
 
-  throw new Error("AI 结果结构不正确");
+  return 1500;
 }
 
 function normalizeAiPlayerPayload(value: unknown): OpenAiPlayerPayload {
@@ -331,14 +284,109 @@ function normalizeAiPlayerPayload(value: unknown): OpenAiPlayerPayload {
       ? value.title_category
       : value.titleCategory === "legend" || value.titleCategory === "fun"
         ? value.titleCategory
+        : value.category === "legend" || value.category === "fun"
+          ? value.category
         : "fun";
 
   return {
-    title_label: readRequiredStringFields(value, "title_label", "titleLabel", "title", "label"),
+    title_label: readRequiredStringFields(
+      value,
+      "title_label",
+      "titleLabel",
+      "title",
+      "label",
+      "name",
+      "称号",
+      "外号",
+    ),
     title_category: titleCategory,
-    title_reason: readRequiredStringFields(value, "title_reason", "titleReason", "reason"),
-    evaluation: readRequiredStringFields(value, "evaluation", "comment", "summary", "analysis"),
+    title_reason: readRequiredStringFields(
+      value,
+      "title_reason",
+      "titleReason",
+      "reason",
+      "description",
+      "原因",
+      "理由",
+    ),
+    evaluation: readRequiredStringFields(
+      value,
+      "evaluation",
+      "comment",
+      "summary",
+      "analysis",
+      "review",
+      "text",
+      "评价",
+    ),
     market_value_usd: Math.round(readMarketValueField(value)),
+  };
+}
+
+function readOptionalStringField(value: unknown, ...keys: string[]) {
+  if (typeof value === "string" && value.trim()) {
+    return value;
+  }
+
+  if (!isRecord(value)) {
+    return "";
+  }
+
+  for (const key of keys) {
+    const candidate = value[key];
+
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate;
+    }
+  }
+
+  return "";
+}
+
+function readNestedRecord(value: unknown, ...keys: string[]) {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  for (const key of keys) {
+    const candidate = value[key];
+
+    if (isRecord(candidate)) {
+      return candidate;
+    }
+  }
+
+  return undefined;
+}
+
+function buildFlatPlayerPayload(value: Record<string, unknown>, prefix: "winner" | "loser") {
+  const snakePrefix = `${prefix}_`;
+  const camelPrefix = prefix;
+  const title =
+    readOptionalStringField(value, `${snakePrefix}title_label`, `${camelPrefix}TitleLabel`) ||
+    readOptionalStringField(value, `${snakePrefix}title`, `${camelPrefix}Title`);
+  const reason =
+    readOptionalStringField(value, `${snakePrefix}title_reason`, `${camelPrefix}TitleReason`) ||
+    readOptionalStringField(value, `${snakePrefix}reason`, `${camelPrefix}Reason`);
+  const evaluation =
+    readOptionalStringField(value, `${snakePrefix}evaluation`, `${camelPrefix}Evaluation`) ||
+    readOptionalStringField(value, `${snakePrefix}comment`, `${camelPrefix}Comment`);
+
+  if (!title && !reason && !evaluation) {
+    return undefined;
+  }
+
+  return {
+    title_label: title || (prefix === "winner" ? "胜者开麦" : "败者沉默"),
+    title_category: prefix === "winner" ? "legend" : "fun",
+    title_reason: reason || evaluation || "这场表现值得被记一笔。",
+    evaluation: evaluation || reason || "这场表现很有节目效果。",
+    market_value_usd:
+      value[`${snakePrefix}market_value_usd`] ??
+      value[`${camelPrefix}MarketValueUsd`] ??
+      value[`${snakePrefix}marketValue`] ??
+      value[`${camelPrefix}MarketValue`] ??
+      1500,
   };
 }
 
@@ -349,9 +397,39 @@ function parseInsightsPayload(payloadText: string): OpenAiInsightsPayload {
     throw new Error("AI 结果结构不正确");
   }
 
-  const winnerProfile = parsed.winner_profile ?? parsed.winnerProfile;
-  const loserProfile = parsed.loser_profile ?? parsed.loserProfile;
-  const matchReview = parsed.match_review ?? parsed.matchReview;
+  const profiles = parsed.profiles ?? parsed.players ?? parsed.player_profiles;
+  const profileList = Array.isArray(profiles) ? profiles : [];
+  const nestedProfiles = readNestedRecord(parsed, "profiles", "players", "player_profiles");
+  const winnerProfile =
+    parsed.winner_profile ??
+    parsed.winnerProfile ??
+    parsed.winner ??
+    parsed.winningPlayer ??
+    parsed.winner_ai_profile ??
+    parsed["胜者"] ??
+    parsed["赢家"] ??
+    readNestedRecord(nestedProfiles, "winner", "winner_profile", "胜者", "赢家") ??
+    profileList[0] ??
+    buildFlatPlayerPayload(parsed, "winner");
+  const loserProfile =
+    parsed.loser_profile ??
+    parsed.loserProfile ??
+    parsed.loser ??
+    parsed.losingPlayer ??
+    parsed.loser_ai_profile ??
+    parsed["败者"] ??
+    parsed["输家"] ??
+    readNestedRecord(nestedProfiles, "loser", "loser_profile", "败者", "输家") ??
+    profileList[1] ??
+    buildFlatPlayerPayload(parsed, "loser");
+  const matchReview =
+    parsed.match_review ??
+    parsed.matchReview ??
+    parsed.review ??
+    parsed.comment ??
+    parsed.summary ??
+    parsed["比赛锐评"] ??
+    readOptionalStringField(parsed.match, "review", "comment", "summary", "text");
 
   if (
     typeof matchReview !== "string"
@@ -410,6 +488,7 @@ function isRetryableAiOutputError(error: unknown) {
     error.message.includes("模型没有返回可解析的文本结果") ||
     error.message.includes("response_format") ||
     error.message.includes("json_schema") ||
+    error.message.includes("json_object") ||
     error.message.includes("Structured Outputs")
   );
 }
@@ -440,6 +519,7 @@ async function requestAiPayloadText({
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
+        "api-key": apiKey,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -465,15 +545,15 @@ async function requestAiPayloadText({
           ? {}
           : {
               response_format: {
-                type: "json_schema",
-                json_schema: {
-                  name: "billiards_match_ai_refresh",
-                  schema: buildResponseSchema(),
-                  strict: true,
-                },
+                type: "json_object",
               },
             }),
-        max_tokens: 600,
+        max_completion_tokens: 2000,
+        thinking: {
+          type: "disabled",
+        },
+        temperature: 1,
+        top_p: 0.95,
       }),
       signal: controller.signal,
     });

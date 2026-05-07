@@ -742,18 +742,14 @@ async function createMatch(request: Request, env: Env, ctx: ExecutionContext) {
   return freshStateResponse(request, env, { status: 201 });
 }
 
-async function backfillPendingAi(request: Request, env: Env, ctx: ExecutionContext) {
+async function backfillPendingAi(request: Request, env: Env) {
   const url = new URL(request.url);
   const requestedLimit = Number(url.searchParams.get("limit") || "1");
   const limit = Number.isFinite(requestedLimit)
-    ? Math.min(3, Math.max(1, Math.floor(requestedLimit)))
+    ? Math.min(1, Math.max(1, Math.floor(requestedLimit)))
     : 1;
 
-  ctx.waitUntil(
-    refreshPendingAiArtifacts(request, env, limit).catch((error) => {
-      console.error("AI backfill failed:", error);
-    }),
-  );
+  await refreshPendingAiArtifacts(request, env, limit);
 
   return freshStateResponse(request, env);
 }
@@ -881,7 +877,7 @@ const worker = {
       }
 
       if (url.pathname === "/api/ai/backfill" && request.method === "POST") {
-        return backfillPendingAi(request, env, ctx);
+        return backfillPendingAi(request, env);
       }
 
       const playerMatch = url.pathname.match(/^\/api\/players\/([^/]+)$/);

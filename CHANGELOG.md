@@ -7,6 +7,14 @@ All notable changes to this project will be documented in this file.
 ### Added
 - 新增预约 tab，每天本地 0 点按启用球员名单生成公开透明的随机上场顺序，并在页面说明日期种子、FNV-1a 签号和排序规则。
 
+### Changed
+- 将 AI 请求超时时间从 12 秒延长到 60 秒，兼容响应较慢的 OpenAI 协议模型网关。
+- 按小米 MiMo 文档改用 `max_completion_tokens`、`response_format: { type: "json_object" }`，并传入 `thinking: { type: "disabled" }` 关闭默认深度思考，避免推理预算耗尽后返回空内容。
+- 历史 AI 补生成接口改为同步处理单场比赛，避免 Cloudflare 取消较慢的 `waitUntil()` 后台任务。
+
+### Tested
+- `npx vitest run worker/ai.test.ts`
+
 ## [0.2.2] - 2026-05-06
 
 ### Added
