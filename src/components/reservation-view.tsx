@@ -23,7 +23,7 @@ function formatCountdown(milliseconds: number) {
 }
 
 export function ReservationView() {
-  const { activePlayers, isLoaded } = useAppState();
+  const { activePlayers, isLoaded, state } = useAppState();
   const [now, setNow] = useState(() => new Date());
   const [dateSeed, setDateSeed] = useState(() => getLocalDateKey());
 
@@ -51,9 +51,19 @@ export function ReservationView() {
     };
   }, [dateSeed]);
 
+  const matchCountsByPlayerId = useMemo(
+    () =>
+      state.matches.reduce<Record<string, number>>((counts, match) => {
+        counts[match.winnerId] = (counts[match.winnerId] ?? 0) + 1;
+        counts[match.loserId] = (counts[match.loserId] ?? 0) + 1;
+
+        return counts;
+      }, {}),
+    [state.matches],
+  );
   const reservationOrder = useMemo(
-    () => buildReservationOrder(activePlayers, dateSeed),
-    [activePlayers, dateSeed],
+    () => buildReservationOrder(activePlayers, dateSeed, undefined, matchCountsByPlayerId),
+    [activePlayers, dateSeed, matchCountsByPlayerId],
   );
   const millisecondsUntilRefresh = calculateMillisecondsUntilNextLocalMidnight(now);
 
@@ -112,7 +122,9 @@ export function ReservationView() {
                   <span className="reservation-card__order">#{entry.order}</span>
                   <div>
                     <h3>{entry.player.name}</h3>
-                    <p>签号 {entry.drawNumberLabel}</p>
+                    <p>
+                      签号 {entry.drawNumberLabel} · 已打 {entry.matchCount} 场
+                    </p>
                   </div>
                 </article>
               ))}
@@ -125,6 +137,7 @@ export function ReservationView() {
                     <th>顺序</th>
                     <th>球员</th>
                     <th>公开签号</th>
+                    <th>场次</th>
                     <th>日期种子</th>
                   </tr>
                 </thead>
@@ -136,6 +149,7 @@ export function ReservationView() {
                       <td>
                         <code>{entry.drawNumberLabel}</code>
                       </td>
+                      <td>{entry.matchCount}</td>
                       <td>{entry.dateSeed}</td>
                     </tr>
                   ))}
@@ -164,9 +178,14 @@ export function ReservationView() {
             每个字符先异或进 hash，再乘以 <code>16777619</code>，最后取 32 位无符号整数。
           </p>
           <p>
+            排序会根据总比赛场次做小幅修正：每打 1 场会让排序值减少 <code>10000000</code>，
+            最多按 12 场计算；0 场球员会额外增加 <code>30000000</code> 排序值。排序值越小越靠前，
+            所以打得多会略微优先，0 场会略微后移，但签号随机性仍然保留。
+          </p>
+          <p>
             系统按签号从小到大排列；如果签号完全相同，就按球员创建时间升序，再按球员 ID 升序兜底。
-            若今天原始前 2 名和昨天最终前 2 名是同一组人，且至少有 3 位启用球员，
-            就把今天原始第 3 名提到第 2 名，原第 2 名顺延到第 3 名，确保前 2 名不会连续两天相同。
+            从第二天开始，昨天最终垫底 2 人会先获得优先排序；如果今天前 2 名仍和昨天最终前 2 名是同一组人，
+            且至少有 3 位启用球员，就把今天第 3 名提到第 2 名，确保前 2 名不会连续两天相同。
           </p>
           <p>
             如果当天只有 2 位启用球员，前 2 名无法避开重复，系统会保留原始签号顺序。

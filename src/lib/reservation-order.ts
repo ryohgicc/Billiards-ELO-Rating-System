@@ -5,11 +5,20 @@ export type ReservationOrderEntry = {
   player: Player;
   drawNumber: number;
   drawNumberLabel: string;
+  matchCount: number;
+  matchWeightDiscount: number;
+  zeroMatchPenalty: number;
+  weightedDrawNumber: number;
   dateSeed: string;
   hashInput: string;
 };
 
 type HashFunction = (input: string) => number;
+type MatchCountsByPlayerId = Record<string, number>;
+
+const MATCH_WEIGHT_DISCOUNT_PER_MATCH = 10_000_000;
+const MAX_MATCH_WEIGHTED_MATCHES = 12;
+const ZERO_MATCH_PENALTY = 30_000_000;
 
 function padNumber(value: number) {
   return value.toString().padStart(2, "0");
@@ -78,22 +87,39 @@ function buildRawReservationOrder(
   players: Player[],
   dateSeed: string,
   hashFunction: HashFunction,
+  matchCountsByPlayerId: MatchCountsByPlayerId,
 ) {
   return players
     .filter((player) => player.isActive)
     .map((player) => {
       const hashInput = buildHashInput(player, dateSeed);
       const drawNumber = hashFunction(hashInput) >>> 0;
+      const matchCount = Math.max(0, Math.floor(matchCountsByPlayerId[player.id] ?? 0));
+      const matchWeightDiscount =
+        Math.min(matchCount, MAX_MATCH_WEIGHTED_MATCHES) * MATCH_WEIGHT_DISCOUNT_PER_MATCH;
+      const zeroMatchPenalty = matchCount === 0 ? ZERO_MATCH_PENALTY : 0;
+      const weightedDrawNumber = Math.max(
+        0,
+        drawNumber + zeroMatchPenalty - matchWeightDiscount,
+      );
 
       return {
         player,
         drawNumber,
         drawNumberLabel: formatDrawNumber(drawNumber),
+        matchCount,
+        matchWeightDiscount,
+        zeroMatchPenalty,
+        weightedDrawNumber,
         dateSeed,
         hashInput,
       };
     })
     .sort((left, right) => {
+      if (left.weightedDrawNumber !== right.weightedDrawNumber) {
+        return left.weightedDrawNumber - right.weightedDrawNumber;
+      }
+
       if (left.drawNumber !== right.drawNumber) {
         return left.drawNumber - right.drawNumber;
       }
@@ -119,6 +145,28 @@ function avoidRepeatedTopTwo(
   return [entries[0], entries[2], entries[1], ...entries.slice(3)];
 }
 
+function prioritizePreviousBottomTwo(
+  entries: ReturnType<typeof buildRawReservationOrder>,
+  previousEntries: ReturnType<typeof buildRawReservationOrder>,
+) {
+  if (entries.length < 3 || previousEntries.length < 3) {
+    return entries;
+  }
+
+  const previousBottomIds = new Set(
+    previousEntries.slice(-2).map((entry) => entry.player.id),
+  );
+  const priorityEntries = entries.filter((entry) => previousBottomIds.has(entry.player.id));
+
+  if (priorityEntries.length === 0) {
+    return entries;
+  }
+
+  const remainingEntries = entries.filter((entry) => !previousBottomIds.has(entry.player.id));
+
+  return [...priorityEntries, ...remainingEntries];
+}
+
 function findFirstLocalDateSeed(players: Player[]) {
   return players
     .filter((player) => player.isActive)
@@ -130,14 +178,17 @@ export function buildReservationOrder(
   players: Player[],
   dateSeed = getLocalDateKey(),
   hashFunction: HashFunction = fnv1a32,
+  matchCountsByPlayerId: MatchCountsByPlayerId = {},
 ): ReservationOrderEntry[] {
   const firstDateSeed = findFirstLocalDateSeed(players);
 
   if (!firstDateSeed || compareDateSeeds(dateSeed, firstDateSeed) <= 0) {
-    return buildRawReservationOrder(players, dateSeed, hashFunction).map((entry, index) => ({
-      ...entry,
-      order: index + 1,
-    }));
+    return buildRawReservationOrder(players, dateSeed, hashFunction, matchCountsByPlayerId).map(
+      (entry, index) => ({
+        ...entry,
+        order: index + 1,
+      }),
+    );
   }
 
   let previousEntries: ReturnType<typeof buildRawReservationOrder> = [];
@@ -145,8 +196,14 @@ export function buildReservationOrder(
 
   while (compareDateSeeds(getLocalDateKey(currentDate), dateSeed) <= 0) {
     const currentDateSeed = getLocalDateKey(currentDate);
-    const rawEntries = buildRawReservationOrder(players, currentDateSeed, hashFunction);
-    const adjustedEntries = avoidRepeatedTopTwo(rawEntries, previousEntries);
+    const rawEntries = buildRawReservationOrder(
+      players,
+      currentDateSeed,
+      hashFunction,
+      matchCountsByPlayerId,
+    );
+    const priorityEntries = prioritizePreviousBottomTwo(rawEntries, previousEntries);
+    const adjustedEntries = avoidRepeatedTopTwo(priorityEntries, previousEntries);
 
     if (currentDateSeed === dateSeed) {
       return adjustedEntries.map((entry, index) => ({

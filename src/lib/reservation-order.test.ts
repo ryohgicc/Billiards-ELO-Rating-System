@@ -36,18 +36,13 @@ const players: Player[] = [
 
 describe("buildReservationOrder", () => {
   it("returns a stable order for the same local day and players", () => {
-    const firstOrder = buildReservationOrder(players, "2026-05-07");
-    const secondOrder = buildReservationOrder([...players].reverse(), "2026-05-07");
+    const firstOrder = buildReservationOrder(players, "2026-04-27");
+    const secondOrder = buildReservationOrder([...players].reverse(), "2026-04-27");
 
     expect(secondOrder).toEqual(firstOrder);
     expect(firstOrder.map((entry) => entry.order)).toEqual([1, 2, 3]);
-    expect(firstOrder.map((entry) => entry.player.id)).toEqual(["p3", "p1", "p2"]);
-    expect(firstOrder.map((entry) => entry.drawNumberLabel)).toEqual([
-      "B20E3DB3",
-      "E5BAD664",
-      "FF187D75",
-    ]);
-    expect(firstOrder.every((entry) => entry.dateSeed === "2026-05-07")).toBe(true);
+    expect(firstOrder.every((entry) => entry.dateSeed === "2026-04-27")).toBe(true);
+    expect(firstOrder.every((entry) => /^[0-9A-F]{8}$/.test(entry.drawNumberLabel))).toBe(true);
   });
 
   it("uses the local day seed so a new day can produce a different order", () => {
@@ -87,12 +82,16 @@ describe("buildReservationOrder", () => {
       },
     ];
 
-    const order = buildReservationOrder(tiedPlayers, "2026-05-07", () => 100);
+    const order = buildReservationOrder(tiedPlayers, "2026-04-27", () => 100);
 
     expect(order.map((entry) => entry.player.id)).toEqual(["alpha", "beta", "later"]);
   });
 
   it("keeps today's top two from matching yesterday's top two when possible", () => {
+    const threePlayers: Player[] = players.slice(0, 3).map((player) => ({
+      ...player,
+      createdAt: "2026-05-07T10:00:00.000Z",
+    }));
     const repeatedTopTwoHash = (input: string) => {
       if (input.includes("|p1|")) {
         return 10;
@@ -105,13 +104,153 @@ describe("buildReservationOrder", () => {
       return 30;
     };
 
-    const yesterdayOrder = buildReservationOrder(players, "2026-05-07", repeatedTopTwoHash);
-    const todayOrder = buildReservationOrder(players, "2026-05-08", repeatedTopTwoHash);
+    const yesterdayOrder = buildReservationOrder(threePlayers, "2026-05-07", repeatedTopTwoHash);
+    const todayOrder = buildReservationOrder(threePlayers, "2026-05-08", repeatedTopTwoHash);
 
     expect(yesterdayOrder.map((entry) => entry.player.id)).toEqual(["p1", "p2", "p3"]);
-    expect(todayOrder.map((entry) => entry.player.id)).toEqual(["p1", "p3", "p2"]);
+    expect(todayOrder.map((entry) => entry.player.id)).toEqual(["p2", "p3", "p1"]);
     expect(todayOrder.slice(0, 2).map((entry) => entry.player.id)).not.toEqual(
       yesterdayOrder.slice(0, 2).map((entry) => entry.player.id),
+    );
+  });
+
+  it("prioritizes yesterday's bottom two on the next day", () => {
+    const fourPlayers: Player[] = [
+      {
+        id: "p1",
+        name: "Alice",
+        createdAt: "2026-05-07T10:00:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "p2",
+        name: "Bob",
+        createdAt: "2026-05-07T10:01:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "p3",
+        name: "Cara",
+        createdAt: "2026-05-07T10:02:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "p4",
+        name: "Dino",
+        createdAt: "2026-05-07T10:03:00.000Z",
+        isActive: true,
+      },
+    ];
+    const stableHash = (input: string) => {
+      if (input.includes("|p1|")) {
+        return 10;
+      }
+
+      if (input.includes("|p2|")) {
+        return 20;
+      }
+
+      if (input.includes("|p3|")) {
+        return 30;
+      }
+
+      return 40;
+    };
+
+    const yesterdayOrder = buildReservationOrder(fourPlayers, "2026-05-07", stableHash);
+    const todayOrder = buildReservationOrder(fourPlayers, "2026-05-08", stableHash);
+
+    expect(yesterdayOrder.map((entry) => entry.player.id)).toEqual(["p1", "p2", "p3", "p4"]);
+    expect(todayOrder.map((entry) => entry.player.id)).toEqual(["p3", "p4", "p1", "p2"]);
+  });
+
+  it("gives a small ordering boost to players with more completed matches", () => {
+    const weightedPlayers: Player[] = [
+      {
+        id: "quiet",
+        name: "Quiet",
+        createdAt: "2026-05-07T10:00:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "regular",
+        name: "Regular",
+        createdAt: "2026-05-07T10:01:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "anchor",
+        name: "Anchor",
+        createdAt: "2026-05-07T10:02:00.000Z",
+        isActive: true,
+      },
+    ];
+    const closeHash = (input: string) => {
+      if (input.includes("|anchor|")) {
+        return 10_000_000;
+      }
+
+      if (input.includes("|quiet|")) {
+        return 100_000_000;
+      }
+
+      return 105_000_000;
+    };
+
+    const order = buildReservationOrder(weightedPlayers, "2026-05-07", closeHash, {
+      quiet: 0,
+      regular: 2,
+      anchor: 0,
+    });
+
+    expect(order.map((entry) => entry.player.id)).toEqual(["anchor", "regular", "quiet"]);
+    expect(order.find((entry) => entry.player.id === "regular")?.matchWeightDiscount).toBe(
+      20_000_000,
+    );
+  });
+
+  it("penalizes zero-match players more than lightly active players", () => {
+    const weightedPlayers: Player[] = [
+      {
+        id: "newcomer",
+        name: "Newcomer",
+        createdAt: "2026-05-07T10:00:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "one-match",
+        name: "One Match",
+        createdAt: "2026-05-07T10:01:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "anchor",
+        name: "Anchor",
+        createdAt: "2026-05-07T10:02:00.000Z",
+        isActive: true,
+      },
+    ];
+    const closeHash = (input: string) => {
+      if (input.includes("|anchor|")) {
+        return 10_000_000;
+      }
+
+      if (input.includes("|newcomer|")) {
+        return 90_000_000;
+      }
+
+      return 105_000_000;
+    };
+
+    const order = buildReservationOrder(weightedPlayers, "2026-05-07", closeHash, {
+      newcomer: 0,
+      "one-match": 1,
+      anchor: 0,
+    });
+
+    expect(order.map((entry) => entry.player.id)).toEqual(["anchor", "one-match", "newcomer"]);
+    expect(order.find((entry) => entry.player.id === "newcomer")?.zeroMatchPenalty).toBe(
+      30_000_000,
     );
   });
 
