@@ -21,7 +21,10 @@ const ACTIVE_DAY_WEIGHT_DISCOUNT = 10_000_000;
 const RECENT_ACTIVE_DAY_WINDOW = 7;
 const ZERO_ACTIVE_DAY_PENALTY = 30_000_000;
 const RESERVATION_DAY_RESET_SALTS: Record<string, string> = {
-  "2026-05-08": "reset-4",
+  "2026-05-08": "reset-5",
+};
+const RESERVATION_TOP_TWO_EXCLUDED_PLAYER_NAMES: Record<string, string[]> = {
+  "2026-05-08": ["gjj"],
 };
 
 function padNumber(value: number) {
@@ -215,12 +218,53 @@ function prioritizePreviousBottomTwo(
   return [...priorityEntries, ...remainingEntries];
 }
 
+function applyTopTwoExclusions(
+  entries: RawReservationOrderEntry[],
+  dateSeed: string,
+) {
+  const excludedPlayerNames = RESERVATION_TOP_TWO_EXCLUDED_PLAYER_NAMES[dateSeed];
+
+  if (!excludedPlayerNames || entries.length < 3) {
+    return entries;
+  }
+
+  const excludedNameSet = new Set(
+    excludedPlayerNames.map((playerName) => playerName.trim().toLowerCase()),
+  );
+  const adjustedEntries = [...entries];
+
+  for (let index = 0; index < Math.min(2, adjustedEntries.length); index += 1) {
+    const entryName = adjustedEntries[index].player.name.trim().toLowerCase();
+
+    if (!excludedNameSet.has(entryName)) {
+      continue;
+    }
+
+    const replacementIndex = adjustedEntries.findIndex(
+      (candidateEntry, candidateIndex) =>
+        candidateIndex >= 2 &&
+        !excludedNameSet.has(candidateEntry.player.name.trim().toLowerCase()),
+    );
+
+    if (replacementIndex === -1) {
+      continue;
+    }
+
+    const [replacementEntry] = adjustedEntries.splice(replacementIndex, 1);
+    adjustedEntries.splice(index, 0, replacementEntry);
+  }
+
+  return adjustedEntries;
+}
+
 function applyActivePlayerProtections(
   entries: ReturnType<typeof buildRawReservationOrder>,
   previousEntries: ReturnType<typeof buildRawReservationOrder>,
+  dateSeed: string,
 ) {
   const priorityEntries = prioritizePreviousBottomTwo(entries, previousEntries);
-  const adjustedEntries = avoidRepeatedTopTwo(priorityEntries, previousEntries);
+  const repeatedTopTwoAdjustedEntries = avoidRepeatedTopTwo(priorityEntries, previousEntries);
+  const adjustedEntries = applyTopTwoExclusions(repeatedTopTwoAdjustedEntries, dateSeed);
 
   return adjustedEntries;
 }
@@ -257,6 +301,7 @@ export function buildReservationOrder(
           recentActiveDayCountsByPlayerId,
         ),
         [],
+        dateSeed,
       ),
     );
   }
@@ -272,7 +317,11 @@ export function buildReservationOrder(
       hashFunction,
       recentActiveDayCountsByPlayerId,
     );
-    const adjustedEntries = applyActivePlayerProtections(rawEntries, previousEntries);
+    const adjustedEntries = applyActivePlayerProtections(
+      rawEntries,
+      previousEntries,
+      currentDateSeed,
+    );
 
     if (currentDateSeed === dateSeed) {
       return assignOrders(adjustedEntries);

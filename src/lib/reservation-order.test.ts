@@ -69,8 +69,8 @@ describe("buildReservationOrder", () => {
     const order = buildReservationOrder(players, "2026-05-08");
 
     expect(order.every((entry) => entry.dateSeed === "2026-05-08")).toBe(true);
-    expect(order.every((entry) => entry.drawSeed === "2026-05-08|reset-4")).toBe(true);
-    expect(order.every((entry) => entry.hashInput.startsWith("2026-05-08|reset-4|"))).toBe(
+    expect(order.every((entry) => entry.drawSeed === "2026-05-08|reset-5")).toBe(true);
+    expect(order.every((entry) => entry.hashInput.startsWith("2026-05-08|reset-5|"))).toBe(
       true,
     );
   });
@@ -403,6 +403,53 @@ describe("buildReservationOrder", () => {
     });
 
     expect(todayOrder.map((entry) => entry.player.id)).toEqual(["p3", "p4", "p1", "p2"]);
+  });
+
+  it("keeps gjj out of the May 8 top two", () => {
+    const cooldownPlayers: Player[] = [
+      {
+        id: "p1",
+        name: "Alice",
+        createdAt: "2026-05-07T10:00:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "gjj-id",
+        name: "gjj",
+        createdAt: "2026-05-07T10:01:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "p3",
+        name: "Cara",
+        createdAt: "2026-05-07T10:02:00.000Z",
+        isActive: true,
+      },
+    ];
+    const stableHash = (input: string) => {
+      if (input.includes("|p1|")) {
+        return 10;
+      }
+
+      if (input.includes("|gjj-id|")) {
+        return 20;
+      }
+
+      return 30;
+    };
+    const activeDayCounts = {
+      p1: 1,
+      "gjj-id": 1,
+      p3: 1,
+    };
+    const may8Order = buildReservationOrder(
+      cooldownPlayers,
+      "2026-05-08",
+      stableHash,
+      activeDayCounts,
+    );
+
+    expect(may8Order.slice(0, 2).map((entry) => entry.player.name)).not.toContain("gjj");
   });
 
   it("leaves two-player days unchanged because the top two cannot differ", () => {
