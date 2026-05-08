@@ -69,8 +69,8 @@ describe("buildReservationOrder", () => {
     const order = buildReservationOrder(players, "2026-05-08");
 
     expect(order.every((entry) => entry.dateSeed === "2026-05-08")).toBe(true);
-    expect(order.every((entry) => entry.drawSeed === "2026-05-08|reset-3")).toBe(true);
-    expect(order.every((entry) => entry.hashInput.startsWith("2026-05-08|reset-3|"))).toBe(
+    expect(order.every((entry) => entry.drawSeed === "2026-05-08|reset-4")).toBe(true);
+    expect(order.every((entry) => entry.hashInput.startsWith("2026-05-08|reset-4|"))).toBe(
       true,
     );
   });
@@ -239,7 +239,7 @@ describe("buildReservationOrder", () => {
     ];
     const closeHash = (input: string) => {
       if (input.includes("|anchor|")) {
-        return 10_000_000;
+        return 70_000_000;
       }
 
       if (input.includes("|quiet|")) {
@@ -284,7 +284,7 @@ describe("buildReservationOrder", () => {
     ];
     const closeHash = (input: string) => {
       if (input.includes("|anchor|")) {
-        return 10_000_000;
+        return 70_000_000;
       }
 
       if (input.includes("|newcomer|")) {
@@ -306,7 +306,7 @@ describe("buildReservationOrder", () => {
     );
   });
 
-  it("keeps zero-active-day players behind all recently active players", () => {
+  it("treats zero-active-day players as a soft penalty instead of a hard bottom", () => {
     const mixedPlayers: Player[] = [
       {
         id: "inactive-lucky",
@@ -347,12 +347,12 @@ describe("buildReservationOrder", () => {
 
     expect(order.map((entry) => entry.player.id)).toEqual([
       "active-anchor",
-      "active-unlucky",
       "inactive-lucky",
+      "active-unlucky",
     ]);
   });
 
-  it("applies previous-bottom priority only within recently active players", () => {
+  it("applies previous-bottom priority across the full enabled pool", () => {
     const mixedPlayers: Player[] = [
       {
         id: "p1",
@@ -402,7 +402,7 @@ describe("buildReservationOrder", () => {
       p4: 0,
     });
 
-    expect(todayOrder.map((entry) => entry.player.id)).toEqual(["p1", "p2", "p3", "p4"]);
+    expect(todayOrder.map((entry) => entry.player.id)).toEqual(["p3", "p4", "p1", "p2"]);
   });
 
   it("leaves two-player days unchanged because the top two cannot differ", () => {

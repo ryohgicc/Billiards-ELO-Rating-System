@@ -21,7 +21,7 @@ const ACTIVE_DAY_WEIGHT_DISCOUNT = 10_000_000;
 const RECENT_ACTIVE_DAY_WINDOW = 7;
 const ZERO_ACTIVE_DAY_PENALTY = 30_000_000;
 const RESERVATION_DAY_RESET_SALTS: Record<string, string> = {
-  "2026-05-08": "reset-3",
+  "2026-05-08": "reset-4",
 };
 
 function padNumber(value: number) {
@@ -219,21 +219,10 @@ function applyActivePlayerProtections(
   entries: ReturnType<typeof buildRawReservationOrder>,
   previousEntries: ReturnType<typeof buildRawReservationOrder>,
 ) {
-  const recentlyActiveEntries = entries.filter((entry) => entry.recentActiveDayCount > 0);
-  const inactiveEntries = entries.filter((entry) => entry.recentActiveDayCount === 0);
-  const recentlyActivePreviousEntries = previousEntries.filter(
-    (entry) => entry.recentActiveDayCount > 0,
-  );
-  const priorityEntries = prioritizePreviousBottomTwo(
-    recentlyActiveEntries,
-    recentlyActivePreviousEntries,
-  );
-  const adjustedActiveEntries = avoidRepeatedTopTwo(
-    priorityEntries,
-    recentlyActivePreviousEntries,
-  );
+  const priorityEntries = prioritizePreviousBottomTwo(entries, previousEntries);
+  const adjustedEntries = avoidRepeatedTopTwo(priorityEntries, previousEntries);
 
-  return [...adjustedActiveEntries, ...inactiveEntries];
+  return adjustedEntries;
 }
 
 function assignOrders(entries: ReturnType<typeof buildRawReservationOrder>) {
