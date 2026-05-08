@@ -21,7 +21,7 @@ const ACTIVE_DAY_WEIGHT_DISCOUNT = 10_000_000;
 const RECENT_ACTIVE_DAY_WINDOW = 7;
 const ZERO_ACTIVE_DAY_PENALTY = 30_000_000;
 const RESERVATION_DAY_RESET_SALTS: Record<string, string> = {
-  "2026-05-08": "reset-1",
+  "2026-05-08": "reset-2",
 };
 
 function padNumber(value: number) {
@@ -180,9 +180,11 @@ function buildRawReservationOrder(
     });
 }
 
+type RawReservationOrderEntry = ReturnType<typeof buildRawReservationOrder>[number];
+
 function avoidRepeatedTopTwo(
-  entries: ReturnType<typeof buildRawReservationOrder>,
-  previousEntries: ReturnType<typeof buildRawReservationOrder>,
+  entries: RawReservationOrderEntry[],
+  previousEntries: RawReservationOrderEntry[],
 ) {
   if (entries.length < 3 || !hasSameTopTwo(entries, previousEntries)) {
     return entries;
@@ -192,8 +194,8 @@ function avoidRepeatedTopTwo(
 }
 
 function prioritizePreviousBottomTwo(
-  entries: ReturnType<typeof buildRawReservationOrder>,
-  previousEntries: ReturnType<typeof buildRawReservationOrder>,
+  entries: RawReservationOrderEntry[],
+  previousEntries: RawReservationOrderEntry[],
 ) {
   if (entries.length < 3 || previousEntries.length < 3) {
     return entries;
@@ -213,6 +215,34 @@ function prioritizePreviousBottomTwo(
   return [...priorityEntries, ...remainingEntries];
 }
 
+function applyActivePlayerProtections(
+  entries: ReturnType<typeof buildRawReservationOrder>,
+  previousEntries: ReturnType<typeof buildRawReservationOrder>,
+) {
+  const recentlyActiveEntries = entries.filter((entry) => entry.recentActiveDayCount > 0);
+  const inactiveEntries = entries.filter((entry) => entry.recentActiveDayCount === 0);
+  const recentlyActivePreviousEntries = previousEntries.filter(
+    (entry) => entry.recentActiveDayCount > 0,
+  );
+  const priorityEntries = prioritizePreviousBottomTwo(
+    recentlyActiveEntries,
+    recentlyActivePreviousEntries,
+  );
+  const adjustedActiveEntries = avoidRepeatedTopTwo(
+    priorityEntries,
+    recentlyActivePreviousEntries,
+  );
+
+  return [...adjustedActiveEntries, ...inactiveEntries];
+}
+
+function assignOrders(entries: ReturnType<typeof buildRawReservationOrder>) {
+  return entries.map((entry, index) => ({
+    ...entry,
+    order: index + 1,
+  }));
+}
+
 function findFirstLocalDateSeed(players: Player[]) {
   return players
     .filter((player) => player.isActive)
@@ -229,15 +259,17 @@ export function buildReservationOrder(
   const firstDateSeed = findFirstLocalDateSeed(players);
 
   if (!firstDateSeed || compareDateSeeds(dateSeed, firstDateSeed) <= 0) {
-    return buildRawReservationOrder(
-      players,
-      dateSeed,
-      hashFunction,
-      recentActiveDayCountsByPlayerId,
-    ).map((entry, index) => ({
-      ...entry,
-      order: index + 1,
-    }));
+    return assignOrders(
+      applyActivePlayerProtections(
+        buildRawReservationOrder(
+          players,
+          dateSeed,
+          hashFunction,
+          recentActiveDayCountsByPlayerId,
+        ),
+        [],
+      ),
+    );
   }
 
   let previousEntries: ReturnType<typeof buildRawReservationOrder> = [];
@@ -251,14 +283,10 @@ export function buildReservationOrder(
       hashFunction,
       recentActiveDayCountsByPlayerId,
     );
-    const priorityEntries = prioritizePreviousBottomTwo(rawEntries, previousEntries);
-    const adjustedEntries = avoidRepeatedTopTwo(priorityEntries, previousEntries);
+    const adjustedEntries = applyActivePlayerProtections(rawEntries, previousEntries);
 
     if (currentDateSeed === dateSeed) {
-      return adjustedEntries.map((entry, index) => ({
-        ...entry,
-        order: index + 1,
-      }));
+      return assignOrders(adjustedEntries);
     }
 
     previousEntries = adjustedEntries;

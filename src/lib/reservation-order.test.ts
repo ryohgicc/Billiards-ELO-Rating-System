@@ -69,8 +69,8 @@ describe("buildReservationOrder", () => {
     const order = buildReservationOrder(players, "2026-05-08");
 
     expect(order.every((entry) => entry.dateSeed === "2026-05-08")).toBe(true);
-    expect(order.every((entry) => entry.drawSeed === "2026-05-08|reset-1")).toBe(true);
-    expect(order.every((entry) => entry.hashInput.startsWith("2026-05-08|reset-1|"))).toBe(
+    expect(order.every((entry) => entry.drawSeed === "2026-05-08|reset-2")).toBe(true);
+    expect(order.every((entry) => entry.hashInput.startsWith("2026-05-08|reset-2|"))).toBe(
       true,
     );
   });
@@ -125,8 +125,23 @@ describe("buildReservationOrder", () => {
       return 30;
     };
 
-    const yesterdayOrder = buildReservationOrder(threePlayers, "2026-05-07", repeatedTopTwoHash);
-    const todayOrder = buildReservationOrder(threePlayers, "2026-05-08", repeatedTopTwoHash);
+    const activeDayCounts = {
+      p1: 1,
+      p2: 1,
+      p3: 1,
+    };
+    const yesterdayOrder = buildReservationOrder(
+      threePlayers,
+      "2026-05-07",
+      repeatedTopTwoHash,
+      activeDayCounts,
+    );
+    const todayOrder = buildReservationOrder(
+      threePlayers,
+      "2026-05-08",
+      repeatedTopTwoHash,
+      activeDayCounts,
+    );
 
     expect(yesterdayOrder.map((entry) => entry.player.id)).toEqual(["p1", "p2", "p3"]);
     expect(todayOrder.map((entry) => entry.player.id)).toEqual(["p2", "p3", "p1"]);
@@ -178,8 +193,24 @@ describe("buildReservationOrder", () => {
       return 40;
     };
 
-    const yesterdayOrder = buildReservationOrder(fourPlayers, "2026-05-07", stableHash);
-    const todayOrder = buildReservationOrder(fourPlayers, "2026-05-08", stableHash);
+    const activeDayCounts = {
+      p1: 1,
+      p2: 1,
+      p3: 1,
+      p4: 1,
+    };
+    const yesterdayOrder = buildReservationOrder(
+      fourPlayers,
+      "2026-05-07",
+      stableHash,
+      activeDayCounts,
+    );
+    const todayOrder = buildReservationOrder(
+      fourPlayers,
+      "2026-05-08",
+      stableHash,
+      activeDayCounts,
+    );
 
     expect(yesterdayOrder.map((entry) => entry.player.id)).toEqual(["p1", "p2", "p3", "p4"]);
     expect(todayOrder.map((entry) => entry.player.id)).toEqual(["p3", "p4", "p1", "p2"]);
@@ -224,7 +255,7 @@ describe("buildReservationOrder", () => {
       anchor: 0,
     });
 
-    expect(order.map((entry) => entry.player.id)).toEqual(["anchor", "regular", "quiet"]);
+    expect(order.map((entry) => entry.player.id)).toEqual(["regular", "anchor", "quiet"]);
     expect(order.find((entry) => entry.player.id === "regular")?.activeDayWeightDiscount).toBe(
       20_000_000,
     );
@@ -269,10 +300,109 @@ describe("buildReservationOrder", () => {
       anchor: 0,
     });
 
-    expect(order.map((entry) => entry.player.id)).toEqual(["anchor", "one-match", "newcomer"]);
+    expect(order.map((entry) => entry.player.id)).toEqual(["one-match", "anchor", "newcomer"]);
     expect(order.find((entry) => entry.player.id === "newcomer")?.zeroActiveDayPenalty).toBe(
       30_000_000,
     );
+  });
+
+  it("keeps zero-active-day players behind all recently active players", () => {
+    const mixedPlayers: Player[] = [
+      {
+        id: "inactive-lucky",
+        name: "Inactive Lucky",
+        createdAt: "2026-05-07T10:00:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "active-unlucky",
+        name: "Active Unlucky",
+        createdAt: "2026-05-07T10:01:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "active-anchor",
+        name: "Active Anchor",
+        createdAt: "2026-05-07T10:02:00.000Z",
+        isActive: true,
+      },
+    ];
+    const wideHash = (input: string) => {
+      if (input.includes("|inactive-lucky|")) {
+        return 10;
+      }
+
+      if (input.includes("|active-anchor|")) {
+        return 200;
+      }
+
+      return 4_000_000_000;
+    };
+
+    const order = buildReservationOrder(mixedPlayers, "2026-05-07", wideHash, {
+      "inactive-lucky": 0,
+      "active-unlucky": 1,
+      "active-anchor": 1,
+    });
+
+    expect(order.map((entry) => entry.player.id)).toEqual([
+      "active-anchor",
+      "active-unlucky",
+      "inactive-lucky",
+    ]);
+  });
+
+  it("applies previous-bottom priority only within recently active players", () => {
+    const mixedPlayers: Player[] = [
+      {
+        id: "p1",
+        name: "Alice",
+        createdAt: "2026-05-07T10:00:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "p2",
+        name: "Bob",
+        createdAt: "2026-05-07T10:01:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "p3",
+        name: "Cara",
+        createdAt: "2026-05-07T10:02:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "p4",
+        name: "Dino",
+        createdAt: "2026-05-07T10:03:00.000Z",
+        isActive: true,
+      },
+    ];
+    const stableHash = (input: string) => {
+      if (input.includes("|p1|")) {
+        return 10;
+      }
+
+      if (input.includes("|p2|")) {
+        return 20;
+      }
+
+      if (input.includes("|p3|")) {
+        return 30;
+      }
+
+      return 40;
+    };
+
+    const todayOrder = buildReservationOrder(mixedPlayers, "2026-05-08", stableHash, {
+      p1: 1,
+      p2: 1,
+      p3: 0,
+      p4: 0,
+    });
+
+    expect(todayOrder.map((entry) => entry.player.id)).toEqual(["p1", "p2", "p3", "p4"]);
   });
 
   it("leaves two-player days unchanged because the top two cannot differ", () => {
