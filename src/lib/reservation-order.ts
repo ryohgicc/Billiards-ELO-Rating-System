@@ -50,11 +50,35 @@ function formatDrawNumber(drawNumber: number) {
   return drawNumber.toString(16).toUpperCase().padStart(8, "0");
 }
 
-export function buildReservationOrder(
+function parseLocalDateKey(dateSeed: string) {
+  const [year = "0", month = "1", day = "1"] = dateSeed.split("-");
+
+  return new Date(Number(year), Number(month) - 1, Number(day));
+}
+
+function addLocalDays(date: Date, days: number) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+}
+
+function compareDateSeeds(left: string, right: string) {
+  return left.localeCompare(right);
+}
+
+function hasSameTopTwo(left: Array<{ player: Player }>, right: Array<{ player: Player }>) {
+  if (left.length < 2 || right.length < 2) {
+    return false;
+  }
+
+  const rightTopTwoIds = new Set(right.slice(0, 2).map((entry) => entry.player.id));
+
+  return left.slice(0, 2).every((entry) => rightTopTwoIds.has(entry.player.id));
+}
+
+function buildRawReservationOrder(
   players: Player[],
-  dateSeed = getLocalDateKey(),
-  hashFunction: HashFunction = fnv1a32,
-): ReservationOrderEntry[] {
+  dateSeed: string,
+  hashFunction: HashFunction,
+) {
   return players
     .filter((player) => player.isActive)
     .map((player) => {
@@ -81,9 +105,59 @@ export function buildReservationOrder(
       }
 
       return left.player.id.localeCompare(right.player.id);
-    })
-    .map((entry, index) => ({
+    });
+}
+
+function avoidRepeatedTopTwo(
+  entries: ReturnType<typeof buildRawReservationOrder>,
+  previousEntries: ReturnType<typeof buildRawReservationOrder>,
+) {
+  if (entries.length < 3 || !hasSameTopTwo(entries, previousEntries)) {
+    return entries;
+  }
+
+  return [entries[0], entries[2], entries[1], ...entries.slice(3)];
+}
+
+function findFirstLocalDateSeed(players: Player[]) {
+  return players
+    .filter((player) => player.isActive)
+    .map((player) => getLocalDateKey(new Date(player.createdAt)))
+    .sort()[0];
+}
+
+export function buildReservationOrder(
+  players: Player[],
+  dateSeed = getLocalDateKey(),
+  hashFunction: HashFunction = fnv1a32,
+): ReservationOrderEntry[] {
+  const firstDateSeed = findFirstLocalDateSeed(players);
+
+  if (!firstDateSeed || compareDateSeeds(dateSeed, firstDateSeed) <= 0) {
+    return buildRawReservationOrder(players, dateSeed, hashFunction).map((entry, index) => ({
       ...entry,
       order: index + 1,
     }));
+  }
+
+  let previousEntries: ReturnType<typeof buildRawReservationOrder> = [];
+  let currentDate = parseLocalDateKey(firstDateSeed);
+
+  while (compareDateSeeds(getLocalDateKey(currentDate), dateSeed) <= 0) {
+    const currentDateSeed = getLocalDateKey(currentDate);
+    const rawEntries = buildRawReservationOrder(players, currentDateSeed, hashFunction);
+    const adjustedEntries = avoidRepeatedTopTwo(rawEntries, previousEntries);
+
+    if (currentDateSeed === dateSeed) {
+      return adjustedEntries.map((entry, index) => ({
+        ...entry,
+        order: index + 1,
+      }));
+    }
+
+    previousEntries = adjustedEntries;
+    currentDate = addLocalDays(currentDate, 1);
+  }
+
+  return [];
 }

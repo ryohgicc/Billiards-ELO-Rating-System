@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - 新增预约 tab，每天本地 0 点按启用球员名单生成公开透明的随机上场顺序，并在页面说明日期种子、FNV-1a 签号和排序规则。
+- 预约排序新增防连续机制，启用球员至少 3 人时，今日前 2 名不会和前一天最终前 2 名完全相同。
 
 ### Changed
 - 将 AI 请求超时时间从 12 秒延长到 60 秒，兼容响应较慢的 OpenAI 协议模型网关。

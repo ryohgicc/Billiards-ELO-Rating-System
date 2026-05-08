@@ -91,6 +91,41 @@ describe("buildReservationOrder", () => {
 
     expect(order.map((entry) => entry.player.id)).toEqual(["alpha", "beta", "later"]);
   });
+
+  it("keeps today's top two from matching yesterday's top two when possible", () => {
+    const repeatedTopTwoHash = (input: string) => {
+      if (input.includes("|p1|")) {
+        return 10;
+      }
+
+      if (input.includes("|p2|")) {
+        return 20;
+      }
+
+      return 30;
+    };
+
+    const yesterdayOrder = buildReservationOrder(players, "2026-05-07", repeatedTopTwoHash);
+    const todayOrder = buildReservationOrder(players, "2026-05-08", repeatedTopTwoHash);
+
+    expect(yesterdayOrder.map((entry) => entry.player.id)).toEqual(["p1", "p2", "p3"]);
+    expect(todayOrder.map((entry) => entry.player.id)).toEqual(["p1", "p3", "p2"]);
+    expect(todayOrder.slice(0, 2).map((entry) => entry.player.id)).not.toEqual(
+      yesterdayOrder.slice(0, 2).map((entry) => entry.player.id),
+    );
+  });
+
+  it("leaves two-player days unchanged because the top two cannot differ", () => {
+    const twoPlayerOrder = buildReservationOrder(players.slice(0, 2), "2026-05-08", (input) => {
+      if (input.includes("|p1|")) {
+        return 10;
+      }
+
+      return 20;
+    });
+
+    expect(twoPlayerOrder.map((entry) => entry.player.id)).toEqual(["p1", "p2"]);
+  });
 });
 
 describe("local date helpers", () => {
