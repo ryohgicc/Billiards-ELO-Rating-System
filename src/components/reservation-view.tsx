@@ -6,6 +6,7 @@ import { CalendarClock, Hash, TimerReset } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { useAppState } from "@/lib/app-state";
 import {
+  buildRecentActiveDayCounts,
   buildReservationOrder,
   calculateMillisecondsUntilNextLocalMidnight,
   getLocalDateKey,
@@ -51,19 +52,19 @@ export function ReservationView() {
     };
   }, [dateSeed]);
 
-  const matchCountsByPlayerId = useMemo(
-    () =>
-      state.matches.reduce<Record<string, number>>((counts, match) => {
-        counts[match.winnerId] = (counts[match.winnerId] ?? 0) + 1;
-        counts[match.loserId] = (counts[match.loserId] ?? 0) + 1;
-
-        return counts;
-      }, {}),
-    [state.matches],
+  const recentActiveDayCountsByPlayerId = useMemo(
+    () => buildRecentActiveDayCounts(state.matches, dateSeed),
+    [dateSeed, state.matches],
   );
   const reservationOrder = useMemo(
-    () => buildReservationOrder(activePlayers, dateSeed, undefined, matchCountsByPlayerId),
-    [activePlayers, dateSeed, matchCountsByPlayerId],
+    () =>
+      buildReservationOrder(
+        activePlayers,
+        dateSeed,
+        undefined,
+        recentActiveDayCountsByPlayerId,
+      ),
+    [activePlayers, dateSeed, recentActiveDayCountsByPlayerId],
   );
   const millisecondsUntilRefresh = calculateMillisecondsUntilNextLocalMidnight(now);
 
@@ -123,7 +124,7 @@ export function ReservationView() {
                   <div>
                     <h3>{entry.player.name}</h3>
                     <p>
-                      签号 {entry.drawNumberLabel} · 已打 {entry.matchCount} 场
+                      签号 {entry.drawNumberLabel} · 近 7 天活跃 {entry.recentActiveDayCount} 天
                     </p>
                   </div>
                 </article>
@@ -137,8 +138,8 @@ export function ReservationView() {
                     <th>顺序</th>
                     <th>球员</th>
                     <th>公开签号</th>
-                    <th>场次</th>
-                    <th>日期种子</th>
+                    <th>近 7 天</th>
+                    <th>抽签种子</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -149,8 +150,8 @@ export function ReservationView() {
                       <td>
                         <code>{entry.drawNumberLabel}</code>
                       </td>
-                      <td>{entry.matchCount}</td>
-                      <td>{entry.dateSeed}</td>
+                      <td>{entry.recentActiveDayCount} 天</td>
+                      <td>{entry.drawSeed}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -171,6 +172,7 @@ export function ReservationView() {
         <div className="algorithm-copy">
           <p>
             每天的日期种子是浏览器本地日期，格式为 <code>YYYY-MM-DD</code>。参与名单只包含当前启用中的球员。
+            如果当天需要重置，会在日期后追加公开重置盐值；例如 <code>2026-05-08|reset-1</code>。
           </p>
           <p>
             每位球员的抽签输入为 <code>日期|球员ID|球员名称|创建时间</code>，再计算
@@ -178,9 +180,10 @@ export function ReservationView() {
             每个字符先异或进 hash，再乘以 <code>16777619</code>，最后取 32 位无符号整数。
           </p>
           <p>
-            排序会根据总比赛场次做小幅修正：每打 1 场会让排序值减少 <code>10000000</code>，
-            最多按 12 场计算；0 场球员会额外增加 <code>30000000</code> 排序值。排序值越小越靠前，
-            所以打得多会略微优先，0 场会略微后移，但签号随机性仍然保留。
+            排序会根据近 7 天活跃天数做小幅修正：同一天无论打几场，只要有比赛就算 1 个活跃日。
+            每 1 个活跃日会让排序值减少 <code>10000000</code>；近 7 天 0 个活跃日会额外增加
+            <code>30000000</code> 排序值。排序值越小越靠前，所以持续来打会略微优先，
+            近期没打会略微后移，但签号随机性仍然保留。
           </p>
           <p>
             系统按签号从小到大排列；如果签号完全相同，就按球员创建时间升序，再按球员 ID 升序兜底。

@@ -1,24 +1,28 @@
-import type { Player } from "@/lib/types";
+import type { MatchRecord, Player } from "@/lib/types";
 
 export type ReservationOrderEntry = {
   order: number;
   player: Player;
   drawNumber: number;
   drawNumberLabel: string;
-  matchCount: number;
-  matchWeightDiscount: number;
-  zeroMatchPenalty: number;
+  recentActiveDayCount: number;
+  activeDayWeightDiscount: number;
+  zeroActiveDayPenalty: number;
   weightedDrawNumber: number;
   dateSeed: string;
+  drawSeed: string;
   hashInput: string;
 };
 
 type HashFunction = (input: string) => number;
-type MatchCountsByPlayerId = Record<string, number>;
+type RecentActiveDayCountsByPlayerId = Record<string, number>;
 
-const MATCH_WEIGHT_DISCOUNT_PER_MATCH = 10_000_000;
-const MAX_MATCH_WEIGHTED_MATCHES = 12;
-const ZERO_MATCH_PENALTY = 30_000_000;
+const ACTIVE_DAY_WEIGHT_DISCOUNT = 10_000_000;
+const RECENT_ACTIVE_DAY_WINDOW = 7;
+const ZERO_ACTIVE_DAY_PENALTY = 30_000_000;
+const RESERVATION_DAY_RESET_SALTS: Record<string, string> = {
+  "2026-05-08": "reset-1",
+};
 
 function padNumber(value: number) {
   return value.toString().padStart(2, "0");
@@ -51,8 +55,14 @@ export function fnv1a32(input: string) {
   return hash >>> 0;
 }
 
-function buildHashInput(player: Player, dateSeed: string) {
-  return `${dateSeed}|${player.id}|${player.name}|${player.createdAt}`;
+export function getReservationDrawSeed(dateSeed: string) {
+  const resetSalt = RESERVATION_DAY_RESET_SALTS[dateSeed];
+
+  return resetSalt ? `${dateSeed}|${resetSalt}` : dateSeed;
+}
+
+function buildHashInput(player: Player, drawSeed: string) {
+  return `${drawSeed}|${player.id}|${player.name}|${player.createdAt}`;
 }
 
 function formatDrawNumber(drawNumber: number) {
@@ -83,35 +93,71 @@ function hasSameTopTwo(left: Array<{ player: Player }>, right: Array<{ player: P
   return left.slice(0, 2).every((entry) => rightTopTwoIds.has(entry.player.id));
 }
 
+export function buildRecentActiveDayCounts(
+  matches: MatchRecord[],
+  dateSeed: string,
+): RecentActiveDayCountsByPlayerId {
+  const windowEnd = parseLocalDateKey(dateSeed);
+  const windowStartKey = getLocalDateKey(addLocalDays(windowEnd, -(RECENT_ACTIVE_DAY_WINDOW - 1)));
+  const windowEndKey = getLocalDateKey(windowEnd);
+  const activeDaysByPlayerId: Record<string, Set<string>> = {};
+
+  for (const match of matches) {
+    const matchDayKey = getLocalDateKey(new Date(match.createdAt));
+
+    if (compareDateSeeds(matchDayKey, windowStartKey) < 0 || compareDateSeeds(matchDayKey, windowEndKey) > 0) {
+      continue;
+    }
+
+    for (const playerId of [match.winnerId, match.loserId]) {
+      activeDaysByPlayerId[playerId] ??= new Set<string>();
+      activeDaysByPlayerId[playerId].add(matchDayKey);
+    }
+  }
+
+  return Object.fromEntries(
+    Object.entries(activeDaysByPlayerId).map(([playerId, activeDays]) => [
+      playerId,
+      activeDays.size,
+    ]),
+  );
+}
+
 function buildRawReservationOrder(
   players: Player[],
   dateSeed: string,
   hashFunction: HashFunction,
-  matchCountsByPlayerId: MatchCountsByPlayerId,
+  recentActiveDayCountsByPlayerId: RecentActiveDayCountsByPlayerId,
 ) {
   return players
     .filter((player) => player.isActive)
     .map((player) => {
-      const hashInput = buildHashInput(player, dateSeed);
+      const drawSeed = getReservationDrawSeed(dateSeed);
+      const hashInput = buildHashInput(player, drawSeed);
       const drawNumber = hashFunction(hashInput) >>> 0;
-      const matchCount = Math.max(0, Math.floor(matchCountsByPlayerId[player.id] ?? 0));
-      const matchWeightDiscount =
-        Math.min(matchCount, MAX_MATCH_WEIGHTED_MATCHES) * MATCH_WEIGHT_DISCOUNT_PER_MATCH;
-      const zeroMatchPenalty = matchCount === 0 ? ZERO_MATCH_PENALTY : 0;
+      const recentActiveDayCount = Math.max(
+        0,
+        Math.floor(recentActiveDayCountsByPlayerId[player.id] ?? 0),
+      );
+      const activeDayWeightDiscount =
+        Math.min(recentActiveDayCount, RECENT_ACTIVE_DAY_WINDOW) * ACTIVE_DAY_WEIGHT_DISCOUNT;
+      const zeroActiveDayPenalty =
+        recentActiveDayCount === 0 ? ZERO_ACTIVE_DAY_PENALTY : 0;
       const weightedDrawNumber = Math.max(
         0,
-        drawNumber + zeroMatchPenalty - matchWeightDiscount,
+        drawNumber + zeroActiveDayPenalty - activeDayWeightDiscount,
       );
 
       return {
         player,
         drawNumber,
         drawNumberLabel: formatDrawNumber(drawNumber),
-        matchCount,
-        matchWeightDiscount,
-        zeroMatchPenalty,
+        recentActiveDayCount,
+        activeDayWeightDiscount,
+        zeroActiveDayPenalty,
         weightedDrawNumber,
         dateSeed,
+        drawSeed,
         hashInput,
       };
     })
@@ -178,17 +224,20 @@ export function buildReservationOrder(
   players: Player[],
   dateSeed = getLocalDateKey(),
   hashFunction: HashFunction = fnv1a32,
-  matchCountsByPlayerId: MatchCountsByPlayerId = {},
+  recentActiveDayCountsByPlayerId: RecentActiveDayCountsByPlayerId = {},
 ): ReservationOrderEntry[] {
   const firstDateSeed = findFirstLocalDateSeed(players);
 
   if (!firstDateSeed || compareDateSeeds(dateSeed, firstDateSeed) <= 0) {
-    return buildRawReservationOrder(players, dateSeed, hashFunction, matchCountsByPlayerId).map(
-      (entry, index) => ({
-        ...entry,
-        order: index + 1,
-      }),
-    );
+    return buildRawReservationOrder(
+      players,
+      dateSeed,
+      hashFunction,
+      recentActiveDayCountsByPlayerId,
+    ).map((entry, index) => ({
+      ...entry,
+      order: index + 1,
+    }));
   }
 
   let previousEntries: ReturnType<typeof buildRawReservationOrder> = [];
@@ -200,7 +249,7 @@ export function buildReservationOrder(
       players,
       currentDateSeed,
       hashFunction,
-      matchCountsByPlayerId,
+      recentActiveDayCountsByPlayerId,
     );
     const priorityEntries = prioritizePreviousBottomTwo(rawEntries, previousEntries);
     const adjustedEntries = avoidRepeatedTopTwo(priorityEntries, previousEntries);

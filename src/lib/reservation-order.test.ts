@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildRecentActiveDayCounts,
   buildReservationOrder,
   getLocalDateKey,
   getNextLocalMidnight,
 } from "@/lib/reservation-order";
-import type { Player } from "@/lib/types";
+import type { MatchRecord, Player } from "@/lib/types";
 
 const players: Player[] = [
   {
@@ -34,6 +35,16 @@ const players: Player[] = [
   },
 ];
 
+function createMatch(match: Omit<MatchRecord, "winnerMoments" | "loserMoments" | "winnerNote" | "loserNote">): MatchRecord {
+  return {
+    ...match,
+    winnerMoments: [],
+    loserMoments: [],
+    winnerNote: "",
+    loserNote: "",
+  };
+}
+
 describe("buildReservationOrder", () => {
   it("returns a stable order for the same local day and players", () => {
     const firstOrder = buildReservationOrder(players, "2026-04-27");
@@ -51,6 +62,16 @@ describe("buildReservationOrder", () => {
 
     expect(tomorrowOrder.map((entry) => entry.player.id)).not.toEqual(
       todayOrder.map((entry) => entry.player.id),
+    );
+  });
+
+  it("uses a public reset seed for the reset day", () => {
+    const order = buildReservationOrder(players, "2026-05-08");
+
+    expect(order.every((entry) => entry.dateSeed === "2026-05-08")).toBe(true);
+    expect(order.every((entry) => entry.drawSeed === "2026-05-08|reset-1")).toBe(true);
+    expect(order.every((entry) => entry.hashInput.startsWith("2026-05-08|reset-1|"))).toBe(
+      true,
     );
   });
 
@@ -164,7 +185,7 @@ describe("buildReservationOrder", () => {
     expect(todayOrder.map((entry) => entry.player.id)).toEqual(["p3", "p4", "p1", "p2"]);
   });
 
-  it("gives a small ordering boost to players with more completed matches", () => {
+  it("gives a small ordering boost to players active across more recent days", () => {
     const weightedPlayers: Player[] = [
       {
         id: "quiet",
@@ -204,12 +225,12 @@ describe("buildReservationOrder", () => {
     });
 
     expect(order.map((entry) => entry.player.id)).toEqual(["anchor", "regular", "quiet"]);
-    expect(order.find((entry) => entry.player.id === "regular")?.matchWeightDiscount).toBe(
+    expect(order.find((entry) => entry.player.id === "regular")?.activeDayWeightDiscount).toBe(
       20_000_000,
     );
   });
 
-  it("penalizes zero-match players more than lightly active players", () => {
+  it("penalizes players with no recent active days more than lightly active players", () => {
     const weightedPlayers: Player[] = [
       {
         id: "newcomer",
@@ -249,7 +270,7 @@ describe("buildReservationOrder", () => {
     });
 
     expect(order.map((entry) => entry.player.id)).toEqual(["anchor", "one-match", "newcomer"]);
-    expect(order.find((entry) => entry.player.id === "newcomer")?.zeroMatchPenalty).toBe(
+    expect(order.find((entry) => entry.player.id === "newcomer")?.zeroActiveDayPenalty).toBe(
       30_000_000,
     );
   });
@@ -264,6 +285,80 @@ describe("buildReservationOrder", () => {
     });
 
     expect(twoPlayerOrder.map((entry) => entry.player.id)).toEqual(["p1", "p2"]);
+  });
+});
+
+describe("buildRecentActiveDayCounts", () => {
+  it("counts multiple matches on the same day as one active day", () => {
+    const counts = buildRecentActiveDayCounts(
+      [
+        createMatch({
+          id: "m1",
+          winnerId: "p1",
+          loserId: "p2",
+          createdAt: "2026-05-08T10:00:00.000Z",
+        }),
+        createMatch({
+          id: "m2",
+          winnerId: "p1",
+          loserId: "p3",
+          createdAt: "2026-05-08T12:00:00.000Z",
+        }),
+      ],
+      "2026-05-08",
+    );
+
+    expect(counts.p1).toBe(1);
+    expect(counts.p2).toBe(1);
+    expect(counts.p3).toBe(1);
+  });
+
+  it("counts distinct active days inside the seven-day window", () => {
+    const counts = buildRecentActiveDayCounts(
+      [
+        createMatch({
+          id: "m1",
+          winnerId: "p1",
+          loserId: "p2",
+          createdAt: "2026-05-02T10:00:00.000Z",
+        }),
+        createMatch({
+          id: "m2",
+          winnerId: "p1",
+          loserId: "p3",
+          createdAt: "2026-05-08T12:00:00.000Z",
+        }),
+      ],
+      "2026-05-08",
+    );
+
+    expect(counts.p1).toBe(2);
+    expect(counts.p2).toBe(1);
+    expect(counts.p3).toBe(1);
+  });
+
+  it("ignores matches outside the seven-day window", () => {
+    const counts = buildRecentActiveDayCounts(
+      [
+        createMatch({
+          id: "old",
+          winnerId: "p1",
+          loserId: "p2",
+          createdAt: "2026-05-01T12:00:00.000Z",
+        }),
+        createMatch({
+          id: "recent",
+          winnerId: "p1",
+          loserId: "p3",
+          createdAt: "2026-05-02T00:00:00.000Z",
+        }),
+      ],
+      "2026-05-08",
+    );
+
+    expect(counts.p1).toBe(1);
+    expect(counts.p2).toBeUndefined();
+    expect(counts.p3).toBe(1);
   });
 });
 
