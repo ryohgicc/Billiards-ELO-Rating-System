@@ -69,8 +69,8 @@ describe("buildReservationOrder", () => {
     const order = buildReservationOrder(players, "2026-05-08");
 
     expect(order.every((entry) => entry.dateSeed === "2026-05-08")).toBe(true);
-    expect(order.every((entry) => entry.drawSeed === "2026-05-08|reset-2")).toBe(true);
-    expect(order.every((entry) => entry.hashInput.startsWith("2026-05-08|reset-2|"))).toBe(
+    expect(order.every((entry) => entry.drawSeed === "2026-05-08|reset-3")).toBe(true);
+    expect(order.every((entry) => entry.hashInput.startsWith("2026-05-08|reset-3|"))).toBe(
       true,
     );
   });

@@ -172,7 +172,7 @@ export function ReservationView() {
         <div className="algorithm-copy">
           <p>
             每天的日期种子是浏览器本地日期，格式为 <code>YYYY-MM-DD</code>。参与名单只包含当前启用中的球员。
-            如果当天需要重置，会在日期后追加公开重置盐值；例如 <code>2026-05-08|reset-2</code>。
+            如果当天需要重置，会在日期后追加公开重置盐值；例如 <code>2026-05-08|reset-3</code>。
           </p>
           <p>
             每位球员的抽签输入为 <code>日期|球员ID|球员名称|创建时间</code>，再计算

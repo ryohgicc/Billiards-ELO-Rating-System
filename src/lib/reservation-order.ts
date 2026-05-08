@@ -21,7 +21,7 @@ const ACTIVE_DAY_WEIGHT_DISCOUNT = 10_000_000;
 const RECENT_ACTIVE_DAY_WINDOW = 7;
 const ZERO_ACTIVE_DAY_PENALTY = 30_000_000;
 const RESERVATION_DAY_RESET_SALTS: Record<string, string> = {
-  "2026-05-08": "reset-2",
+  "2026-05-08": "reset-3",
 };
 
 function padNumber(value: number) {
