@@ -231,4 +231,79 @@ describe("generateAiMatchInsights", () => {
       },
     });
   });
+
+  it("retries malformed AI output up to ten model calls", async () => {
+    const validPayload = {
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              winner_profile: {
+                title_label: "准星队长",
+                title_category: "legend",
+                title_reason: "关键球稳得住。",
+                evaluation: "赢得不花，但够硬。",
+                market_value_usd: 2200,
+              },
+              loser_profile: {
+                title_label: "遗憾大师",
+                title_category: "fun",
+                title_reason: "机会来过，手没跟上。",
+                evaluation: "输在最后一口气。",
+                market_value_usd: 1200,
+              },
+              match_review: "这场球胜者像有导航，负者像在找停车位。",
+            }),
+          },
+        },
+      ],
+    };
+    const malformedPayload = {
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              note: "格式不对",
+            }),
+          },
+        },
+      ],
+    };
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify(fetchSpy.mock.calls.length <= 9 ? malformedPayload : validPayload),
+          {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          },
+        ),
+      ),
+    );
+
+    const winner = buildPlayer("winner", "小明");
+    const loser = buildPlayer("loser", "小王");
+
+    const result = await generateAiMatchInsights({
+      apiKey: "test-key",
+      apiUrl: "https://example.com/v1",
+      model: "mimo-v2.5-pro",
+      generatedAt,
+      match: {
+        id: "match-1",
+        winnerId: winner.id,
+        loserId: loser.id,
+        createdAt: generatedAt,
+        winnerMoments: [],
+        loserMoments: [],
+        winnerNote: "",
+        loserNote: "",
+      },
+      winner: { player: winner, profile: buildProfile(winner.id) },
+      loser: { player: loser, profile: buildProfile(loser.id) },
+    });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(10);
+    expect(result.matchReview.review).toBe("这场球胜者像有导航，负者像在找停车位。");
+  });
 });

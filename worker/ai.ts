@@ -12,6 +12,7 @@ const DEFAULT_OPENAI_API_URL = "https://api.openai.com/v1";
 const MIN_AI_MARKET_VALUE = 500;
 const MAX_AI_MARKET_VALUE = 30000;
 const AI_REQUEST_TIMEOUT_MS = 60000;
+const MAX_AI_OUTPUT_RETRY_ATTEMPTS = 10;
 const PLAIN_JSON_OUTPUT_NOTICE =
   "禁止输出思考过程、<think> 标签、markdown 代码块或额外解释。只输出一个 JSON 对象。";
 
@@ -597,7 +598,7 @@ export async function generateAiMatchInsights({
   let parsed: OpenAiInsightsPayload | null = null;
   let lastError: unknown = null;
 
-  for (const plainJsonOnly of [false, true]) {
+  for (let attemptIndex = 0; attemptIndex < MAX_AI_OUTPUT_RETRY_ATTEMPTS; attemptIndex += 1) {
     try {
       const payloadText = await requestAiPayloadText({
         apiKey,
@@ -606,14 +607,17 @@ export async function generateAiMatchInsights({
         match,
         winner,
         loser,
-        plainJsonOnly,
+        plainJsonOnly: attemptIndex > 0,
       });
       parsed = parseInsightsPayload(payloadText);
       break;
     } catch (error) {
       lastError = error;
 
-      if (plainJsonOnly || !isRetryableAiOutputError(error)) {
+      if (
+        !isRetryableAiOutputError(error) ||
+        attemptIndex === MAX_AI_OUTPUT_RETRY_ATTEMPTS - 1
+      ) {
         throw error;
       }
     }

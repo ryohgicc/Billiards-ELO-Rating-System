@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 - 将 AI 请求超时时间从 12 秒延长到 60 秒，兼容响应较慢的 OpenAI 协议模型网关。
 - 按小米 MiMo 文档改用 `max_completion_tokens`、`response_format: { type: "json_object" }`，并传入 `thinking: { type: "disabled" }` 关闭默认深度思考，避免推理预算耗尽后返回空内容。
 - 历史 AI 补生成接口改为同步处理单场比赛，避免 Cloudflare 取消较慢的 `waitUntil()` 后台任务。
+- AI 返回结构不正确时会重新调用模型生成，最多重试 10 次，减少赛后评价因偶发格式漂移漏生成的情况。
 
 ### Tested
 - `npx vitest run worker/ai.test.ts`
