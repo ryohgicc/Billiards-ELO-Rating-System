@@ -91,7 +91,7 @@ describe("buildPlayerProfiles", () => {
     expect(profiles.p1.recentMatches[0]?.moments).toContain("决胜局绝杀");
     expect(profiles.p1.marketValue.amountUsd).toBeGreaterThan(profiles.p2.marketValue.amountUsd);
     expect(profiles.p1.marketValue.amountUsd).toBeGreaterThanOrEqual(12000);
-    expect(profiles.p1.marketValue.tier).toBe("桌边传说价");
+    expect(profiles.p1.marketValue.tier).toBe("巡回赛热股");
 
     expect(profiles.p2.title?.label).toBe("黑八冤种");
     expect(profiles.p2.worstLossStreak).toBe(3);
