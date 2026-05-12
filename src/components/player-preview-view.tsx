@@ -40,7 +40,6 @@ export function PlayerPreviewView() {
       : filteredPlayers[0]?.id ?? "";
   const selectedPlayer = filteredPlayers.find((player) => player.id === activePlayerId) ?? filteredPlayers[0];
   const selectedProfile = selectedPlayer ? profilesByPlayerId[selectedPlayer.id] : null;
-  const topProspect = sortedPlayers[0] ? profilesByPlayerId[sortedPlayers[0].id] : null;
 
   if (!isLoaded) {
     return <section className="panel">正在读取球员预览数据...</section>;
@@ -59,25 +58,6 @@ export function PlayerPreviewView() {
 
   return (
     <div className="stack">
-      <section className="panel preview-spotlight">
-        <div>
-          <p className="eyebrow">Player Market</p>
-          <h2>球员预览</h2>
-          <p className="algorithm-note">
-            看球员成就、最近战绩和身价估值，后面拿这套画像接 AI 打分会比较顺手。
-          </p>
-        </div>
-        {topProspect ? (
-          <div className="preview-spotlight__value">
-            <span>当前头号资产</span>
-            <strong>{sortedPlayers[0].name}</strong>
-            <p>
-              {formatCurrency(topProspect.marketValue.amountUsd)} · {topProspect.marketValue.tier}
-            </p>
-          </div>
-        ) : null}
-      </section>
-
       <section className="panel">
         <div className="section-heading">
           <div>
@@ -287,62 +267,6 @@ export function PlayerPreviewView() {
                     </p>
                   </section>
                 </div>
-
-                <section className="preview-panel">
-                  <div className="section-heading">
-                    <div>
-                      <p className="eyebrow">Recent Matches</p>
-                      <h3>最近战绩</h3>
-                    </div>
-                    <span className="section-note">{selectedProfile.recentMatches.length} 场</span>
-                  </div>
-
-                  {selectedProfile.recentMatches.length > 0 ? (
-                    <div className="preview-match-list">
-                      {selectedProfile.recentMatches.map((match) => (
-                        <article key={match.id} className="preview-match-card">
-                          <div className="preview-match-card__top">
-                            <div>
-                              <strong>
-                                {match.result === "W" ? "胜" : "负"} {match.opponentName}
-                              </strong>
-                              <p>{match.scoreline}</p>
-                            </div>
-                            <div className="preview-match-card__meta">
-                              <span
-                                className={
-                                  match.result === "W"
-                                    ? "title-pill title-pill--legend"
-                                    : "title-pill title-pill--fun"
-                                }
-                              >
-                                {match.result === "W" ? `+${match.ratingDelta}` : match.ratingDelta}
-                              </span>
-                              <small>{formatDateTime(match.createdAt)}</small>
-                            </div>
-                          </div>
-                          {match.moments.length > 0 ? (
-                            <div className="badge-list">
-                              {match.moments.map((moment) => (
-                                <span
-                                  key={`${match.id}-${moment}`}
-                                  className={
-                                    match.result === "W" ? "badge badge--glory" : "badge badge--chaos"
-                                  }
-                                >
-                                  {moment}
-                                </span>
-                              ))}
-                            </div>
-                          ) : null}
-                          {match.note ? <p>{match.note}</p> : null}
-                        </article>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="algorithm-note">还没有最近战绩可展示。</p>
-                  )}
-                </section>
 
                 <section className="preview-panel">
                   <div className="section-heading">

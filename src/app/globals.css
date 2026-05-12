@@ -1248,37 +1248,6 @@ button {
   min-height: 100%;
 }
 
-.preview-spotlight {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.38fr);
-  align-items: center;
-}
-
-.preview-spotlight__value {
-  display: grid;
-  gap: 0.35rem;
-  padding: 1rem;
-  border: 1px solid rgba(255, 216, 77, 0.18);
-  border-radius: 16px;
-  background:
-    radial-gradient(circle at 82% 20%, rgba(255, 216, 77, 0.14), transparent 7rem),
-    rgba(8, 10, 8, 0.88);
-}
-
-.preview-spotlight__value span {
-  color: var(--muted);
-}
-
-.preview-spotlight__value strong {
-  color: var(--gold);
-  font-size: 1.4rem;
-}
-
-.preview-spotlight__value p {
-  color: var(--text);
-}
-
 .preview-search {
   margin-bottom: 1rem;
 }
@@ -2259,7 +2228,6 @@ button {
 
   .academy-hero,
   .reservation-hero,
-  .preview-spotlight,
   .preview-workbench,
   .preview-detail__hero,
   .preview-columns,
@@ -2272,8 +2240,7 @@ button {
     grid-template-columns: 1fr;
   }
 
-  .preview-stat-grid,
-  .preview-spotlight {
+  .preview-stat-grid {
     grid-template-columns: 1fr;
   }
 
