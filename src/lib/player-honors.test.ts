@@ -100,6 +100,88 @@ describe("buildPlayerProfiles", () => {
     expect(profiles.p2.recentMatches[0]?.result).toBe("L");
   });
 
+  it("keeps full match history while summarizing opponent records", () => {
+    const profiles = buildPlayerProfiles(players, [
+      createMatch({
+        id: "m1",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-27T11:00:00.000Z",
+      }),
+      createMatch({
+        id: "m2",
+        winnerId: "p3",
+        loserId: "p1",
+        createdAt: "2026-04-27T11:10:00.000Z",
+      }),
+      createMatch({
+        id: "m3",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-27T11:20:00.000Z",
+      }),
+      createMatch({
+        id: "m4",
+        winnerId: "p2",
+        loserId: "p1",
+        createdAt: "2026-04-27T11:30:00.000Z",
+      }),
+      createMatch({
+        id: "m5",
+        winnerId: "p1",
+        loserId: "p3",
+        createdAt: "2026-04-27T11:40:00.000Z",
+      }),
+      createMatch({
+        id: "m6",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-27T11:50:00.000Z",
+      }),
+    ]);
+
+    expect(profiles.p1.matchHistory.map((match) => match.id)).toEqual([
+      "m6",
+      "m5",
+      "m4",
+      "m3",
+      "m2",
+      "m1",
+    ]);
+    expect(profiles.p1.recentMatches.map((match) => match.id)).toEqual([
+      "m6",
+      "m5",
+      "m4",
+      "m3",
+      "m2",
+    ]);
+    expect(profiles.p1.recentForm).toEqual({
+      wins: 3,
+      losses: 2,
+      trend: ["W", "W", "L", "W", "L"],
+    });
+    expect(profiles.p1.opponentSummaries).toEqual([
+      {
+        opponentId: "p2",
+        opponentName: "Bob",
+        wins: 3,
+        losses: 1,
+        totalMatches: 4,
+        winRate: 0.75,
+        lastMatchAt: "2026-04-27T11:50:00.000Z",
+      },
+      {
+        opponentId: "p3",
+        opponentName: "Cara",
+        wins: 1,
+        losses: 1,
+        totalMatches: 2,
+        winRate: 0.5,
+        lastMatchAt: "2026-04-27T11:40:00.000Z",
+      },
+    ]);
+  });
+
   it("prefers fresh ai profiles over rule-based titles and valuations", () => {
     const ruleProfiles = buildPlayerProfiles(players, [
       createMatch({

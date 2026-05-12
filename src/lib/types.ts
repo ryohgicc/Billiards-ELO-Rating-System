@@ -151,6 +151,16 @@ export type PlayerRecentForm = {
   trend: Array<"W" | "L">;
 };
 
+export type PlayerOpponentSummary = {
+  opponentId: string;
+  opponentName: string;
+  wins: number;
+  losses: number;
+  totalMatches: number;
+  winRate: number;
+  lastMatchAt: string;
+};
+
 export type PlayerMarketValue = {
   amountUsd: number;
   tier: string;
@@ -179,6 +189,8 @@ export type PlayerProfile = {
   currentLossStreak: number;
   recentForm: PlayerRecentForm;
   recentMatches: PlayerRecentMatch[];
+  matchHistory: PlayerRecentMatch[];
+  opponentSummaries: PlayerOpponentSummary[];
   evaluation: string;
   marketValue: PlayerMarketValue;
   marketValueSource: "rules" | "ai";

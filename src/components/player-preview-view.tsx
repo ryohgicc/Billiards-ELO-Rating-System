@@ -343,6 +343,104 @@ export function PlayerPreviewView() {
                     <p className="algorithm-note">还没有最近战绩可展示。</p>
                   )}
                 </section>
+
+                <section className="preview-panel">
+                  <div className="section-heading">
+                    <div>
+                      <p className="eyebrow">Head to Head</p>
+                      <h3>对阵分析</h3>
+                    </div>
+                    <span className="section-note">{selectedProfile.opponentSummaries.length} 位对手</span>
+                  </div>
+
+                  {selectedProfile.opponentSummaries.length > 0 ? (
+                    <div className="preview-opponent-grid">
+                      {selectedProfile.opponentSummaries.map((summary) => (
+                        <article key={summary.opponentId} className="preview-opponent-card">
+                          <div className="preview-opponent-card__top">
+                            <div>
+                              <strong>{summary.opponentName}</strong>
+                              <p>
+                                {summary.wins} 胜 {summary.losses} 负 · 共 {summary.totalMatches} 场
+                              </p>
+                            </div>
+                            <span
+                              className={
+                                summary.winRate >= 0.5
+                                  ? "title-pill title-pill--legend"
+                                  : "title-pill title-pill--fun"
+                              }
+                            >
+                              {formatPercent(summary.winRate)}
+                            </span>
+                          </div>
+                          <div className="preview-opponent-card__bar" aria-hidden="true">
+                            <span style={{ width: `${Math.round(summary.winRate * 100)}%` }} />
+                          </div>
+                          <small>最近交手：{formatDateTime(summary.lastMatchAt)}</small>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="algorithm-note">还没有形成对阵样本。</p>
+                  )}
+                </section>
+
+                <section className="preview-panel">
+                  <div className="section-heading">
+                    <div>
+                      <p className="eyebrow">Full History</p>
+                      <h3>完整比赛记录</h3>
+                    </div>
+                    <span className="section-note">{selectedProfile.matchHistory.length} 场</span>
+                  </div>
+
+                  {selectedProfile.matchHistory.length > 0 ? (
+                    <div className="preview-match-list">
+                      {selectedProfile.matchHistory.map((match) => (
+                        <article key={`history-${match.id}`} className="preview-match-card">
+                          <div className="preview-match-card__top">
+                            <div>
+                              <strong>
+                                {match.result === "W" ? "胜" : "负"} {match.opponentName}
+                              </strong>
+                              <p>{match.scoreline}</p>
+                            </div>
+                            <div className="preview-match-card__meta">
+                              <span
+                                className={
+                                  match.result === "W"
+                                    ? "title-pill title-pill--legend"
+                                    : "title-pill title-pill--fun"
+                                }
+                              >
+                                {match.result === "W" ? `+${match.ratingDelta}` : match.ratingDelta}
+                              </span>
+                              <small>{formatDateTime(match.createdAt)}</small>
+                            </div>
+                          </div>
+                          {match.moments.length > 0 ? (
+                            <div className="badge-list">
+                              {match.moments.map((moment) => (
+                                <span
+                                  key={`history-${match.id}-${moment}`}
+                                  className={
+                                    match.result === "W" ? "badge badge--glory" : "badge badge--chaos"
+                                  }
+                                >
+                                  {moment}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                          {match.note ? <p>{match.note}</p> : null}
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="algorithm-note">还没有完整战绩可展示。</p>
+                  )}
+                </section>
               </section>
             ) : null}
           </div>

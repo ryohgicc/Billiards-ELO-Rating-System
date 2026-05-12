@@ -10,6 +10,7 @@ import type {
   PlayerAchievement,
   PlayerAiProfile,
   PlayerMarketValue,
+  PlayerOpponentSummary,
   PlayerPhoto,
   PlayerPhotoRole,
   PlayerProfile,
@@ -344,10 +345,9 @@ function buildAiHooks(
   return [...new Set(hooks)].slice(0, 6);
 }
 
-function buildRecentMatches(playerId: string, timeline: MatchTimelineEntry[]): PlayerRecentMatch[] {
+function buildMatchHistory(playerId: string, timeline: MatchTimelineEntry[]): PlayerRecentMatch[] {
   return timeline
     .filter((entry) => entry.winnerId === playerId || entry.loserId === playerId)
-    .slice(0, 5)
     .map((entry) => {
       const isWinner = entry.winnerId === playerId;
 
@@ -362,6 +362,60 @@ function buildRecentMatches(playerId: string, timeline: MatchTimelineEntry[]): P
         note: isWinner ? entry.winnerNote : entry.loserNote,
       };
     });
+}
+
+function buildOpponentSummaries(
+  playerId: string,
+  timeline: MatchTimelineEntry[],
+): PlayerOpponentSummary[] {
+  const summariesByOpponentId = new Map<string, PlayerOpponentSummary>();
+
+  for (const entry of timeline) {
+    const isWinner = entry.winnerId === playerId;
+    const isLoser = entry.loserId === playerId;
+
+    if (!isWinner && !isLoser) {
+      continue;
+    }
+
+    const opponentId = isWinner ? entry.loserId : entry.winnerId;
+    const summary = summariesByOpponentId.get(opponentId) ?? {
+      opponentId,
+      opponentName: isWinner ? entry.loserName : entry.winnerName,
+      wins: 0,
+      losses: 0,
+      totalMatches: 0,
+      winRate: 0,
+      lastMatchAt: entry.createdAt,
+    };
+
+    if (isWinner) {
+      summary.wins += 1;
+    } else {
+      summary.losses += 1;
+    }
+
+    summary.totalMatches += 1;
+    summary.winRate = summary.wins / summary.totalMatches;
+
+    if (entry.createdAt > summary.lastMatchAt) {
+      summary.lastMatchAt = entry.createdAt;
+    }
+
+    summariesByOpponentId.set(opponentId, summary);
+  }
+
+  return [...summariesByOpponentId.values()].sort((left, right) => {
+    if (right.totalMatches !== left.totalMatches) {
+      return right.totalMatches - left.totalMatches;
+    }
+
+    if (right.winRate !== left.winRate) {
+      return right.winRate - left.winRate;
+    }
+
+    return right.lastMatchAt.localeCompare(left.lastMatchAt);
+  });
 }
 
 function buildRecentForm(recentMatches: PlayerRecentMatch[]): PlayerRecentForm {
@@ -593,8 +647,10 @@ export function buildPlayerProfiles(
       titleCandidates.length > 0 ? titleCandidates : fallbackTitle ? [fallbackTitle] : [];
     const title = unlockedTitles[0] ?? null;
     const achievements = buildAchievements(context);
-    const recentMatches = buildRecentMatches(player.id, timeline);
+    const matchHistory = buildMatchHistory(player.id, timeline);
+    const recentMatches = matchHistory.slice(0, 5);
     const recentForm = buildRecentForm(recentMatches);
+    const opponentSummaries = buildOpponentSummaries(player.id, timeline);
     const notableMoments = buildNotableMoments(context.momentCounts);
     const marketValue = buildMarketValue(context, title, recentForm);
     const playerPhotos = photosByPlayerId[player.id] ?? [];
@@ -630,6 +686,8 @@ export function buildPlayerProfiles(
       currentLossStreak: context.currentLossStreak,
       recentForm,
       recentMatches,
+      matchHistory,
+      opponentSummaries,
       evaluation: marketValue.summary,
       marketValue,
       titleSource: "rules",

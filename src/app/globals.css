@@ -1332,6 +1332,7 @@ button {
 .preview-detail__hero h3,
 .preview-panel h3,
 .preview-achievement-card strong,
+.preview-opponent-card strong,
 .preview-match-card strong {
   color: var(--text);
 }
@@ -1340,6 +1341,7 @@ button {
 .preview-roster__item small,
 .preview-title-card p,
 .preview-achievement-card p,
+.preview-opponent-card p,
 .preview-match-card p,
 .preview-stat-card p {
   color: var(--muted);
@@ -1352,6 +1354,7 @@ button {
 .preview-stat-card,
 .preview-title-card,
 .preview-achievement-card,
+.preview-opponent-card,
 .preview-factor-card,
 .preview-match-card {
   border: 1px solid var(--line);
@@ -1440,6 +1443,7 @@ button {
 
 .preview-title-list,
 .preview-achievement-list,
+.preview-opponent-grid,
 .preview-match-list,
 .preview-factor-list {
   display: grid;
@@ -1448,6 +1452,7 @@ button {
 
 .preview-title-card,
 .preview-achievement-card,
+.preview-opponent-card,
 .preview-factor-card,
 .preview-match-card {
   padding: 0.9rem;
@@ -1469,11 +1474,40 @@ button {
 }
 
 .preview-achievement-card__top,
+.preview-opponent-card__top,
 .preview-match-card__top {
   display: flex;
   gap: 0.75rem;
   justify-content: space-between;
   align-items: flex-start;
+}
+
+.preview-opponent-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.preview-opponent-card {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.preview-opponent-card small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.preview-opponent-card__bar {
+  overflow: hidden;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.preview-opponent-card__bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--gold));
 }
 
 .preview-match-card {
@@ -2229,6 +2263,7 @@ button {
   .preview-workbench,
   .preview-detail__hero,
   .preview-columns,
+  .preview-opponent-grid,
   .academy-split,
   .academy-grid,
   .academy-tip-grid,
@@ -2243,6 +2278,7 @@ button {
   }
 
   .preview-achievement-card__top,
+  .preview-opponent-card__top,
   .preview-match-card__top,
   .preview-roster__top {
     flex-direction: column;
