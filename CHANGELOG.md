@@ -20,6 +20,9 @@ All notable changes to this project will be documented in this file.
 - 历史 AI 补生成接口改为同步处理单场比赛，避免 Cloudflare 取消较慢的 `waitUntil()` 后台任务。
 - AI 返回结构不正确时会重新调用模型生成，最多重试 10 次，减少赛后评价因偶发格式漂移漏生成的情况。
 
+### Fixed
+- 球员列表和预览中的 AI 素材不再重复展示 AI 称号、身价和评价，避免和独立评价字段混在一起。
+
 ### Tested
 - `npx vitest run worker/ai.test.ts`
 

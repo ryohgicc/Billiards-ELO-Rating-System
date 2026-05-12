@@ -222,6 +222,11 @@ describe("buildPlayerProfiles", () => {
     expect(merged.p1.marketValueSource).toBe("ai");
     expect(merged.p1.evaluation).toContain("重点盯防");
     expect(merged.p1.aiModel).toBe("gpt-5.4-mini");
+    expect(merged.p1.aiHooks).not.toContain("AI称号：球房判官");
+    expect(merged.p1.aiHooks).not.toContain("AI身价：$15500");
+    expect(merged.p1.aiHooks).not.toContain(
+      "AI评价：手感和压迫感都在，已经进入被重点盯防的区间。",
+    );
 
     expect(merged.p2.titleSource).toBe("rules");
     expect(merged.p2.title?.label).not.toBe("过期旧称号");
