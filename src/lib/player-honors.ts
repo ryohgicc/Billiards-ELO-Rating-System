@@ -760,16 +760,7 @@ export function mergeAiProfilesIntoPlayerProfiles(
       },
       marketValueSource: "ai",
       aiModel: aiProfile.model,
-      aiHooks: [
-        ...new Set(
-          [
-            `AI称号：${aiTitle.label}`,
-            `AI身价：$${amountUsd}`,
-            `AI评价：${evaluation}`,
-            ...profile.aiHooks,
-          ].filter((value): value is string => Boolean(value)),
-        ),
-      ].slice(0, 6),
+      aiHooks: profile.aiHooks,
     };
   }
 
