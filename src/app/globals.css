@@ -1102,6 +1102,13 @@ button {
     0 18px 38px rgba(0, 0, 0, 0.18);
 }
 
+.result-photo-stage-wrap {
+  display: grid;
+  gap: 0.55rem;
+  justify-items: center;
+  width: min(100%, 18rem);
+}
+
 .result-photo-stage::before {
   position: absolute;
   inset: 0.75rem 50% 0.75rem auto;
@@ -1183,6 +1190,10 @@ button {
   display: grid;
   gap: 0.1rem;
   padding: 0 0.72rem;
+}
+
+.result-photo-card--readonly .result-photo-card__caption {
+  inset: auto 0 0.72rem;
 }
 
 .result-photo-card__caption span {
@@ -2380,6 +2391,11 @@ button {
   }
 
   .result-photo-stage {
+    width: 100%;
+    max-width: 20rem;
+  }
+
+  .result-photo-stage-wrap {
     width: 100%;
     max-width: 20rem;
   }

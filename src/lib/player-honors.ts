@@ -453,23 +453,20 @@ function pickResultAwareFeaturedPhoto(
   photos: PlayerPhoto[],
   latestMatchRole: PlayerPhotoRole,
 ) {
-  const resultPhotos = photos.filter((photo) => photo.role === latestMatchRole);
+  const resultOnlyPhotos = photos.filter(
+    (photo) => photo.role === "victory" || photo.role === "defeat",
+  );
+  const resultPhotos = resultOnlyPhotos.filter((photo) => photo.role === latestMatchRole);
 
   if (resultPhotos.length > 0) {
     return resultPhotos[resultPhotos.length - 1];
   }
 
-  if (photos.length === 1) {
-    return photos[0];
+  if (resultOnlyPhotos.length === 1) {
+    return resultOnlyPhotos[0];
   }
 
-  const defaultPhotos = photos.filter((photo) => photo.role === "default");
-
-  if (defaultPhotos.length > 0) {
-    return defaultPhotos[defaultPhotos.length - 1];
-  }
-
-  return photos[photos.length - 1] ?? null;
+  return resultOnlyPhotos[resultOnlyPhotos.length - 1] ?? null;
 }
 
 function roundMarketValue(value: number) {

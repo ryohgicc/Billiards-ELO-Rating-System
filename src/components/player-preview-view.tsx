@@ -5,7 +5,7 @@ import { useDeferredValue, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { EmptyState } from "@/components/empty-state";
-import { PlayerPhotoFrame } from "@/components/player-photo-frame";
+import { ResultPhotoStage } from "@/components/result-photo-stage";
 import { useAppState } from "@/lib/app-state";
 import { formatCurrency, formatDateTime, formatPercent } from "@/lib/format";
 
@@ -119,8 +119,8 @@ export function PlayerPreviewView() {
                   <div>
                     <p className="eyebrow">Preview Card</p>
                     <h3>{selectedPlayer.name}</h3>
-                    <PlayerPhotoFrame
-                      photo={selectedProfile.featuredPhoto}
+                    <ResultPhotoStage
+                      photos={selectedProfile.photos}
                       playerId={selectedPlayer.id}
                       playerName={selectedPlayer.name}
                     />

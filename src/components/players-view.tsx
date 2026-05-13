@@ -1,34 +1,14 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 
 import { EmptyState } from "@/components/empty-state";
+import { ResultPhotoStage } from "@/components/result-photo-stage";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { preparePlayerPhotoPayload } from "@/lib/player-photos";
 import { useAppState } from "@/lib/app-state";
-import type { PlayerPhoto, PlayerPhotoRole } from "@/lib/types";
-
-const resultPhotoSlots: Array<{
-  role: Extract<PlayerPhotoRole, "victory" | "defeat">;
-  label: string;
-  uploadLabel: string;
-  eyebrow: string;
-}> = [
-  {
-    role: "victory",
-    label: "胜利图片",
-    uploadLabel: "上传胜利图片",
-    eyebrow: "WIN",
-  },
-  {
-    role: "defeat",
-    label: "失败图片",
-    uploadLabel: "上传失败图片",
-    eyebrow: "LOSS",
-  },
-];
+import type { PlayerPhotoRole } from "@/lib/types";
 
 export function PlayersView() {
   const {
@@ -153,75 +133,19 @@ export function PlayersView() {
                 : (profile?.currentLossStreak ?? 0) > 0
                   ? `当前 ${profile?.currentLossStreak} 连败`
                   : "当前暂无连串";
-            const photosByRole = (profile?.photos ?? []).reduce<
-              Partial<Record<PlayerPhotoRole, PlayerPhoto>>
-            >((accumulator, photo) => {
-              accumulator[photo.role] = photo;
-              return accumulator;
-            }, {});
 
             return (
               <article key={player.id} className="player-row">
                 {profile ? (
                   <div className="player-row__media">
-                    <div className="result-photo-stage" aria-label={`${player.name} 的胜负图片`}>
-                      {resultPhotoSlots.map(({ role, label, uploadLabel, eyebrow }) => {
-                        const photoRole = role;
-                        const inputId = `player-photo-${photoRole}-${player.id}`;
-                        const isUploading = uploadingPhotoTarget === `${player.id}:${photoRole}`;
-                        const photo = photosByRole[photoRole] ?? null;
-
-                        return (
-                          <div
-                            key={photoRole}
-                            className={`result-photo-card result-photo-card--${photoRole}`}
-                          >
-                            <div className="result-photo-card__image-wrap">
-                              {photo ? (
-                                <img
-                                  alt={`${player.name} 的${label}`}
-                                  className="result-photo-card__image"
-                                  loading="lazy"
-                                  src={photo.imageData}
-                                />
-                              ) : (
-                                <div className="result-photo-card__placeholder" aria-hidden="true">
-                                  <span>{player.name.slice(0, 1).toUpperCase()}</span>
-                                </div>
-                              )}
-                              <div className="result-photo-card__shine" aria-hidden="true" />
-                            </div>
-                            <div className="result-photo-card__caption">
-                              <span>{eyebrow}</span>
-                              <strong>{label}</strong>
-                            </div>
-                            <label className="result-photo-card__upload" htmlFor={inputId}>
-                              {isUploading ? "上传中..." : photo ? "替换" : uploadLabel}
-                            </label>
-                            <input
-                              className="sr-only"
-                              id={inputId}
-                              onChange={(event) => {
-                                handlePhotoUpload(
-                                  player.id,
-                                  photoRole,
-                                  event.target.files,
-                                ).catch(() => undefined);
-                                event.target.value = "";
-                              }}
-                              type="file"
-                              accept="image/*"
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <Link
-                      className="result-photo-stage__profile-link"
-                      href={`/preview?player=${encodeURIComponent(player.id)}`}
-                    >
-                      查看球员档案
-                    </Link>
+                    <ResultPhotoStage
+                      onPhotoUpload={handlePhotoUpload}
+                      photos={profile.photos}
+                      playerId={player.id}
+                      playerName={player.name}
+                      profileHref={`/preview?player=${encodeURIComponent(player.id)}`}
+                      uploadingPhotoTarget={uploadingPhotoTarget}
+                    />
                   </div>
                 ) : null}
                 <div className="player-row__content">

@@ -319,4 +319,29 @@ describe("buildPlayerProfiles", () => {
 
     expect(profiles.p1.featuredPhoto?.id).toBe("p1-victory");
   });
+
+  it("does not use default photos as featured result photos", () => {
+    const profiles = buildPlayerProfiles(
+      players,
+      [
+        createMatch({
+          id: "m1",
+          winnerId: "p1",
+          loserId: "p2",
+          createdAt: "2026-04-27T11:00:00.000Z",
+        }),
+      ],
+      [
+        {
+          id: "p1-default",
+          playerId: "p1",
+          imageData: "data:image/jpeg;base64,default",
+          createdAt: "2026-04-27T10:05:00.000Z",
+          role: "default",
+        },
+      ],
+    );
+
+    expect(profiles.p1.featuredPhoto).toBeNull();
+  });
 });
