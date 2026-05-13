@@ -43,8 +43,8 @@ describe("calculateMatchDelta", () => {
   it("gives the winner and loser equal opposite rating changes", () => {
     const result = calculateMatchDelta(1000, 1000);
 
-    expect(result.winnerDelta).toBe(35);
-    expect(result.loserDelta).toBe(-35);
+    expect(result.winnerDelta).toBe(30);
+    expect(result.loserDelta).toBe(-30);
     expect(result.winnerDelta + result.loserDelta).toBe(0);
   });
 
@@ -54,10 +54,10 @@ describe("calculateMatchDelta", () => {
     const largerUpset = calculateMatchDelta(1000, 1400);
     const heavyFavoriteWin = calculateMatchDelta(1400, 1000);
 
-    expect(favoriteWin.winnerDelta).toBe(17);
-    expect(underdogWin.winnerDelta).toBe(71);
-    expect(largerUpset.winnerDelta).toBe(111);
-    expect(heavyFavoriteWin.winnerDelta).toBe(6);
+    expect(favoriteWin.winnerDelta).toBe(14);
+    expect(underdogWin.winnerDelta).toBe(61);
+    expect(largerUpset.winnerDelta).toBe(95);
+    expect(heavyFavoriteWin.winnerDelta).toBe(5);
     expect(favoriteWin.winnerDelta).toBeLessThan(underdogWin.winnerDelta);
     expect(underdogWin.winnerDelta + underdogWin.loserDelta).toBe(0);
     expect(largerUpset.winnerDelta + largerUpset.loserDelta).toBe(0);
@@ -83,8 +83,8 @@ describe("replayMatches", () => {
 
     const result = replayMatches(players.slice(0, 2), matches);
 
-    expect(result.p1.rating).toBe(989);
-    expect(result.p2.rating).toBe(1011);
+    expect(result.p1.rating).toBe(992);
+    expect(result.p2.rating).toBe(1008);
     expect(result.p1.wins).toBe(1);
     expect(result.p1.losses).toBe(1);
     expect(result.p1.bestWinStreak).toBe(1);
@@ -117,9 +117,9 @@ describe("replayMatches", () => {
 
     const withoutMiddle = replayMatches(players, matches.filter((match) => match.id !== "m2"));
 
-    expect(withoutMiddle.p1.rating).toBe(1035);
-    expect(withoutMiddle.p2.rating).toBe(1005);
-    expect(withoutMiddle.p3.rating).toBe(960);
+    expect(withoutMiddle.p1.rating).toBe(1030);
+    expect(withoutMiddle.p2.rating).toBe(1004);
+    expect(withoutMiddle.p3.rating).toBe(966);
   });
 
   it("tracks longest win and loss streaks per player", () => {
@@ -217,8 +217,8 @@ describe("buildRankingsThroughLocalDay", () => {
     const snapshot = buildRankingsThroughLocalDay(players.slice(0, 2), matches, "2026-04-27");
 
     expect(snapshot.map((entry) => entry.player.id)).toEqual(["p1", "p2"]);
-    expect(snapshot[0].rating).toBe(1035);
-    expect(snapshot[1].rating).toBe(965);
+    expect(snapshot[0].rating).toBe(1030);
+    expect(snapshot[1].rating).toBe(970);
   });
 
   it("excludes players created after the selected local day", () => {

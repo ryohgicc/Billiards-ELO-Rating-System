@@ -1,8 +1,8 @@
 const exampleRows = [
   { label: "赛前积分", playerA: "A：1000", playerB: "B：1000" },
   { label: "预期胜率", playerA: "50%", playerB: "50%" },
-  { label: "A 获胜后变化", playerA: "+35", playerB: "-35" },
-  { label: "赛后积分", playerA: "1035", playerB: "965" },
+  { label: "A 获胜后变化", playerA: "+30", playerB: "-30" },
+  { label: "赛后积分", playerA: "1030", playerB: "970" },
 ];
 
 export function AlgorithmView() {
@@ -14,7 +14,7 @@ export function AlgorithmView() {
             <p className="eyebrow">Rating Model</p>
             <h2>Elo 积分算法</h2>
           </div>
-          <span className="section-note">初始分 1000 / K 值 70</span>
+          <span className="section-note">初始分 1000 / K 值 60</span>
         </div>
 
         <div className="algorithm-copy">
@@ -88,7 +88,7 @@ export function AlgorithmView() {
         </div>
 
         <p className="algorithm-note">
-          因为双方赛前都是 1000 分，系统认为两人胜率相同。A 获胜后得到 35 分，B 扣 35 分。
+          因为双方赛前都是 1000 分，系统认为两人胜率相同。A 获胜后得到 30 分，B 扣 30 分。
           如果 A 原本明显更高分，A 获胜会加得更少；如果 B 是低分反胜高分，会按爆冷倍率加得更多，单场最多变化 160 分。
         </p>
       </section>

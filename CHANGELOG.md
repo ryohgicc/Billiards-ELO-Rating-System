@@ -13,8 +13,8 @@ All notable changes to this project will be documented in this file.
 - 为 `2026-05-08` 预约排序追加公开重置盐值 `reset-5`，并限定 `gjj` 不进入当天前 2 名，用于重新 roll 当天抽签结果。
 
 ### Changed
+- 默认 K 值改为 `60`，同分比赛胜者加 `30` 分、败者扣 `30` 分；历史积分继续从比赛记录回放重算，线上 D1 `settings.kFactor` 同步为 `60` 后即可追溯更新现有排行榜。
 - 球员预览移除顶部资产概览和单独最近战绩模块，页面直接进入球探面板、对阵分析和完整比赛记录。
-- 默认 K 值改为 `70`，同分比赛胜者加 `35` 分、败者扣 `35` 分；历史积分继续从比赛记录回放重算，线上 D1 `settings.kFactor` 同步为 `70` 后即可追溯更新现有排行榜。
 - 将 AI 请求超时时间从 12 秒延长到 60 秒，兼容响应较慢的 OpenAI 协议模型网关。
 - 按小米 MiMo 文档改用 `max_completion_tokens`、`response_format: { type: "json_object" }`，并传入 `thinking: { type: "disabled" }` 关闭默认深度思考，避免推理预算耗尽后返回空内容。
 - 历史 AI 补生成接口改为同步处理单场比赛，避免 Cloudflare 取消较慢的 `waitUntil()` 后台任务。
