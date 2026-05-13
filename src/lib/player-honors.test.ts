@@ -292,4 +292,31 @@ describe("buildPlayerProfiles", () => {
     expect(winningProfiles.p1.featuredPhoto?.id).toBe("p1-victory");
     expect(losingProfiles.p1.featuredPhoto?.id).toBe("p1-defeat");
   });
+
+  it("falls back to the only available role photo when the latest result role is missing", () => {
+    const photos: PlayerPhoto[] = [
+      {
+        id: "p1-victory",
+        playerId: "p1",
+        imageData: "data:image/jpeg;base64,victory",
+        createdAt: "2026-04-27T10:06:00.000Z",
+        role: "victory",
+      },
+    ];
+
+    const profiles = buildPlayerProfiles(
+      players,
+      [
+        createMatch({
+          id: "m1",
+          winnerId: "p2",
+          loserId: "p1",
+          createdAt: "2026-04-27T11:00:00.000Z",
+        }),
+      ],
+      photos,
+    );
+
+    expect(profiles.p1.featuredPhoto?.id).toBe("p1-victory");
+  });
 });

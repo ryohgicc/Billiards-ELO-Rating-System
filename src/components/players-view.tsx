@@ -141,7 +141,6 @@ export function PlayersView() {
                     <PlayerPhotoFrame
                       href={`/preview?player=${encodeURIComponent(player.id)}`}
                       photo={profile.featuredPhoto}
-                      photoCount={profile.photoCount}
                       playerId={player.id}
                       playerName={player.name}
                     />
@@ -162,7 +161,6 @@ export function PlayersView() {
                             <input
                               className="sr-only"
                               id={inputId}
-                              multiple={photoRole === "default"}
                               onChange={(event) => {
                                 handlePhotoUpload(
                                   player.id,
@@ -241,7 +239,7 @@ export function PlayersView() {
                     <>
                       <div className="player-row__meta">
                         <span>身价 {profile ? formatCurrency(profile.marketValue.amountUsd) : "$0"}</span>
-                        <span>照片 {profile.photoCount} 张</span>
+                        <span>图片 {profile.photoCount} 张</span>
                         <span>{currentTrend}</span>
                         <span>最长连胜 {profile.bestWinStreak}</span>
                         <span>最长连败 {profile.worstLossStreak}</span>

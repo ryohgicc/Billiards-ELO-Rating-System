@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - 默认 K 值改为 `60`，同分比赛胜者加 `30` 分、败者扣 `30` 分；历史积分继续从比赛记录回放重算，线上 D1 `settings.kFactor` 同步为 `60` 后即可追溯更新现有排行榜。
+- 球员展示图去掉轮播逻辑，改为最近一场胜利展示胜利图片、失败展示失败图片；胜利和失败图片各只保留 1 张，重新上传会替换旧图。
 - 球员预览移除顶部资产概览和单独最近战绩模块，页面直接进入球探面板、对阵分析和完整比赛记录。
 - 将 AI 请求超时时间从 12 秒延长到 60 秒，兼容响应较慢的 OpenAI 协议模型网关。
 - 按小米 MiMo 文档改用 `max_completion_tokens`、`response_format: { type: "json_object" }`，并传入 `thinking: { type: "disabled" }` 关闭默认深度思考，避免推理预算耗尽后返回空内容。

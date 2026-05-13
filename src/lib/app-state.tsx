@@ -224,7 +224,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     async addPlayerPhotos(playerId, images, role = "default") {
       const payload = validatePlayerPhotoPayload(
         { images, role },
-        state.photos.filter((photo) => photo.playerId === playerId).length,
+        state.photos.filter((photo) => photo.playerId === playerId && photo.role !== role).length,
       );
       applyServerState(await api.createPlayerPhotos(playerId, payload.images, payload.role));
     },

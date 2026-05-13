@@ -1,6 +1,5 @@
 import { DEFAULT_K_FACTOR, DEFAULT_RATING } from "@/lib/constants";
 import { MATCH_MOMENT_OPTIONS, formatMatchMomentLabel } from "@/lib/match-moments";
-import { pickFeaturedPhoto } from "@/lib/player-photos";
 import { buildMatchTimeline, replayMatches } from "@/lib/rating";
 import type {
   MatchMomentKey,
@@ -453,21 +452,24 @@ function findLatestMatchRole(playerId: string, timeline: MatchTimelineEntry[]): 
 function pickResultAwareFeaturedPhoto(
   photos: PlayerPhoto[],
   latestMatchRole: PlayerPhotoRole,
-  seed: string,
 ) {
   const resultPhotos = photos.filter((photo) => photo.role === latestMatchRole);
 
   if (resultPhotos.length > 0) {
-    return pickFeaturedPhoto(resultPhotos, seed);
+    return resultPhotos[resultPhotos.length - 1];
+  }
+
+  if (photos.length === 1) {
+    return photos[0];
   }
 
   const defaultPhotos = photos.filter((photo) => photo.role === "default");
 
   if (defaultPhotos.length > 0) {
-    return pickFeaturedPhoto(defaultPhotos, seed);
+    return defaultPhotos[defaultPhotos.length - 1];
   }
 
-  return pickFeaturedPhoto(photos, seed);
+  return photos[photos.length - 1] ?? null;
 }
 
 function roundMarketValue(value: number) {
@@ -582,6 +584,7 @@ export function buildPlayerProfiles(
   kFactor = DEFAULT_K_FACTOR,
   photoSeed = "default-photo-seed",
 ): Record<string, PlayerProfile> {
+  void photoSeed;
   const stats = replayMatches(players, matches, kFactor);
   const timeline = buildMatchTimeline(players, matches, kFactor);
   const photosByPlayerId = players.reduce<Record<string, PlayerPhoto[]>>((accumulator, player) => {
@@ -655,11 +658,7 @@ export function buildPlayerProfiles(
     const marketValue = buildMarketValue(context, title, recentForm);
     const playerPhotos = photosByPlayerId[player.id] ?? [];
     const latestMatchRole = findLatestMatchRole(player.id, timeline);
-    const featuredPhoto = pickResultAwareFeaturedPhoto(
-      playerPhotos,
-      latestMatchRole,
-      `${photoSeed}:${player.id}:${playerPhotos.length}`,
-    );
+    const featuredPhoto = pickResultAwareFeaturedPhoto(playerPhotos, latestMatchRole);
 
     accumulator[player.id] = {
       playerId: player.id,

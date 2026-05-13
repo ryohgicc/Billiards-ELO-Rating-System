@@ -659,8 +659,10 @@ async function updatePlayerName(playerId: string, request: Request, env: Env) {
 async function createPlayerPhotos(playerId: string, request: Request, env: Env) {
   const body = (await readJson(request)) as {
     images?: unknown;
+    role?: unknown;
   };
   const state = await loadState(env.DB);
+  const role = normalizePlayerPhotoRole(body.role);
 
   if (!state.players.some((player) => player.id === playerId)) {
     return errorResponse("球员不存在", 404);
@@ -668,12 +670,20 @@ async function createPlayerPhotos(playerId: string, request: Request, env: Env) 
 
   const photoPayload = validatePlayerPhotoPayload(
     body,
-    state.photos.filter((photo) => photo.playerId === playerId).length,
+    state.photos.filter((photo) => photo.playerId === playerId && photo.role !== role).length,
   );
   const now = new Date().toISOString();
+  const statements =
+    photoPayload.role === "victory" || photoPayload.role === "defeat"
+      ? [
+          env.DB
+            .prepare("DELETE FROM player_photos WHERE player_id = ? AND role = ?")
+            .bind(playerId, photoPayload.role),
+        ]
+      : [];
 
   await env.DB.batch(
-    photoPayload.images.map((imageData, index) =>
+    statements.concat(photoPayload.images.map((imageData, index) =>
       env.DB
         .prepare(
           "INSERT INTO player_photos (id, player_id, image_data, created_at, role) VALUES (?, ?, ?, ?, ?)",
@@ -685,7 +695,7 @@ async function createPlayerPhotos(playerId: string, request: Request, env: Env) 
           new Date(Date.parse(now) + index).toISOString(),
           photoPayload.role,
         ),
-    ),
+    )),
   );
 
   return freshStateResponse(request, env, { status: 201 });

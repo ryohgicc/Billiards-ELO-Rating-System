@@ -1,5 +1,4 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
 import { useDeferredValue, useState } from "react";
@@ -122,7 +121,6 @@ export function PlayerPreviewView() {
                     <h3>{selectedPlayer.name}</h3>
                     <PlayerPhotoFrame
                       photo={selectedProfile.featuredPhoto}
-                      photoCount={selectedProfile.photoCount}
                       playerId={selectedPlayer.id}
                       playerName={selectedPlayer.name}
                     />
@@ -150,23 +148,6 @@ export function PlayerPreviewView() {
                     <p className="player-row__note">
                       {selectedProfile.title?.reason ?? "先打几场比赛，让系统给出更完整的判断。"}
                     </p>
-                    {selectedProfile.photoCount > 1 ? (
-                      <div className="preview-photo-strip">
-                        {selectedProfile.photos.map((photo) => (
-                          <img
-                            key={photo.id}
-                            alt={`${selectedPlayer.name} 的历史照片`}
-                            className={
-                              selectedProfile.featuredPhoto?.id === photo.id
-                                ? "preview-photo-strip__thumb preview-photo-strip__thumb--active"
-                                : "preview-photo-strip__thumb"
-                            }
-                            loading="lazy"
-                            src={photo.imageData}
-                          />
-                        ))}
-                      </div>
-                    ) : null}
                   </div>
                   <div className="preview-value-card">
                     <span>{selectedProfile.aiModel ? "AI 当前估值" : "当前估值"}</span>

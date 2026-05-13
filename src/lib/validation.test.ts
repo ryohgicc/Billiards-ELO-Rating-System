@@ -300,6 +300,22 @@ describe("validatePlayerPhotoPayload", () => {
     });
   });
 
+  it("rejects more than one victory or defeat photo per upload", () => {
+    expect(() =>
+      validatePlayerPhotoPayload({
+        images: ["data:image/jpeg;base64,abc", "data:image/jpeg;base64,def"],
+        role: "victory",
+      }),
+    ).toThrowError("胜利图片每次只能上传 1 张");
+
+    expect(() =>
+      validatePlayerPhotoPayload({
+        images: ["data:image/jpeg;base64,abc", "data:image/jpeg;base64,def"],
+        role: "defeat",
+      }),
+    ).toThrowError("失败图片每次只能上传 1 张");
+  });
+
   it("rejects invalid images", () => {
     expect(() =>
       validatePlayerPhotoPayload({

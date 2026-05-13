@@ -285,6 +285,16 @@ export function validatePlayerPhotoPayload(value: { images?: unknown; role?: unk
     throw new Error("请选择至少一张照片");
   }
 
+  const role = normalizePlayerPhotoRole(value.role);
+
+  if (role === "victory" && value.images.length > 1) {
+    throw new Error("胜利图片每次只能上传 1 张");
+  }
+
+  if (role === "defeat" && value.images.length > 1) {
+    throw new Error("失败图片每次只能上传 1 张");
+  }
+
   if (value.images.length > MAX_PLAYER_PHOTOS_PER_UPLOAD) {
     throw new Error(`单次最多上传 ${MAX_PLAYER_PHOTOS_PER_UPLOAD} 张照片`);
   }
@@ -293,7 +303,6 @@ export function validatePlayerPhotoPayload(value: { images?: unknown; role?: unk
     throw new Error(`每位球员最多保留 ${MAX_PLAYER_PHOTOS_PER_PLAYER} 张照片`);
   }
 
-  const role = normalizePlayerPhotoRole(value.role);
   const images = value.images.map((image, index) => {
     if (typeof image !== "string" || !isPlayerPhotoDataUrl(image.trim())) {
       throw new Error(`第 ${index + 1} 张照片格式不正确`);

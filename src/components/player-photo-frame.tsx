@@ -9,16 +9,20 @@ type PlayerPhotoFrameProps = {
   playerId: string;
   playerName: string;
   photo: PlayerPhoto | null;
-  photoCount?: number;
   href?: string;
   compact?: boolean;
   hideText?: boolean;
 };
 
+const photoRoleLabels: Record<PlayerPhoto["role"], string> = {
+  default: "球员图片",
+  victory: "胜利图片",
+  defeat: "失败图片",
+};
+
 function PlayerPhotoFrameInner({
   playerName,
   photo,
-  photoCount = 0,
   compact = false,
   hideText = false,
 }: Omit<PlayerPhotoFrameProps, "playerId" | "href">) {
@@ -39,7 +43,7 @@ function PlayerPhotoFrameInner({
       {hideText ? null : (
         <div className="player-photo-frame__overlay">
           <strong>{playerName}</strong>
-          <span>{photoCount > 0 ? `${photoCount} 张照片轮播中` : "暂无照片"}</span>
+          <span>{photo ? photoRoleLabels[photo.role] : "暂无照片"}</span>
         </div>
       )}
     </div>

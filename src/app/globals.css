@@ -1499,33 +1499,6 @@ button {
   color: #ffe9a6;
 }
 
-.preview-photo-strip {
-  display: flex;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-  margin-top: 0.8rem;
-}
-
-.preview-photo-strip__thumb {
-  width: 4.6rem;
-  height: 4.6rem;
-  object-fit: cover;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  opacity: 0.66;
-  transition:
-    opacity 160ms ease,
-    border-color 160ms ease,
-    transform 160ms ease;
-}
-
-.preview-photo-strip__thumb--active {
-  border-color: rgba(55, 241, 151, 0.3);
-  opacity: 1;
-  box-shadow: 0 0 18px rgba(55, 241, 151, 0.14);
-  transform: translateY(-1px);
-}
-
 .reservation-hero {
   display: grid;
   gap: 1rem;
@@ -2277,11 +2250,6 @@ button {
 
   .ranking-table__player {
     align-items: flex-start;
-  }
-
-  .preview-photo-strip__thumb {
-    width: 4rem;
-    height: 4rem;
   }
 
   .reservation-hero__copy h2 {
