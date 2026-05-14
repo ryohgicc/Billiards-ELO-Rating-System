@@ -2291,6 +2291,23 @@ button {
     font-size: 1.2rem;
   }
 
+  .date-switcher {
+    gap: 0.45rem;
+    margin-right: -0.78rem;
+    margin-left: -0.78rem;
+    padding-inline: 0.78rem;
+  }
+
+  .date-switcher__button {
+    flex: 0 0 auto;
+    min-width: 9.75rem;
+  }
+
+  .date-switcher__button span,
+  .date-switcher__button strong {
+    max-width: 100%;
+  }
+
   .spotlight {
     grid-template-columns: 1fr;
     gap: 0.62rem;
@@ -2382,6 +2399,9 @@ button {
     display: grid;
     grid-template-columns: 4.5rem minmax(0, 1fr);
     gap: 0.65rem;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
     padding: 0.72rem;
   }
 
@@ -2406,6 +2426,7 @@ button {
     grid-column: 2;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.38rem 0.55rem;
+    min-width: 0;
     width: 100%;
   }
 
@@ -2417,6 +2438,14 @@ button {
     grid-column: 1;
     grid-row: 2;
     min-width: 0;
+  }
+
+  .ranking-card__top p,
+  .ranking-card__title-note,
+  .ranking-card__name h3,
+  .ranking-card__name a {
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
 
   .ranking-card__top > strong {
@@ -2437,7 +2466,7 @@ button {
   .ranking-card__stats {
     display: grid;
     grid-column: 1 / -1;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 0.42rem;
     margin-top: 0;
     font-size: 0.82rem;
@@ -2449,6 +2478,7 @@ button {
     border: 1px solid var(--line);
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.035);
+    overflow-wrap: anywhere;
   }
 
   .daily-movement {
@@ -2466,6 +2496,47 @@ button {
   .ranking-card__top {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .history-card {
+    gap: 0.78rem;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 0.82rem;
+  }
+
+  .history-card > div,
+  .history-card p,
+  .history-card__title,
+  .history-card__review,
+  .badge-list,
+  .badge {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .history-card__title {
+    align-items: flex-start;
+    gap: 0.35rem 0.55rem;
+  }
+
+  .history-card__title h3 {
+    font-size: 1rem;
+    line-height: 1.35;
+  }
+
+  .history-card__title span,
+  .history-card p {
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+
+  .history-card__review {
+    padding: 0.62rem 0.7rem;
+    line-height: 1.55;
   }
 
   .player-row {
