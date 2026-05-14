@@ -119,6 +119,11 @@ export type RankingEntry = PlayerStats & {
   winRate: number;
 };
 
+export type RankingMovement = {
+  status: "up" | "down" | "same" | "new";
+  places: number;
+};
+
 export type PlayerTitle = {
   key: string;
   label: string;

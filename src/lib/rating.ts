@@ -5,6 +5,7 @@ import type {
   Player,
   PlayerStats,
   RankingEntry,
+  RankingMovement,
 } from "@/lib/types";
 
 function getExpectedScore(playerRating: number, opponentRating: number) {
@@ -143,6 +144,56 @@ export function buildRankingsThroughLocalDay(
     matches.filter((match) => getLocalDateKey(match.createdAt) <= dateKey),
     kFactor,
   );
+}
+
+export function buildRankingMovements(
+  currentRankings: Array<Pick<RankingEntry, "player" | "rank">>,
+  previousRankings: Array<Pick<RankingEntry, "player" | "rank">> | null,
+): Record<string, RankingMovement> {
+  const previousRanks = new Map(
+    previousRankings?.map((entry) => [entry.player.id, entry.rank]) ?? [],
+  );
+
+  return currentRankings.reduce<Record<string, RankingMovement>>((movements, entry) => {
+    const previousRank = previousRanks.get(entry.player.id);
+
+    if (!previousRankings) {
+      movements[entry.player.id] = { status: "same", places: 0 };
+      return movements;
+    }
+
+    if (previousRank === undefined) {
+      movements[entry.player.id] = { status: "new", places: 0 };
+      return movements;
+    }
+
+    const places = previousRank - entry.rank;
+
+    if (places > 0) {
+      movements[entry.player.id] = { status: "up", places };
+    } else if (places < 0) {
+      movements[entry.player.id] = { status: "down", places: Math.abs(places) };
+    } else {
+      movements[entry.player.id] = { status: "same", places: 0 };
+    }
+
+    return movements;
+  }, {});
+}
+
+export function getPreviousRankingDateKey(
+  dailyGroups: Array<{ dateKey: string }>,
+  selectedViewKey: string,
+) {
+  const selectedIndex = selectedViewKey === "overall"
+    ? 0
+    : dailyGroups.findIndex((group) => group.dateKey === selectedViewKey);
+
+  if (selectedIndex < 0) {
+    return null;
+  }
+
+  return dailyGroups[selectedIndex + 1]?.dateKey ?? null;
 }
 
 export function buildMatchTimeline(

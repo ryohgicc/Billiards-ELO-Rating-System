@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Gauge, Medal, Trophy } from "lucide-react";
+import { Activity, ArrowDown, ArrowUp, Gauge, Medal, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -10,7 +10,12 @@ import { formatCurrency, formatDateTime, formatPercent } from "@/lib/format";
 import { useAppState } from "@/lib/app-state";
 import { groupEntriesByLocalDay } from "@/lib/history";
 import { buildLeaderInsight } from "@/lib/leader-insight";
-import { buildRankingsThroughLocalDay } from "@/lib/rating";
+import {
+  buildRankingMovements,
+  buildRankingsThroughLocalDay,
+  getPreviousRankingDateKey,
+} from "@/lib/rating";
+import type { RankingMovement } from "@/lib/types";
 
 function getPodiumLabel(rank: number) {
   if (rank === 1) {
@@ -49,6 +54,46 @@ function formatSignedValue(value: number) {
   return value > 0 ? `+${value}` : String(value);
 }
 
+function RankingMovementBadge({ movement }: { movement: RankingMovement }) {
+  if (movement.status === "up") {
+    return (
+      <span
+        className="ranking-movement ranking-movement--up"
+        title={`较前一比赛日上升 ${movement.places} 名`}
+      >
+        <ArrowUp aria-hidden="true" size={13} strokeWidth={2.8} />
+        {movement.places}
+      </span>
+    );
+  }
+
+  if (movement.status === "down") {
+    return (
+      <span
+        className="ranking-movement ranking-movement--down"
+        title={`较前一比赛日下降 ${movement.places} 名`}
+      >
+        <ArrowDown aria-hidden="true" size={13} strokeWidth={2.8} />
+        {movement.places}
+      </span>
+    );
+  }
+
+  if (movement.status === "new") {
+    return (
+      <span className="ranking-movement ranking-movement--new" title="较前一比赛日新上榜">
+        新
+      </span>
+    );
+  }
+
+  return (
+    <span className="ranking-movement ranking-movement--same" title="较前一比赛日排名不变">
+      -
+    </span>
+  );
+}
+
 export function RankingsView() {
   const { rankings, state, timeline, isLoaded, profilesByPlayerId } = useAppState();
   const dailyGroups = groupEntriesByLocalDay(timeline);
@@ -63,6 +108,16 @@ export function RankingsView() {
           selectedViewKey,
           state.settings.kFactor,
         );
+  const previousDateKey = getPreviousRankingDateKey(dailyGroups, selectedViewKey);
+  const previousRankings = previousDateKey
+    ? buildRankingsThroughLocalDay(
+        state.players,
+        state.matches,
+        previousDateKey,
+        state.settings.kFactor,
+      )
+    : null;
+  const rankingMovements = buildRankingMovements(visibleRankings, previousRankings);
   const leader = visibleRankings[0];
   const leaderInsight = buildLeaderInsight(visibleRankings);
   const leaderProfile = leader ? profilesByPlayerId[leader.player.id] : null;
@@ -247,7 +302,10 @@ export function RankingsView() {
                   />
                 ) : null}
                 <div className="ranking-card__top">
-                  <span className="ranking-card__rank">#{entry.rank}</span>
+                  <span className="ranking-card__rank">
+                    #{entry.rank}
+                    <RankingMovementBadge movement={rankingMovements[entry.player.id]} />
+                  </span>
                   <div>
                     <div className="ranking-card__name">
                       <h3>
@@ -281,6 +339,7 @@ export function RankingsView() {
             <thead>
               <tr>
                 <th>排名</th>
+                <th>较前日</th>
                 <th>球员</th>
                 <th>积分</th>
                 <th>战绩</th>
@@ -306,6 +365,9 @@ export function RankingsView() {
                         #{entry.rank}
                         <PodiumBadge rank={entry.rank} />
                       </span>
+                    </td>
+                    <td>
+                      <RankingMovementBadge movement={rankingMovements[entry.player.id]} />
                     </td>
                     <td>
                       <div className="ranking-table__player">

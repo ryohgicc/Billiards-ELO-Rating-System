@@ -485,6 +485,13 @@ button {
   font-size: 0.85rem;
 }
 
+.ranking-card__rank {
+  display: inline-flex;
+  gap: 0.42rem;
+  align-items: center;
+  width: max-content;
+}
+
 .section-heading {
   display: flex;
   justify-content: space-between;
@@ -597,6 +604,41 @@ button {
 .ranking-podium-badge--rank-3 {
   color: var(--gold);
   background: rgba(255, 216, 77, 0.11);
+}
+
+.ranking-movement {
+  display: inline-flex;
+  gap: 0.18rem;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.1rem;
+  padding: 0.28rem 0.46rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.ranking-movement--up {
+  color: var(--success);
+  background: rgba(55, 241, 151, 0.1);
+}
+
+.ranking-movement--down {
+  color: var(--danger);
+  background: rgba(255, 107, 95, 0.1);
+}
+
+.ranking-movement--same {
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.ranking-movement--new {
+  color: var(--gold);
+  background: rgba(255, 216, 77, 0.1);
 }
 
 .ranking-card__stats {

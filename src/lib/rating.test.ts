@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildRankingMovements,
   buildRankings,
   buildRankingsThroughLocalDay,
   calculateMatchDelta,
+  getPreviousRankingDateKey,
   replayMatches,
 } from "@/lib/rating";
 import type { MatchRecord, Player } from "@/lib/types";
@@ -232,5 +234,61 @@ describe("buildRankingsThroughLocalDay", () => {
     const snapshot = buildRankingsThroughLocalDay([...players, futurePlayer], [], "2026-04-27");
 
     expect(snapshot.map((entry) => entry.player.id)).toEqual(["p1", "p2", "p3"]);
+  });
+});
+
+describe("buildRankingMovements", () => {
+  it("reports rank gains, drops, unchanged ranks, and new entries", () => {
+    const previous = [
+      { player: players[0], rank: 3 },
+      { player: players[1], rank: 1 },
+      { player: players[2], rank: 2 },
+    ];
+    const current = [
+      { player: players[0], rank: 1 },
+      { player: players[1], rank: 4 },
+      { player: players[2], rank: 2 },
+      {
+        player: {
+          id: "p4",
+          name: "Dana",
+          createdAt: "2026-04-29T10:00:00.000Z",
+          isActive: true,
+        },
+        rank: 3,
+      },
+    ];
+
+    const movements = buildRankingMovements(current, previous);
+
+    expect(movements).toEqual({
+      p1: { status: "up", places: 2 },
+      p2: { status: "down", places: 3 },
+      p3: { status: "same", places: 0 },
+      p4: { status: "new", places: 0 },
+    });
+  });
+
+  it("returns unchanged movements when there is no comparison snapshot", () => {
+    const movements = buildRankingMovements([{ player: players[0], rank: 1 }], null);
+
+    expect(movements).toEqual({
+      p1: { status: "same", places: 0 },
+    });
+  });
+});
+
+describe("getPreviousRankingDateKey", () => {
+  it("uses the previous match day instead of filling empty natural days", () => {
+    const groups = [
+      { dateKey: "2026-05-13" },
+      { dateKey: "2026-05-11" },
+      { dateKey: "2026-05-09" },
+    ];
+
+    expect(getPreviousRankingDateKey(groups, "2026-05-13")).toBe("2026-05-11");
+    expect(getPreviousRankingDateKey(groups, "2026-05-11")).toBe("2026-05-09");
+    expect(getPreviousRankingDateKey(groups, "2026-05-09")).toBeNull();
+    expect(getPreviousRankingDateKey(groups, "overall")).toBe("2026-05-11");
   });
 });
