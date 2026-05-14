@@ -285,11 +285,12 @@ export function RankingsView() {
             return (
               <article
                 key={entry.player.id}
-                className={
+                className={[
                   entry.rank <= 3
                     ? `ranking-card ranking-card--podium ranking-card--rank-${entry.rank}`
-                    : "ranking-card"
-                }
+                    : "ranking-card",
+                  profile ? "ranking-card--with-photo" : "ranking-card--no-photo",
+                ].join(" ")}
               >
                 {profile ? (
                   <PlayerPhotoFrame

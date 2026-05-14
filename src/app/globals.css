@@ -2196,25 +2196,25 @@ button {
 
   .shell {
     width: 100%;
-    padding: 0.75rem 0.75rem 2rem;
+    padding: 0.5rem 0.62rem 2rem;
   }
 
   .hero {
     grid-template-columns: 1fr;
-    gap: 0.9rem;
-    padding: 1rem;
+    gap: 0.72rem;
+    padding: 0.9rem;
     border-radius: 14px;
   }
 
   .hero h1 {
-    font-size: 2rem;
-    line-height: 1.08;
+    font-size: clamp(1.72rem, 9vw, 2.08rem);
+    line-height: 1.05;
   }
 
   .hero__copy {
-    margin-top: 0.55rem;
-    font-size: 0.95rem;
-    line-height: 1.55;
+    margin-top: 0.45rem;
+    font-size: 0.92rem;
+    line-height: 1.45;
   }
 
   .eyebrow {
@@ -2228,17 +2228,17 @@ button {
   .academy-dispute-grid,
   .academy-position-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.5rem;
+    gap: 0.42rem;
   }
 
   .hero__visual {
-    min-height: 210px;
-    padding: 0.75rem;
+    min-height: auto;
+    padding: 0.62rem;
   }
 
   .stat-chip {
-    min-height: 72px;
-    padding: 0.65rem;
+    min-height: 4rem;
+    padding: 0.58rem;
     border-left-width: 3px;
   }
 
@@ -2253,9 +2253,9 @@ button {
 
   .nav-tabs {
     flex-wrap: nowrap;
-    gap: 0.45rem;
-    margin: 0.75rem -0.75rem 1rem;
-    padding: 0 0.75rem 0.2rem;
+    gap: 0.38rem;
+    margin: 0.62rem -0.62rem 0.85rem;
+    padding: 0 0.62rem 0.2rem;
     overflow-x: auto;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
@@ -2268,8 +2268,8 @@ button {
   .nav-tabs__link {
     width: auto;
     min-width: max-content;
-    padding: 0.64rem 0.78rem;
-    font-size: 0.9rem;
+    padding: 0.58rem 0.7rem;
+    font-size: 0.86rem;
     text-align: center;
   }
 
@@ -2279,7 +2279,7 @@ button {
   }
 
   .panel {
-    padding: 0.9rem;
+    padding: 0.78rem;
   }
 
   .section-heading {
@@ -2292,18 +2292,28 @@ button {
   }
 
   .spotlight {
-    grid-template-columns: minmax(5.8rem, 0.34fr) minmax(0, 1fr);
-    gap: 0.75rem;
+    grid-template-columns: 1fr;
+    gap: 0.62rem;
     min-height: auto;
+    padding: 0.72rem;
+  }
+
+  .spotlight > .player-photo-frame__link {
+    position: absolute;
+    top: 0.72rem;
+    right: 0.72rem;
+    width: 4.5rem;
   }
 
   .spotlight > .player-photo-frame__link .player-photo-frame--compact {
-    height: auto;
+    width: 4.5rem;
+    height: 4.5rem;
     min-height: 0;
+    border-radius: 14px;
   }
 
   .spotlight h2 {
-    font-size: clamp(2rem, 12vw, 2.4rem);
+    font-size: clamp(2rem, 13vw, 2.55rem);
     word-break: break-word;
   }
 
@@ -2313,7 +2323,8 @@ button {
   }
 
   .spotlight__identity {
-    gap: 0.65rem;
+    gap: 0.55rem;
+    padding-right: 4.7rem;
   }
 
   .spotlight__rank {
@@ -2322,17 +2333,29 @@ button {
   }
 
   .spotlight__content {
-    padding: 0.7rem;
+    gap: 0.58rem;
+    padding: 0.68rem;
   }
 
   .spotlight__brief,
   .spotlight__power {
-    padding: 0.65rem;
+    padding: 0.62rem;
   }
 
   .spotlight__meta {
-    grid-column: 1 / -1;
+    grid-column: auto;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .spotlight__meta span {
+    min-height: 3.6rem;
+    padding: 0.5rem 0.58rem;
+    border-radius: 12px;
+  }
+
+  .spotlight__meta strong {
+    font-size: 0.98rem;
   }
 
   .spotlight__watermark {
@@ -2356,17 +2379,76 @@ button {
   }
 
   .ranking-card {
-    padding: 0.85rem;
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    gap: 0.65rem;
+    padding: 0.72rem;
+  }
+
+  .ranking-card--no-photo {
+    grid-template-columns: 1fr;
+  }
+
+  .ranking-card > .player-photo-frame__link {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+  }
+
+  .ranking-card > .player-photo-frame__link .player-photo-frame--compact {
+    width: 4.5rem;
+    height: 4.5rem;
+    border-radius: 14px;
+  }
+
+  .ranking-card__top {
+    display: grid;
+    grid-column: 2;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.38rem 0.55rem;
+    width: 100%;
+  }
+
+  .ranking-card--no-photo .ranking-card__top {
+    grid-column: 1;
+  }
+
+  .ranking-card__top > div {
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+  }
+
+  .ranking-card__top > strong {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: end;
+  }
+
+  .ranking-card__rank {
+    grid-column: 1 / -1;
+    padding: 0.36rem 0.58rem;
   }
 
   .ranking-card__top strong {
-    font-size: 1.25rem;
+    font-size: 1.35rem;
   }
 
   .ranking-card__stats {
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-    font-size: 0.88rem;
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.42rem;
+    margin-top: 0;
+    font-size: 0.82rem;
+  }
+
+  .ranking-card__stats span {
+    min-width: 0;
+    padding: 0.42rem 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.035);
   }
 
   .daily-movement {
@@ -2378,7 +2460,6 @@ button {
     display: none;
   }
 
-  .spotlight,
   .history-card,
   .player-row__actions,
   .button-row,
