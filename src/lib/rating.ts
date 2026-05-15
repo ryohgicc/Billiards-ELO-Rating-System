@@ -146,6 +146,43 @@ export function buildRankingsThroughLocalDay(
   );
 }
 
+export type PlayerRankDayCounts = {
+  topDays: number;
+  bottomDays: number;
+};
+
+export function buildPlayerRankDayCounts(
+  players: Player[],
+  matches: MatchRecord[],
+  kFactor = DEFAULT_K_FACTOR,
+): Record<string, PlayerRankDayCounts> {
+  const counts = players.reduce<Record<string, PlayerRankDayCounts>>((accumulator, player) => {
+    accumulator[player.id] = {
+      topDays: 0,
+      bottomDays: 0,
+    };
+
+    return accumulator;
+  }, {});
+  const matchDateKeys = [...new Set(matches.map((match) => getLocalDateKey(match.createdAt)))].sort();
+
+  for (const dateKey of matchDateKeys) {
+    const rankings = buildRankingsThroughLocalDay(players, matches, dateKey, kFactor);
+    const topPlayerId = rankings[0]?.player.id;
+    const bottomPlayerId = rankings.at(-1)?.player.id;
+
+    if (topPlayerId && counts[topPlayerId]) {
+      counts[topPlayerId].topDays += 1;
+    }
+
+    if (bottomPlayerId && counts[bottomPlayerId]) {
+      counts[bottomPlayerId].bottomDays += 1;
+    }
+  }
+
+  return counts;
+}
+
 export function buildRankingMovements(
   currentRankings: Array<Pick<RankingEntry, "player" | "rank">>,
   previousRankings: Array<Pick<RankingEntry, "player" | "rank">> | null,

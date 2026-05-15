@@ -11,6 +11,7 @@ import { useAppState } from "@/lib/app-state";
 import { groupEntriesByLocalDay } from "@/lib/history";
 import { buildLeaderInsight } from "@/lib/leader-insight";
 import {
+  buildPlayerRankDayCounts,
   buildRankingMovements,
   buildRankingsThroughLocalDay,
   getPreviousRankingDateKey,
@@ -94,6 +95,15 @@ function RankingMovementBadge({ movement }: { movement: RankingMovement }) {
   );
 }
 
+function RankDayTags({ bottomDays, topDays }: { bottomDays: number; topDays: number }) {
+  return (
+    <span className="ranking-day-tags" title="按有比赛的日期快照统计">
+      <span className="ranking-day-tag ranking-day-tag--top">登顶 {topDays} 天</span>
+      <span className="ranking-day-tag ranking-day-tag--bottom">垫底 {bottomDays} 天</span>
+    </span>
+  );
+}
+
 export function RankingsView() {
   const { rankings, state, timeline, isLoaded, profilesByPlayerId } = useAppState();
   const dailyGroups = groupEntriesByLocalDay(timeline);
@@ -117,6 +127,11 @@ export function RankingsView() {
         state.settings.kFactor,
       )
     : null;
+  const rankDayCounts = buildPlayerRankDayCounts(
+    state.players,
+    state.matches,
+    state.settings.kFactor,
+  );
   const rankingMovements = buildRankingMovements(visibleRankings, previousRankings);
   const leader = visibleRankings[0];
   const leaderInsight = buildLeaderInsight(visibleRankings);
@@ -319,6 +334,10 @@ export function RankingsView() {
                     {profile?.title ? (
                       <p className="ranking-card__title-note">{profile.title.label}</p>
                     ) : null}
+                    <RankDayTags
+                      bottomDays={rankDayCounts[entry.player.id]?.bottomDays ?? 0}
+                      topDays={rankDayCounts[entry.player.id]?.topDays ?? 0}
+                    />
                     <p className="ranking-card__meta-line">
                       最近比赛：{formatDateTime(entry.lastMatchAt)}
                     </p>
@@ -389,6 +408,10 @@ export function RankingsView() {
                             {entry.player.name}
                           </Link>
                           {profile?.title ? <small>{profile.title.label}</small> : null}
+                          <RankDayTags
+                            bottomDays={rankDayCounts[entry.player.id]?.bottomDays ?? 0}
+                            topDays={rankDayCounts[entry.player.id]?.topDays ?? 0}
+                          />
                         </div>
                       </div>
                     </td>

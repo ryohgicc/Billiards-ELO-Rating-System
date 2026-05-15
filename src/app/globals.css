@@ -641,6 +641,42 @@ button {
   background: rgba(255, 216, 77, 0.1);
 }
 
+.ranking-day-tags {
+  display: flex;
+  gap: 0.38rem;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+}
+
+.ranking-day-tag {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  max-width: 100%;
+  padding: 0.28rem 0.48rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.ranking-day-tag--top {
+  border-color: rgba(55, 241, 151, 0.24);
+  background: rgba(55, 241, 151, 0.1);
+  color: var(--accent);
+}
+
+.ranking-day-tag--bottom {
+  border-color: rgba(255, 107, 95, 0.22);
+  background: rgba(255, 107, 95, 0.1);
+  color: #ffb8b0;
+}
+
 .ranking-card__stats {
   display: flex;
   gap: 0.75rem;

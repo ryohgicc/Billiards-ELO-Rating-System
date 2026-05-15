@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildPlayerRankDayCounts,
   buildRankingMovements,
   buildRankings,
   buildRankingsThroughLocalDay,
@@ -234,6 +235,39 @@ describe("buildRankingsThroughLocalDay", () => {
     const snapshot = buildRankingsThroughLocalDay([...players, futurePlayer], [], "2026-04-27");
 
     expect(snapshot.map((entry) => entry.player.id)).toEqual(["p1", "p2", "p3"]);
+  });
+});
+
+describe("buildPlayerRankDayCounts", () => {
+  it("counts top and bottom days from daily ranking snapshots", () => {
+    const matches: MatchRecord[] = [
+      createMatch({
+        id: "m1",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-27T11:00:00.000Z",
+      }),
+      createMatch({
+        id: "m2",
+        winnerId: "p2",
+        loserId: "p1",
+        createdAt: "2026-04-28T11:00:00.000Z",
+      }),
+      createMatch({
+        id: "m3",
+        winnerId: "p3",
+        loserId: "p2",
+        createdAt: "2026-04-29T11:00:00.000Z",
+      }),
+    ];
+
+    const counts = buildPlayerRankDayCounts(players, matches);
+
+    expect(counts).toEqual({
+      p1: { topDays: 1, bottomDays: 1 },
+      p2: { topDays: 1, bottomDays: 2 },
+      p3: { topDays: 1, bottomDays: 0 },
+    });
   });
 });
 
