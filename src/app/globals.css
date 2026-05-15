@@ -1706,6 +1706,12 @@ button {
   color: #ffe9a6;
 }
 
+.history-card__summary,
+.history-card__review-list {
+  display: grid;
+  gap: 0.45rem;
+}
+
 .reservation-hero {
   display: grid;
   gap: 1rem;
@@ -2197,6 +2203,7 @@ button {
   .shell {
     width: 100%;
     padding: 0.5rem 0.62rem 2rem;
+    overflow-x: clip;
   }
 
   .hero {
@@ -2279,10 +2286,14 @@ button {
   }
 
   .panel {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
     padding: 0.78rem;
   }
 
   .section-heading {
+    flex-wrap: wrap;
     align-items: flex-start;
     margin-bottom: 0.75rem;
   }
@@ -2296,22 +2307,33 @@ button {
     margin-right: -0.78rem;
     margin-left: -0.78rem;
     padding-inline: 0.78rem;
+    max-width: calc(100% + 1.56rem);
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
   .date-switcher__button {
     flex: 0 0 auto;
     min-width: 9.75rem;
+    width: max-content;
+    max-width: none;
   }
 
   .date-switcher__button span,
   .date-switcher__button strong {
     max-width: 100%;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
   }
 
   .spotlight {
     grid-template-columns: 1fr;
     gap: 0.62rem;
+    min-width: 0;
+    max-width: 100%;
     min-height: auto;
+    overflow: hidden;
     padding: 0.72rem;
   }
 
@@ -2351,6 +2373,7 @@ button {
 
   .spotlight__content {
     gap: 0.58rem;
+    min-width: 0;
     padding: 0.68rem;
   }
 
@@ -2363,12 +2386,16 @@ button {
     grid-column: auto;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.45rem;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .spotlight__meta span {
+    min-width: 0;
     min-height: 3.6rem;
     padding: 0.5rem 0.58rem;
     border-radius: 12px;
+    overflow-wrap: anywhere;
   }
 
   .spotlight__meta strong {
@@ -2393,12 +2420,14 @@ button {
   .ranking-list--mobile {
     display: grid;
     gap: 0.65rem;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .ranking-card {
     display: grid;
-    grid-template-columns: 4.5rem minmax(0, 1fr);
-    gap: 0.65rem;
+    grid-template-columns: 4rem minmax(0, 1fr);
+    gap: 0.62rem;
     min-width: 0;
     max-width: 100%;
     overflow: hidden;
@@ -2416,17 +2445,18 @@ button {
   }
 
   .ranking-card > .player-photo-frame__link .player-photo-frame--compact {
-    width: 4.5rem;
-    height: 4.5rem;
+    width: 4rem;
+    height: 4rem;
     border-radius: 14px;
   }
 
   .ranking-card__top {
     display: grid;
     grid-column: 2;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.38rem 0.55rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.4rem;
     min-width: 0;
+    max-width: 100%;
     width: 100%;
   }
 
@@ -2438,24 +2468,42 @@ button {
     grid-column: 1;
     grid-row: 2;
     min-width: 0;
+    max-width: 100%;
   }
 
   .ranking-card__top p,
+  .ranking-card__meta-line,
   .ranking-card__title-note,
   .ranking-card__name h3,
   .ranking-card__name a {
     max-width: 100%;
     overflow-wrap: anywhere;
+    white-space: normal;
   }
 
-  .ranking-card__top > strong {
-    grid-column: 2;
-    grid-row: 2;
-    align-self: end;
+  .ranking-card__name,
+  .ranking-rank-cell {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .ranking-podium-badge {
+    width: auto;
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .ranking-card__rating {
+    grid-column: 1;
+    grid-row: 3;
+    justify-self: start;
   }
 
   .ranking-card__rank {
     grid-column: 1 / -1;
+    width: fit-content;
+    max-width: 100%;
     padding: 0.36rem 0.58rem;
   }
 
@@ -2470,6 +2518,8 @@ button {
     gap: 0.42rem;
     margin-top: 0;
     font-size: 0.82rem;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .ranking-card__stats span {
@@ -2484,6 +2534,14 @@ button {
   .daily-movement {
     grid-template-columns: 1fr;
     gap: 0.55rem;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .daily-movement__item {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
 
   .table-wrap {
@@ -2499,6 +2557,7 @@ button {
   }
 
   .history-card {
+    display: grid;
     gap: 0.78rem;
     min-width: 0;
     max-width: 100%;
@@ -2509,8 +2568,11 @@ button {
   .history-card > div,
   .history-card p,
   .history-card__title,
+  .history-card__summary,
+  .history-card__review-list,
   .history-card__review,
   .badge-list,
+  .title-pill,
   .badge {
     max-width: 100%;
     min-width: 0;
@@ -2535,8 +2597,19 @@ button {
   }
 
   .history-card__review {
+    margin-top: 0;
     padding: 0.62rem 0.7rem;
     line-height: 1.55;
+  }
+
+  .history-card .badge {
+    width: auto;
+    align-items: flex-start;
+    border-radius: 12px;
+  }
+
+  .history-card .button {
+    width: 100%;
   }
 
   .player-row {

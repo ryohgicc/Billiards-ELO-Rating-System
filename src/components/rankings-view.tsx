@@ -319,9 +319,11 @@ export function RankingsView() {
                     {profile?.title ? (
                       <p className="ranking-card__title-note">{profile.title.label}</p>
                     ) : null}
-                    <p>最近比赛：{formatDateTime(entry.lastMatchAt)}</p>
+                    <p className="ranking-card__meta-line">
+                      最近比赛：{formatDateTime(entry.lastMatchAt)}
+                    </p>
                   </div>
-                  <strong>{entry.rating}</strong>
+                  <strong className="ranking-card__rating">{entry.rating}</strong>
                 </div>
                 <div className="ranking-card__stats">
                   <span>{entry.wins} 胜</span>

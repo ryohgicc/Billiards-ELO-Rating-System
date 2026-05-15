@@ -96,13 +96,15 @@ export function HistoryView() {
                       </h3>
                       <span>{formatDateTime(entry.createdAt)}</span>
                     </div>
-                    <p>
-                      积分变化：{entry.winnerName} +{entry.winnerDelta} /{" "}
-                      {entry.loserName} {entry.loserDelta}
-                    </p>
-                    <p>
-                      当前落点：{entry.winnerRatingAfter} vs {entry.loserRatingAfter}
-                    </p>
+                    <div className="history-card__summary">
+                      <p>
+                        积分变化：{entry.winnerName} +{entry.winnerDelta} /{" "}
+                        {entry.loserName} {entry.loserDelta}
+                      </p>
+                      <p>
+                        当前落点：{entry.winnerRatingAfter} vs {entry.loserRatingAfter}
+                      </p>
+                    </div>
                     {entry.winnerMoments.length > 0 || entry.loserMoments.length > 0 ? (
                       <div className="badge-list">
                         {entry.winnerMoments.map((moment) => (
@@ -118,7 +120,7 @@ export function HistoryView() {
                       </div>
                     ) : null}
                     {aiReviewsByMatchId[entry.id]?.review ? (
-                      <>
+                      <div className="history-card__review-list">
                         <p className="history-card__review">
                           AI 锐评：{aiReviewsByMatchId[entry.id]?.review}
                         </p>
@@ -132,9 +134,11 @@ export function HistoryView() {
                             负者赛后评价：{aiReviewsByMatchId[entry.id]?.loserEvaluation}
                           </p>
                         ) : null}
-                      </>
+                      </div>
                     ) : entry.id === latestPendingMatchId ? (
-                      <p className="history-card__review">AI 锐评与双方赛后评价生成中...</p>
+                      <div className="history-card__review-list">
+                        <p className="history-card__review">AI 锐评与双方赛后评价生成中...</p>
+                      </div>
                     ) : null}
                     {entry.winnerNote ? <p>胜者备注：{entry.winnerNote}</p> : null}
                     {entry.loserNote ? <p>负者备注：{entry.loserNote}</p> : null}
