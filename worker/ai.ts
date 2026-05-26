@@ -1,4 +1,4 @@
-import { formatMatchMomentLabel } from "../src/lib/match-moments";
+import { formatMatchMomentPromptDetail } from "../src/lib/match-moments";
 import type {
   MatchAiReview,
   MatchRecord,
@@ -138,8 +138,8 @@ function formatPlayerBundle(label: string, bundle: PlayerBundle) {
 }
 
 function formatMatchSummary(match: MatchRecord, winner: PlayerBundle, loser: PlayerBundle) {
-  const winnerMoments = match.winnerMoments.map(formatMatchMomentLabel).join("、");
-  const loserMoments = match.loserMoments.map(formatMatchMomentLabel).join("、");
+  const winnerMoments = match.winnerMoments.map(formatMatchMomentPromptDetail).join("；");
+  const loserMoments = match.loserMoments.map(formatMatchMomentPromptDetail).join("；");
 
   return [
     `最新比赛：${winner.player.name} 胜 ${loser.player.name}`,
@@ -147,6 +147,7 @@ function formatMatchSummary(match: MatchRecord, winner: PlayerBundle, loser: Pla
     `负者瞬间：${loserMoments || "无"}`,
     `胜者备注：${match.winnerNote || "无"}`,
     `负者备注：${match.loserNote || "无"}`,
+    "事实边界：只能使用上面列出的球员名、胜负关系、标签含义和备注；不要把未勾选标签、比分、零封、复仇、让球或其他未提供情节写成事实。",
   ].join("\n");
 }
 
@@ -159,7 +160,7 @@ function buildPrompt(match: MatchRecord, winner: PlayerBundle, loser: PlayerBund
     "3. title_category 只能是 legend 或 fun。",
     "4. title_reason 和 evaluation 都要是简体中文单句，幽默毒舌、一句扎心，可以玩梗调侃但不能人身攻击。",
     "5. market_value_usd 输出整数，50 的倍数，范围 500 到 30000。",
-    "6. match_review 必须是一句简体中文赛后辣评，风格要像吐槽大会/脱口秀——损得精准、好笑、让人拍大腿，点名球员名字或比赛瞬间，可以夸张但不能编造比分。",
+    "6. match_review 必须是一句简体中文赛后辣评，风格要像吐槽大会/脱口秀——损得精准、好笑、让人拍大腿，点名球员名字或比赛瞬间；可以夸张表达语气，但不能编造比分或未提供的赛事情节。",
     "7. 整体基调：又毒又好笑，别端水，别客气，锐评就要有锐度。",
     "",
     formatPlayerBundle("胜者球员画像输入", winner),

@@ -111,6 +111,12 @@ export function formatMatchMomentLabel(key: MatchMomentKey) {
   return getMatchMomentDefinition(key).label;
 }
 
+export function formatMatchMomentPromptDetail(key: MatchMomentKey) {
+  const definition = getMatchMomentDefinition(key);
+
+  return `${definition.label}：${definition.description}`;
+}
+
 export function normalizeMatchMomentKeys(value: unknown, side: MatchSide) {
   if (!Array.isArray(value)) {
     return [];

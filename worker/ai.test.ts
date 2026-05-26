@@ -157,6 +157,76 @@ describe("generateAiMatchInsights", () => {
     });
   });
 
+  it("passes match moment meanings to the AI prompt", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    winner_profile: {
+                      title_label: "绝杀队长",
+                      title_category: "legend",
+                      title_reason: "最后一杆收得住。",
+                      evaluation: "赢在关键球，不靠脑补剧情。",
+                      market_value_usd: 2200,
+                    },
+                    loser_profile: {
+                      title_label: "断电大师",
+                      title_category: "fun",
+                      title_reason: "终点前突然掉线。",
+                      evaluation: "输得可惜，但素材很足。",
+                      market_value_usd: 1200,
+                    },
+                    match_review: "小明拖到最后一局一击收工，小王在终点前断电。",
+                  }),
+                },
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          },
+        ),
+      ),
+    );
+
+    const winner = buildPlayer("winner", "小明");
+    const loser = buildPlayer("loser", "小王");
+
+    await generateAiMatchInsights({
+      apiKey: "test-key",
+      apiUrl: "https://example.com/v1",
+      model: "mimo-v2.5-pro",
+      generatedAt,
+      match: {
+        id: "match-1",
+        winnerId: winner.id,
+        loserId: loser.id,
+        createdAt: generatedAt,
+        winnerMoments: ["hill_hill_finish", "comeback_win"],
+        loserMoments: ["hill_hill_meltdown"],
+        winnerNote: "",
+        loserNote: "",
+      },
+      winner: { player: winner, profile: buildProfile(winner.id) },
+      loser: { player: loser, profile: buildProfile(loser.id) },
+    });
+
+    const requestBody = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body));
+    const prompt = requestBody.messages
+      .map((message: { content: string }) => message.content)
+      .join("\n");
+
+    expect(prompt).toContain("决胜局绝杀：拖到最后一局，再一击收工。");
+    expect(prompt).toContain("逆转翻盘：落后局面下硬是翻了回来。");
+    expect(prompt).toContain("决胜局断电：明明拖到了最后，还是在终点前掉线。");
+    expect(prompt).toContain("不要把未勾选标签、比分、零封、复仇、让球或其他未提供情节写成事实");
+  });
+
   it("accepts common JSON aliases from OpenAI-compatible gateways", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(() =>
       Promise.resolve(
