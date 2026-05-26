@@ -7,18 +7,18 @@ const evenExampleRows = [
 
 const heavyFavoriteExampleRows = [
   { label: "赛前积分", playerA: "A：1900", playerB: "B：1500" },
-  { label: "胜方加分（A）", playerA: "+12", playerB: "—" },
+  { label: "胜方加分（A）", playerA: "+15", playerB: "—" },
   { label: "败方扣分（B）", playerA: "—", playerB: "−5" },
-  { label: "本场净拉开分差", playerA: "+7", playerB: "" },
-  { label: "赛后积分", playerA: "1912", playerB: "1495" },
+  { label: "本场净拉开分差", playerA: "+10", playerB: "" },
+  { label: "赛后积分", playerA: "1915", playerB: "1495" },
 ];
 
 const heavyUpsetExampleRows = [
   { label: "赛前积分", playerA: "A：1100", playerB: "B：1500" },
-  { label: "胜方加分（A）", playerA: "+95", playerB: "—" },
-  { label: "败方扣分（B）", playerA: "—", playerB: "−109" },
-  { label: "本场净压缩分差", playerA: "−14", playerB: "" },
-  { label: "赛后积分", playerA: "1195", playerB: "1391" },
+  { label: "胜方加分（A）", playerA: "+87", playerB: "—" },
+  { label: "败方扣分（B）", playerA: "—", playerB: "−95" },
+  { label: "本场净压缩分差", playerA: "−8", playerB: "" },
+  { label: "赛后积分", playerA: "1187", playerB: "1405" },
 ];
 
 export function AlgorithmView() {
@@ -39,10 +39,10 @@ export function AlgorithmView() {
             胜方加分公式与败方扣分公式分别独立计算，<code>winnerDelta + loserDelta</code> 不再恒为零。
           </p>
           <p>
-            高分球员稳定击败低分球员时，胜方仍能拿到至少 12 分增长，但败方只扣 0 到 10 分，
+            高分球员稳定击败低分球员时，胜方仍能拿到至少 15 分增长，但败方只扣 5 到 10 分，
             本场的净分差贡献为正，长期累积会持续拉开榜首与榜尾的差距；反之，低分球员爆冷击败高分球员时，
-            胜方至少加 50 分（分差 ≥ 400 时至少加 80 分），败方则会被加重惩罚，本场净分差贡献为负，
-            用以快速压缩榜单上的虚高积分。
+            胜方至少加 50 分（分差 ≥ 400 时至少加 80 分），败方扣分会被加重，但被约束在
+            「不超过胜方加分的 1.15 倍」之内，本场净分差贡献为负，用以适度压缩榜单上的虚高积分。
           </p>
           <p>
             系统不会只保存最终积分，而是保存完整比赛历史。新增、修改或删除比赛后，会按时间顺序重新回放所有比赛，
@@ -67,23 +67,23 @@ export function AlgorithmView() {
           </div>
           <div className="formula-card">
             <span>胜方加分（强者赢，差距 ≥ 0）</span>
-            <code>winnerDelta = max(12, 30 − 差距 × 0.045)</code>
+            <code>winnerDelta = max(15, 30 − 差距 × 0.0375)</code>
           </div>
           <div className="formula-card">
             <span>败方扣分（强者赢，差距 ≥ 0）</span>
-            <code>loserDelta = clamp(−K × (1 − E_winner), −40, −3)</code>
+            <code>loserDelta = clamp(−K × (1 − E_winner), −30, −5)</code>
           </div>
           <div className="formula-card">
             <span>胜方加分（爆冷，差距 &lt; 0）</span>
             <code>
-              winnerDelta = K × (1 − E_winner) × (1 + min(1.2, 0.75 × (分差 / 400) ^ 1.15))
+              winnerDelta = K × (1 − E_winner) × (1 + min(0.75, 0.6 × (分差 / 400) ^ 1.15))
               ；分差 ≥ 200 时下限 50；分差 ≥ 400 时下限 80
             </code>
           </div>
           <div className="formula-card">
             <span>败方扣分（爆冷，差距 &lt; 0）</span>
             <code>
-              loserDelta = −K × (1 − E_winner) × (1 + min(1.5, (分差 / 400) ^ 1.15))
+              loserDelta = max(−winnerDelta × 1.15, −K × (1 − E_winner) × (1 + min(1.0, 0.75 × (分差 / 400) ^ 1.15)))
               ；分差 ≥ 200 时上限 −25；分差 ≥ 400 时上限 −40
             </code>
           </div>
@@ -156,8 +156,8 @@ export function AlgorithmView() {
         </div>
 
         <p className="algorithm-note">
-          胜方仍获得 +12 的兜底增长，败方只扣 5 分，单场净 +7 分。10 场这样的统治级胜利累积会让榜首额外
-          抬升约 70 分，让分差能持续被拉开。
+          胜方仍获得 +15 的兜底增长，败方只扣 5 分，单场净 +10 分。10 场这样的统治级胜利累积会让榜首额外
+          抬升约 100 分，让分差能持续被拉开。
         </p>
       </section>
 
@@ -192,7 +192,8 @@ export function AlgorithmView() {
         </div>
 
         <p className="algorithm-note">
-          爆冷胜方拿满 +95 分，败方扣 −109 分，单场净 −14 分对榜单整体起到压缩作用。
+          爆冷胜方拿满 +87 分，败方扣 −95 分，单场净 −8 分对榜单整体起到压缩作用。
+          败方扣分受「不超过胜方加分的 1.15 倍」约束，避免高分球员一旦输球就被过度惩罚；
           单场最大变化封顶 ±160，避免极端比赛把榜单完全打散。
         </p>
       </section>

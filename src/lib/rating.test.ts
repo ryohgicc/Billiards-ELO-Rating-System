@@ -130,7 +130,7 @@ describe("replayMatches", () => {
 
     const result = replayMatches(players.slice(0, 2), matches);
 
-    expect(result.p1.rating).toBe(991);
+    expect(result.p1.rating).toBe(992);
     expect(result.p2.rating).toBe(1008);
     expect(result.p1.wins).toBe(1);
     expect(result.p1.losses).toBe(1);

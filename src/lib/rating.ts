@@ -14,21 +14,22 @@ function getExpectedScore(playerRating: number, opponentRating: number) {
 
 const SINGLE_MATCH_CAP = 160;
 const EVEN_MATCH_WINNER_DELTA = 30;
-const HEAVY_FAVORITE_WINNER_FLOOR = 12;
-const FAVORITE_DECAY_PER_RATING_POINT = 0.045;
-const FAVORITE_LOSER_MIN_PENALTY = 3;
-const FAVORITE_LOSER_MAX_PENALTY = 40;
+const HEAVY_FAVORITE_WINNER_FLOOR = 15;
+const FAVORITE_DECAY_PER_RATING_POINT = 0.0375;
+const FAVORITE_LOSER_MIN_PENALTY = 5;
+const FAVORITE_LOSER_MAX_PENALTY = 30;
 const UPSET_GAP_THRESHOLD = 200;
 const HEAVY_UPSET_GAP_THRESHOLD = 400;
 const UPSET_WINNER_FLOOR = 50;
 const HEAVY_UPSET_WINNER_FLOOR = 80;
 const UPSET_LOSER_PENALTY_FLOOR = 25;
 const HEAVY_UPSET_LOSER_PENALTY_FLOOR = 40;
-const UPSET_WINNER_MULTIPLIER_CAP = 1.2;
-const UPSET_WINNER_MULTIPLIER_SCALE = 0.75;
-const UPSET_LOSER_MULTIPLIER_CAP = 1.5;
-const UPSET_LOSER_MULTIPLIER_SCALE = 1.0;
+const UPSET_WINNER_MULTIPLIER_CAP = 0.75;
+const UPSET_WINNER_MULTIPLIER_SCALE = 0.6;
+const UPSET_LOSER_MULTIPLIER_CAP = 1.0;
+const UPSET_LOSER_MULTIPLIER_SCALE = 0.75;
 const UPSET_MULTIPLIER_EXPONENT = 1.15;
+const UPSET_LOSER_RELATIVE_CAP = 1.15;
 
 export function calculateMatchDelta(
   winnerRating: number,
@@ -73,6 +74,9 @@ export function calculateMatchDelta(
       rawWinner = Math.max(UPSET_WINNER_FLOOR, rawWinner);
       rawLoser = Math.min(-UPSET_LOSER_PENALTY_FLOOR, rawLoser);
     }
+
+    // 守恒约束：败方扣分最多比胜方加分高 15%，避免爆冷败方惩罚远超胜方奖励
+    rawLoser = Math.max(-rawWinner * UPSET_LOSER_RELATIVE_CAP, rawLoser);
   }
 
   const cappedWinner = Math.min(SINGLE_MATCH_CAP, Math.max(1, rawWinner));
