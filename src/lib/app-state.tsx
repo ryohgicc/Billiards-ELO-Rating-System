@@ -13,7 +13,7 @@ import {
 import { api } from "@/lib/api";
 import { DEFAULT_K_FACTOR, DEFAULT_SETTINGS } from "@/lib/constants";
 import { buildPlayerProfiles, mergeAiProfilesIntoPlayerProfiles } from "@/lib/player-honors";
-import { buildMatchTimeline, buildRankings, calculateMatchDelta, replayMatches } from "@/lib/rating";
+import { buildMatchTimeline, buildRankings, calculateMatchDelta, getEffectiveKFactor, replayMatches } from "@/lib/rating";
 import { createEmptyState, importState } from "@/lib/storage";
 import type { AppState, MatchMomentKey, Player, PlayerPhotoRole, PlayerProfile } from "@/lib/types";
 import {
@@ -248,11 +248,13 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         throw new Error("球员不存在");
       }
 
-      const delta = calculateMatchDelta(
-        winner.rating,
-        loser.rating,
-        state.settings.kFactor ?? DEFAULT_K_FACTOR,
-      );
+      const baseKFactor = state.settings.kFactor ?? DEFAULT_K_FACTOR;
+      const winnerKFactor = getEffectiveKFactor(winner.wins + winner.losses, baseKFactor);
+      const loserKFactor = getEffectiveKFactor(loser.wins + loser.losses, baseKFactor);
+      const delta = calculateMatchDelta(winner.rating, loser.rating, {
+        winnerKFactor,
+        loserKFactor,
+      });
 
       const nextState = await api.createMatch(
         winnerId,

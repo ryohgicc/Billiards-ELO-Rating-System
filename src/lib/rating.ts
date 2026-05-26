@@ -13,48 +13,88 @@ function getExpectedScore(playerRating: number, opponentRating: number) {
 }
 
 const SINGLE_MATCH_CAP = 160;
-const EVEN_MATCH_WINNER_DELTA = 30;
-const HEAVY_FAVORITE_WINNER_FLOOR = 15;
-const FAVORITE_DECAY_PER_RATING_POINT = 0.0375;
-const FAVORITE_LOSER_MIN_PENALTY = 5;
-const FAVORITE_LOSER_MAX_PENALTY = 30;
+const EVEN_MATCH_WINNER_DELTA = 25;
+const HEAVY_FAVORITE_WINNER_FLOOR = 12;
+const FAVORITE_DECAY_PER_RATING_POINT = 0.0325;
+const FAVORITE_LOSER_MIN_PENALTY = 3;
+const FAVORITE_LOSER_MAX_PENALTY = 18;
+const FAVORITE_LOSER_SOFTENING = 0.5;
 const UPSET_GAP_THRESHOLD = 200;
 const HEAVY_UPSET_GAP_THRESHOLD = 400;
 const UPSET_WINNER_FLOOR = 50;
 const HEAVY_UPSET_WINNER_FLOOR = 80;
 const UPSET_LOSER_PENALTY_FLOOR = 25;
 const HEAVY_UPSET_LOSER_PENALTY_FLOOR = 40;
-const UPSET_WINNER_MULTIPLIER_CAP = 0.75;
-const UPSET_WINNER_MULTIPLIER_SCALE = 0.6;
-const UPSET_LOSER_MULTIPLIER_CAP = 1.0;
-const UPSET_LOSER_MULTIPLIER_SCALE = 0.75;
+const UPSET_WINNER_MULTIPLIER_CAP = 0.6;
+const UPSET_WINNER_MULTIPLIER_SCALE = 0.5;
+const UPSET_LOSER_MULTIPLIER_CAP = 0.6;
+const UPSET_LOSER_MULTIPLIER_SCALE = 0.5;
 const UPSET_MULTIPLIER_EXPONENT = 1.15;
-const UPSET_LOSER_RELATIVE_CAP = 1.15;
+const UPSET_LOSER_RELATIVE_CAP = 1.0;
+
+export const NEW_PLAYER_K_FACTOR = 80;
+export const STABLE_PLAYER_K_FACTOR = 40;
+export const NEW_PLAYER_GAME_THRESHOLD = 10;
+export const STABLE_PLAYER_GAME_THRESHOLD = 30;
+
+/**
+ * 根据球员赛前已完成的比赛总场数返回分段 K 值。借鉴 FIDE 国际象棋分级 K 因子思路：
+ * 新人变化大、稳定老手变化小，以减少偶发结果对长期段位的扰动。
+ */
+export function getEffectiveKFactor(
+  totalMatchesBefore: number,
+  baseKFactor = DEFAULT_K_FACTOR,
+) {
+  if (totalMatchesBefore < NEW_PLAYER_GAME_THRESHOLD) {
+    return NEW_PLAYER_K_FACTOR;
+  }
+  if (totalMatchesBefore >= STABLE_PLAYER_GAME_THRESHOLD) {
+    return STABLE_PLAYER_K_FACTOR;
+  }
+  return baseKFactor;
+}
+
+export type MatchDeltaOptions = {
+  winnerKFactor?: number;
+  loserKFactor?: number;
+};
 
 export function calculateMatchDelta(
   winnerRating: number,
   loserRating: number,
-  kFactor = DEFAULT_K_FACTOR,
+  kFactorOrOptions: number | MatchDeltaOptions = DEFAULT_K_FACTOR,
 ) {
+  const winnerKFactor =
+    typeof kFactorOrOptions === "number"
+      ? kFactorOrOptions
+      : kFactorOrOptions.winnerKFactor ?? DEFAULT_K_FACTOR;
+  const loserKFactor =
+    typeof kFactorOrOptions === "number"
+      ? kFactorOrOptions
+      : kFactorOrOptions.loserKFactor ?? DEFAULT_K_FACTOR;
+
   const winnerLoserGap = winnerRating - loserRating;
   const winnerExpected = getExpectedScore(winnerRating, loserRating);
   const loserExpected = 1 - winnerExpected;
+  const baseKScale = DEFAULT_K_FACTOR;
 
   let rawWinner: number;
   let rawLoser: number;
 
   if (winnerLoserGap >= 0) {
-    // 强者赢或同分：胜方加分按线性衰减，败方扣分用标准 Elo 但收缩到温和惩罚区间
+    // 强者赢或同分：胜方加分按基础值线性衰减后，按胜方 K 比例缩放，最后保底兜底；
+    // 败方扣分用标准 Elo 收缩 50% 后落入温和惩罚区间，再按败方 K 比例缩放。
     const decayed = EVEN_MATCH_WINNER_DELTA - winnerLoserGap * FAVORITE_DECAY_PER_RATING_POINT;
-    rawWinner = Math.max(HEAVY_FAVORITE_WINNER_FLOOR, decayed);
+    const winnerBase = Math.max(EVEN_MATCH_WINNER_DELTA * 0.5, decayed);
+    rawWinner = Math.max(HEAVY_FAVORITE_WINNER_FLOOR, winnerBase * (winnerKFactor / baseKScale));
 
-    const symmetricLoser = -kFactor * loserExpected;
+    const softenedLoser = -loserKFactor * loserExpected * FAVORITE_LOSER_SOFTENING;
     rawLoser = Math.max(
       -FAVORITE_LOSER_MAX_PENALTY,
-      Math.min(-FAVORITE_LOSER_MIN_PENALTY, symmetricLoser),
+      Math.min(-FAVORITE_LOSER_MIN_PENALTY, softenedLoser),
     );
   } else {
-    // 爆冷：胜方按上调倍率获得高额奖励，败方按上调倍率被加重惩罚
+    // 爆冷：胜方按上调倍率获得高额奖励，败方按上调倍率被加重惩罚（但被胜方加分上限约束）
     const upsetGap = -winnerLoserGap;
     const normalizedGap = upsetGap / HEAVY_UPSET_GAP_THRESHOLD;
     const upsetCurve = Math.pow(normalizedGap, UPSET_MULTIPLIER_EXPONENT);
@@ -64,8 +104,8 @@ export function calculateMatchDelta(
     const loserPenaltyMultiplier =
       1 + Math.min(UPSET_LOSER_MULTIPLIER_CAP, UPSET_LOSER_MULTIPLIER_SCALE * upsetCurve);
 
-    rawWinner = kFactor * (1 - winnerExpected) * winnerMultiplier;
-    rawLoser = -kFactor * loserExpected * loserPenaltyMultiplier;
+    rawWinner = winnerKFactor * (1 - winnerExpected) * winnerMultiplier;
+    rawLoser = -loserKFactor * loserExpected * loserPenaltyMultiplier;
 
     if (upsetGap >= HEAVY_UPSET_GAP_THRESHOLD) {
       rawWinner = Math.max(HEAVY_UPSET_WINNER_FLOOR, rawWinner);
@@ -75,7 +115,7 @@ export function calculateMatchDelta(
       rawLoser = Math.min(-UPSET_LOSER_PENALTY_FLOOR, rawLoser);
     }
 
-    // 守恒约束：败方扣分最多比胜方加分高 15%，避免爆冷败方惩罚远超胜方奖励
+    // 守恒约束：爆冷败方扣分不超过胜方加分，避免高分球员被过度惩罚
     rawLoser = Math.max(-rawWinner * UPSET_LOSER_RELATIVE_CAP, rawLoser);
   }
 
@@ -124,7 +164,12 @@ export function replayMatches(
       continue;
     }
 
-    const delta = calculateMatchDelta(winner.rating, loser.rating, kFactor);
+    const winnerKFactor = getEffectiveKFactor(winner.wins + winner.losses, kFactor);
+    const loserKFactor = getEffectiveKFactor(loser.wins + loser.losses, kFactor);
+    const delta = calculateMatchDelta(winner.rating, loser.rating, {
+      winnerKFactor,
+      loserKFactor,
+    });
 
     winner.rating += delta.winnerDelta;
     winner.wins += 1;
@@ -312,7 +357,12 @@ export function buildMatchTimeline(
         return null;
       }
 
-      const delta = calculateMatchDelta(winner.rating, loser.rating, kFactor);
+      const winnerKFactor = getEffectiveKFactor(winner.wins + winner.losses, kFactor);
+      const loserKFactor = getEffectiveKFactor(loser.wins + loser.losses, kFactor);
+      const delta = calculateMatchDelta(winner.rating, loser.rating, {
+        winnerKFactor,
+        loserKFactor,
+      });
       const entry: MatchTimelineEntry = {
         ...match,
         winnerName: winnerPlayer.name,

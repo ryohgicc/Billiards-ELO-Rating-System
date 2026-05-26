@@ -6,7 +6,12 @@ import {
   buildRankings,
   buildRankingsThroughLocalDay,
   calculateMatchDelta,
+  getEffectiveKFactor,
   getPreviousRankingDateKey,
+  NEW_PLAYER_GAME_THRESHOLD,
+  NEW_PLAYER_K_FACTOR,
+  STABLE_PLAYER_GAME_THRESHOLD,
+  STABLE_PLAYER_K_FACTOR,
   replayMatches,
 } from "@/lib/rating";
 import type { MatchRecord, Player } from "@/lib/types";
@@ -42,20 +47,51 @@ function createMatch(match: Omit<MatchRecord, "winnerMoments" | "loserMoments" |
   };
 }
 
-describe("calculateMatchDelta", () => {
-  it("gives the winner +30 and loser -30 in an even match", () => {
-    const result = calculateMatchDelta(1500, 1500);
-
-    expect(result.winnerDelta).toBeGreaterThanOrEqual(25);
-    expect(result.winnerDelta).toBeLessThanOrEqual(40);
-    expect(result.loserDelta).toBeGreaterThanOrEqual(-40);
-    expect(result.loserDelta).toBeLessThanOrEqual(-25);
-    expect(result.winnerDelta).toBe(30);
-    expect(result.loserDelta).toBe(-30);
+describe("getEffectiveKFactor", () => {
+  it("uses the new-player K when the player has fewer matches than the new threshold", () => {
+    expect(getEffectiveKFactor(0)).toBe(NEW_PLAYER_K_FACTOR);
+    expect(getEffectiveKFactor(NEW_PLAYER_GAME_THRESHOLD - 1)).toBe(NEW_PLAYER_K_FACTOR);
   });
 
-  it("keeps a heavy favorite winning above the floor and softens the loser penalty so the spread widens", () => {
-    const heavyFavorite = calculateMatchDelta(1900, 1500);
+  it("uses the base K when the player has reached the new threshold but is below the stable threshold", () => {
+    expect(getEffectiveKFactor(NEW_PLAYER_GAME_THRESHOLD)).toBe(60);
+    expect(getEffectiveKFactor(STABLE_PLAYER_GAME_THRESHOLD - 1)).toBe(60);
+  });
+
+  it("uses the stable-player K once the player has met the stable threshold", () => {
+    expect(getEffectiveKFactor(STABLE_PLAYER_GAME_THRESHOLD)).toBe(STABLE_PLAYER_K_FACTOR);
+    expect(getEffectiveKFactor(120)).toBe(STABLE_PLAYER_K_FACTOR);
+  });
+
+  it("respects an explicit base K factor for the middle band", () => {
+    expect(getEffectiveKFactor(15, 50)).toBe(50);
+  });
+});
+
+describe("calculateMatchDelta", () => {
+  it("gives +25 to the winner and -15 to the loser when both sit at the base K in an even match", () => {
+    const result = calculateMatchDelta(1500, 1500, { winnerKFactor: 60, loserKFactor: 60 });
+
+    expect(result.winnerDelta).toBeGreaterThanOrEqual(15);
+    expect(result.winnerDelta).toBeLessThanOrEqual(40);
+    expect(result.loserDelta).toBeGreaterThanOrEqual(-25);
+    expect(result.loserDelta).toBeLessThanOrEqual(-3);
+    expect(result.winnerDelta).toBe(25);
+    expect(result.loserDelta).toBe(-15);
+    expect(result.winnerDelta + result.loserDelta).toBeGreaterThan(0);
+  });
+
+  it("scales the winner gain up for new players (K=80) and down for stable veterans (K=40) in even matches", () => {
+    const newcomer = calculateMatchDelta(1500, 1500, { winnerKFactor: 80, loserKFactor: 80 });
+    const baseline = calculateMatchDelta(1500, 1500, { winnerKFactor: 60, loserKFactor: 60 });
+    const veteran = calculateMatchDelta(1500, 1500, { winnerKFactor: 40, loserKFactor: 40 });
+
+    expect(newcomer.winnerDelta).toBeGreaterThan(baseline.winnerDelta);
+    expect(veteran.winnerDelta).toBeLessThan(baseline.winnerDelta);
+  });
+
+  it("keeps a heavy favorite winner above the absolute floor and softens the loser penalty", () => {
+    const heavyFavorite = calculateMatchDelta(1900, 1500, { winnerKFactor: 60, loserKFactor: 60 });
 
     expect(heavyFavorite.winnerDelta).toBeGreaterThanOrEqual(12);
     expect(heavyFavorite.winnerDelta).toBeLessThanOrEqual(40);
@@ -65,15 +101,15 @@ describe("calculateMatchDelta", () => {
   });
 
   it("rewards an upset winner above the upset floor and caps the gain at 160", () => {
-    const upset = calculateMatchDelta(1300, 1500);
+    const upset = calculateMatchDelta(1300, 1500, { winnerKFactor: 60, loserKFactor: 60 });
 
     expect(upset.winnerDelta).toBeGreaterThanOrEqual(50);
     expect(upset.winnerDelta).toBeLessThanOrEqual(160);
     expect(upset.loserDelta).toBeLessThanOrEqual(-25);
   });
 
-  it("punishes a heavy upset loser harder than -40 and stays within -160", () => {
-    const heavyUpset = calculateMatchDelta(1100, 1500);
+  it("punishes a heavy upset loser with at least -40 and stays within -160", () => {
+    const heavyUpset = calculateMatchDelta(1100, 1500, { winnerKFactor: 60, loserKFactor: 60 });
 
     expect(heavyUpset.winnerDelta).toBeGreaterThanOrEqual(80);
     expect(heavyUpset.winnerDelta).toBeLessThanOrEqual(160);
@@ -81,16 +117,19 @@ describe("calculateMatchDelta", () => {
     expect(heavyUpset.loserDelta).toBeLessThanOrEqual(-40);
   });
 
-  it("keeps the winner gain monotonically non-increasing as the favorite gap grows", () => {
+  it("keeps the winner gain monotonically non-increasing as the favorite gap grows at a fixed K", () => {
     const winnerRatings = [1500, 1600, 1700, 1800, 1900, 2000];
-    const deltas = winnerRatings.map((rating) => calculateMatchDelta(rating, 1500).winnerDelta);
+    const deltas = winnerRatings.map(
+      (rating) =>
+        calculateMatchDelta(rating, 1500, { winnerKFactor: 60, loserKFactor: 60 }).winnerDelta,
+    );
 
     for (let index = 1; index < deltas.length; index += 1) {
       expect(deltas[index]).toBeLessThanOrEqual(deltas[index - 1]);
     }
   });
 
-  it("keeps every match within the [-160, 160] caps and avoids zero winner gains", () => {
+  it("keeps every match within the [-160, 160] caps with positive integer winner deltas", () => {
     const samples = [
       [1500, 1500],
       [2400, 1000],
@@ -100,7 +139,10 @@ describe("calculateMatchDelta", () => {
     ] as const;
 
     for (const [winner, loser] of samples) {
-      const result = calculateMatchDelta(winner, loser);
+      const result = calculateMatchDelta(winner, loser, {
+        winnerKFactor: 60,
+        loserKFactor: 60,
+      });
       expect(Number.isInteger(result.winnerDelta)).toBe(true);
       expect(Number.isInteger(result.loserDelta)).toBe(true);
       expect(result.winnerDelta).toBeGreaterThan(0);
@@ -109,10 +151,17 @@ describe("calculateMatchDelta", () => {
       expect(result.loserDelta).toBeGreaterThanOrEqual(-160);
     }
   });
+
+  it("accepts a single numeric kFactor argument for backward compatibility", () => {
+    const numeric = calculateMatchDelta(1500, 1500, 60);
+    const opts = calculateMatchDelta(1500, 1500, { winnerKFactor: 60, loserKFactor: 60 });
+
+    expect(numeric).toEqual(opts);
+  });
 });
 
 describe("replayMatches", () => {
-  it("starts new players at 1000 and accumulates match history in order", () => {
+  it("starts new players at 1000 with the new-player K and accumulates match history in order", () => {
     const matches: MatchRecord[] = [
       createMatch({
         id: "m1",
@@ -130,8 +179,8 @@ describe("replayMatches", () => {
 
     const result = replayMatches(players.slice(0, 2), matches);
 
-    expect(result.p1.rating).toBe(992);
-    expect(result.p2.rating).toBe(1008);
+    expect(result.p1.rating).toBe(985);
+    expect(result.p2.rating).toBe(1030);
     expect(result.p1.wins).toBe(1);
     expect(result.p1.losses).toBe(1);
     expect(result.p1.bestWinStreak).toBe(1);
@@ -164,9 +213,9 @@ describe("replayMatches", () => {
 
     const withoutMiddle = replayMatches(players, matches.filter((match) => match.id !== "m2"));
 
-    expect(withoutMiddle.p1.rating).toBe(1030);
-    expect(withoutMiddle.p2.rating).toBe(1004);
-    expect(withoutMiddle.p3.rating).toBe(966);
+    expect(withoutMiddle.p1.rating).toBe(1033);
+    expect(withoutMiddle.p2.rating).toBe(1025);
+    expect(withoutMiddle.p3.rating).toBe(957);
   });
 
   it("tracks longest win and loss streaks per player", () => {
@@ -303,8 +352,8 @@ describe("buildRankingsThroughLocalDay", () => {
     const snapshot = buildRankingsThroughLocalDay(players.slice(0, 2), matches, "2026-04-27");
 
     expect(snapshot.map((entry) => entry.player.id)).toEqual(["p1", "p2"]);
-    expect(snapshot[0].rating).toBe(1030);
-    expect(snapshot[1].rating).toBe(970);
+    expect(snapshot[0].rating).toBe(1033);
+    expect(snapshot[1].rating).toBe(982);
   });
 
   it("excludes players created after the selected local day", () => {
