@@ -12,20 +12,75 @@ function getExpectedScore(playerRating: number, opponentRating: number) {
   return 1 / (1 + 10 ** ((opponentRating - playerRating) / 400));
 }
 
+const SINGLE_MATCH_CAP = 160;
+const EVEN_MATCH_WINNER_DELTA = 30;
+const HEAVY_FAVORITE_WINNER_FLOOR = 12;
+const FAVORITE_DECAY_PER_RATING_POINT = 0.045;
+const FAVORITE_LOSER_MIN_PENALTY = 3;
+const FAVORITE_LOSER_MAX_PENALTY = 40;
+const UPSET_GAP_THRESHOLD = 200;
+const HEAVY_UPSET_GAP_THRESHOLD = 400;
+const UPSET_WINNER_FLOOR = 50;
+const HEAVY_UPSET_WINNER_FLOOR = 80;
+const UPSET_LOSER_PENALTY_FLOOR = 25;
+const HEAVY_UPSET_LOSER_PENALTY_FLOOR = 40;
+const UPSET_WINNER_MULTIPLIER_CAP = 1.2;
+const UPSET_WINNER_MULTIPLIER_SCALE = 0.75;
+const UPSET_LOSER_MULTIPLIER_CAP = 1.5;
+const UPSET_LOSER_MULTIPLIER_SCALE = 1.0;
+const UPSET_MULTIPLIER_EXPONENT = 1.15;
+
 export function calculateMatchDelta(
   winnerRating: number,
   loserRating: number,
   kFactor = DEFAULT_K_FACTOR,
 ) {
-  const winnerExpectedScore = getExpectedScore(winnerRating, loserRating);
-  const baseDelta = kFactor * (1 - winnerExpectedScore);
-  const upsetGap = Math.max(0, loserRating - winnerRating);
-  const upsetMultiplier = 1 + Math.min(1.2, 0.75 * (upsetGap / 400) ** 1.15);
-  const winnerDelta = Math.round(Math.min(160, Math.max(5, baseDelta * upsetMultiplier)));
+  const winnerLoserGap = winnerRating - loserRating;
+  const winnerExpected = getExpectedScore(winnerRating, loserRating);
+  const loserExpected = 1 - winnerExpected;
+
+  let rawWinner: number;
+  let rawLoser: number;
+
+  if (winnerLoserGap >= 0) {
+    // 强者赢或同分：胜方加分按线性衰减，败方扣分用标准 Elo 但收缩到温和惩罚区间
+    const decayed = EVEN_MATCH_WINNER_DELTA - winnerLoserGap * FAVORITE_DECAY_PER_RATING_POINT;
+    rawWinner = Math.max(HEAVY_FAVORITE_WINNER_FLOOR, decayed);
+
+    const symmetricLoser = -kFactor * loserExpected;
+    rawLoser = Math.max(
+      -FAVORITE_LOSER_MAX_PENALTY,
+      Math.min(-FAVORITE_LOSER_MIN_PENALTY, symmetricLoser),
+    );
+  } else {
+    // 爆冷：胜方按上调倍率获得高额奖励，败方按上调倍率被加重惩罚
+    const upsetGap = -winnerLoserGap;
+    const normalizedGap = upsetGap / HEAVY_UPSET_GAP_THRESHOLD;
+    const upsetCurve = Math.pow(normalizedGap, UPSET_MULTIPLIER_EXPONENT);
+
+    const winnerMultiplier =
+      1 + Math.min(UPSET_WINNER_MULTIPLIER_CAP, UPSET_WINNER_MULTIPLIER_SCALE * upsetCurve);
+    const loserPenaltyMultiplier =
+      1 + Math.min(UPSET_LOSER_MULTIPLIER_CAP, UPSET_LOSER_MULTIPLIER_SCALE * upsetCurve);
+
+    rawWinner = kFactor * (1 - winnerExpected) * winnerMultiplier;
+    rawLoser = -kFactor * loserExpected * loserPenaltyMultiplier;
+
+    if (upsetGap >= HEAVY_UPSET_GAP_THRESHOLD) {
+      rawWinner = Math.max(HEAVY_UPSET_WINNER_FLOOR, rawWinner);
+      rawLoser = Math.min(-HEAVY_UPSET_LOSER_PENALTY_FLOOR, rawLoser);
+    } else if (upsetGap >= UPSET_GAP_THRESHOLD) {
+      rawWinner = Math.max(UPSET_WINNER_FLOOR, rawWinner);
+      rawLoser = Math.min(-UPSET_LOSER_PENALTY_FLOOR, rawLoser);
+    }
+  }
+
+  const cappedWinner = Math.min(SINGLE_MATCH_CAP, Math.max(1, rawWinner));
+  const cappedLoser = Math.max(-SINGLE_MATCH_CAP, Math.min(0, rawLoser));
 
   return {
-    winnerDelta,
-    loserDelta: -winnerDelta,
+    winnerDelta: Math.round(cappedWinner),
+    loserDelta: Math.round(cappedLoser),
   };
 }
 

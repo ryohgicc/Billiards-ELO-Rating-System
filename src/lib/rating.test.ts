@@ -43,27 +43,71 @@ function createMatch(match: Omit<MatchRecord, "winnerMoments" | "loserMoments" |
 }
 
 describe("calculateMatchDelta", () => {
-  it("gives the winner and loser equal opposite rating changes", () => {
-    const result = calculateMatchDelta(1000, 1000);
+  it("gives the winner +30 and loser -30 in an even match", () => {
+    const result = calculateMatchDelta(1500, 1500);
 
+    expect(result.winnerDelta).toBeGreaterThanOrEqual(25);
+    expect(result.winnerDelta).toBeLessThanOrEqual(40);
+    expect(result.loserDelta).toBeGreaterThanOrEqual(-40);
+    expect(result.loserDelta).toBeLessThanOrEqual(-25);
     expect(result.winnerDelta).toBe(30);
     expect(result.loserDelta).toBe(-30);
-    expect(result.winnerDelta + result.loserDelta).toBe(0);
   });
 
-  it("rewards an upset more aggressively than an expected win", () => {
-    const favoriteWin = calculateMatchDelta(1200, 1000);
-    const underdogWin = calculateMatchDelta(1000, 1200);
-    const largerUpset = calculateMatchDelta(1000, 1400);
-    const heavyFavoriteWin = calculateMatchDelta(1400, 1000);
+  it("keeps a heavy favorite winning above the floor and softens the loser penalty so the spread widens", () => {
+    const heavyFavorite = calculateMatchDelta(1900, 1500);
 
-    expect(favoriteWin.winnerDelta).toBe(14);
-    expect(underdogWin.winnerDelta).toBe(61);
-    expect(largerUpset.winnerDelta).toBe(95);
-    expect(heavyFavoriteWin.winnerDelta).toBe(5);
-    expect(favoriteWin.winnerDelta).toBeLessThan(underdogWin.winnerDelta);
-    expect(underdogWin.winnerDelta + underdogWin.loserDelta).toBe(0);
-    expect(largerUpset.winnerDelta + largerUpset.loserDelta).toBe(0);
+    expect(heavyFavorite.winnerDelta).toBeGreaterThanOrEqual(12);
+    expect(heavyFavorite.winnerDelta).toBeLessThanOrEqual(40);
+    expect(heavyFavorite.loserDelta).toBeGreaterThanOrEqual(-10);
+    expect(heavyFavorite.loserDelta).toBeLessThanOrEqual(0);
+    expect(heavyFavorite.winnerDelta + heavyFavorite.loserDelta).toBeGreaterThan(0);
+  });
+
+  it("rewards an upset winner above the upset floor and caps the gain at 160", () => {
+    const upset = calculateMatchDelta(1300, 1500);
+
+    expect(upset.winnerDelta).toBeGreaterThanOrEqual(50);
+    expect(upset.winnerDelta).toBeLessThanOrEqual(160);
+    expect(upset.loserDelta).toBeLessThanOrEqual(-25);
+  });
+
+  it("punishes a heavy upset loser harder than -40 and stays within -160", () => {
+    const heavyUpset = calculateMatchDelta(1100, 1500);
+
+    expect(heavyUpset.winnerDelta).toBeGreaterThanOrEqual(80);
+    expect(heavyUpset.winnerDelta).toBeLessThanOrEqual(160);
+    expect(heavyUpset.loserDelta).toBeGreaterThanOrEqual(-160);
+    expect(heavyUpset.loserDelta).toBeLessThanOrEqual(-40);
+  });
+
+  it("keeps the winner gain monotonically non-increasing as the favorite gap grows", () => {
+    const winnerRatings = [1500, 1600, 1700, 1800, 1900, 2000];
+    const deltas = winnerRatings.map((rating) => calculateMatchDelta(rating, 1500).winnerDelta);
+
+    for (let index = 1; index < deltas.length; index += 1) {
+      expect(deltas[index]).toBeLessThanOrEqual(deltas[index - 1]);
+    }
+  });
+
+  it("keeps every match within the [-160, 160] caps and avoids zero winner gains", () => {
+    const samples = [
+      [1500, 1500],
+      [2400, 1000],
+      [1000, 2400],
+      [1200, 1000],
+      [1000, 1200],
+    ] as const;
+
+    for (const [winner, loser] of samples) {
+      const result = calculateMatchDelta(winner, loser);
+      expect(Number.isInteger(result.winnerDelta)).toBe(true);
+      expect(Number.isInteger(result.loserDelta)).toBe(true);
+      expect(result.winnerDelta).toBeGreaterThan(0);
+      expect(result.winnerDelta).toBeLessThanOrEqual(160);
+      expect(result.loserDelta).toBeLessThanOrEqual(0);
+      expect(result.loserDelta).toBeGreaterThanOrEqual(-160);
+    }
   });
 });
 
@@ -86,7 +130,7 @@ describe("replayMatches", () => {
 
     const result = replayMatches(players.slice(0, 2), matches);
 
-    expect(result.p1.rating).toBe(992);
+    expect(result.p1.rating).toBe(991);
     expect(result.p2.rating).toBe(1008);
     expect(result.p1.wins).toBe(1);
     expect(result.p1.losses).toBe(1);
@@ -165,6 +209,45 @@ describe("replayMatches", () => {
     expect(result.p1.worstLossStreak).toBe(1);
     expect(result.p2.worstLossStreak).toBe(3);
     expect(result.p3.bestWinStreak).toBe(3);
+  });
+
+  it("produces deterministic deltas and final ratings across repeated calls", () => {
+    const matches: MatchRecord[] = [
+      createMatch({
+        id: "m1",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-27T11:00:00.000Z",
+      }),
+      createMatch({
+        id: "m2",
+        winnerId: "p2",
+        loserId: "p3",
+        createdAt: "2026-04-27T11:10:00.000Z",
+      }),
+      createMatch({
+        id: "m3",
+        winnerId: "p1",
+        loserId: "p3",
+        createdAt: "2026-04-27T11:20:00.000Z",
+      }),
+    ];
+
+    const firstRankings = buildRankings(players, matches);
+    const secondRankings = buildRankings(players, matches);
+
+    expect(firstRankings.map((entry) => entry.player.id)).toEqual(
+      secondRankings.map((entry) => entry.player.id),
+    );
+    expect(firstRankings.map((entry) => entry.rating)).toEqual(
+      secondRankings.map((entry) => entry.rating),
+    );
+
+    const firstStats = replayMatches(players, matches);
+    const secondStats = replayMatches(players, matches);
+    expect(firstStats.p1.rating).toBe(secondStats.p1.rating);
+    expect(firstStats.p2.rating).toBe(secondStats.p2.rating);
+    expect(firstStats.p3.rating).toBe(secondStats.p3.rating);
   });
 });
 
