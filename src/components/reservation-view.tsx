@@ -6,7 +6,6 @@ import { CalendarClock, Hash, TimerReset } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { useAppState } from "@/lib/app-state";
 import {
-  buildRecentActiveDayCounts,
   buildReservationOrder,
   calculateMillisecondsUntilNextLocalMidnight,
   getLocalDateKey,
@@ -24,7 +23,7 @@ function formatCountdown(milliseconds: number) {
 }
 
 export function ReservationView() {
-  const { activePlayers, isLoaded, state } = useAppState();
+  const { activePlayers, isLoaded } = useAppState();
   const [now, setNow] = useState(() => new Date());
   const [dateSeed, setDateSeed] = useState(() => getLocalDateKey());
 
@@ -52,19 +51,9 @@ export function ReservationView() {
     };
   }, [dateSeed]);
 
-  const recentActiveDayCountsByPlayerId = useMemo(
-    () => buildRecentActiveDayCounts(state.matches, dateSeed),
-    [dateSeed, state.matches],
-  );
   const reservationOrder = useMemo(
-    () =>
-      buildReservationOrder(
-        activePlayers,
-        dateSeed,
-        undefined,
-        recentActiveDayCountsByPlayerId,
-      ),
-    [activePlayers, dateSeed, recentActiveDayCountsByPlayerId],
+    () => buildReservationOrder(activePlayers, dateSeed),
+    [activePlayers, dateSeed],
   );
   const millisecondsUntilRefresh = calculateMillisecondsUntilNextLocalMidnight(now);
 
@@ -73,10 +62,10 @@ export function ReservationView() {
       <section className="panel reservation-hero">
         <div className="reservation-hero__copy">
           <p className="eyebrow">Reservation Draw</p>
-          <h2>今日上场顺序</h2>
+          <h2>每日排序</h2>
           <p>
-            每天 0 点用当天日期和启用球员名单重新抽签。同一天内顺序保持稳定，
-            方便大家提前确认排队节奏。
+            每天 0 点用当天日期和启用球员名单重新随机排序。同一天内顺序保持稳定，
+            不参考战绩、活跃度或历史排序。
           </p>
         </div>
         <div className="reservation-hero__meta" aria-label="预约抽签状态">
@@ -102,7 +91,7 @@ export function ReservationView() {
         <div className="section-heading">
           <div>
             <p className="eyebrow">Queue</p>
-            <h2>预约名单</h2>
+            <h2>每日排序</h2>
           </div>
           <span className="section-note">仅启用球员参与</span>
         </div>
@@ -111,7 +100,7 @@ export function ReservationView() {
         {isLoaded && reservationOrder.length === 0 ? (
           <EmptyState
             title="还没有可预约球员"
-            description="先在球员管理里新增并启用球员，预约页会在每天 0 点自动生成顺序。"
+            description="先在球员管理里新增并启用球员，每日排序会在每天 0 点自动生成。"
           />
         ) : null}
 
@@ -123,9 +112,7 @@ export function ReservationView() {
                   <span className="reservation-card__order">#{entry.order}</span>
                   <div>
                     <h3>{entry.player.name}</h3>
-                    <p>
-                      签号 {entry.drawNumberLabel} · 近 7 天活跃 {entry.recentActiveDayCount} 天
-                    </p>
+                    <p>随机签号 {entry.drawNumberLabel}</p>
                   </div>
                 </article>
               ))}
@@ -137,9 +124,8 @@ export function ReservationView() {
                   <tr>
                     <th>顺序</th>
                     <th>球员</th>
-                    <th>公开签号</th>
-                    <th>近 7 天</th>
-                    <th>抽签种子</th>
+                    <th>随机签号</th>
+                    <th>每日种子</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -150,7 +136,6 @@ export function ReservationView() {
                       <td>
                         <code>{entry.drawNumberLabel}</code>
                       </td>
-                      <td>{entry.recentActiveDayCount} 天</td>
                       <td>{entry.drawSeed}</td>
                     </tr>
                   ))}
@@ -165,48 +150,24 @@ export function ReservationView() {
         <div className="section-heading">
           <div>
             <p className="eyebrow">Transparent Algorithm</p>
-            <h2>随机算法公开说明</h2>
+            <h2>每日排序说明</h2>
           </div>
         </div>
 
         <div className="algorithm-copy">
           <p>
-            每天 0 点页面会重新生成当天预约名单：先取当时所有启用中的球员，算出每人的公开签号和近 7 天活跃天数，
-            再把所有人放进同一个候选池，按加权后的排序值和保护规则生成完整顺序。
+            每天 0 点页面会重新生成当天排序：先取当时所有启用中的球员，再为每个人生成一个当天随机签号。
+            签号越小越靠前，除此之外不使用战绩、活跃天数、昨天名次或指定球员规则。
           </p>
           <p>
             每天的日期种子是浏览器本地日期，格式为 <code>YYYY-MM-DD</code>。参与名单只包含当前启用中的球员。
-            如果当天需要重置，会在日期后追加公开重置盐值；例如 <code>2026-05-08|reset-5</code>。
           </p>
           <p>
-            每位球员的抽签输入为 <code>日期|球员ID|球员名称|创建时间</code>，再计算
-            <code> FNV-1a 32-bit hash</code> 得到公开签号：初始值 <code>2166136261</code>，
-            每个字符先异或进 hash，再乘以 <code>16777619</code>，最后取 32 位无符号整数。
+            每位球员的输入为 <code>日期|球员ID|球员名称|创建时间</code>，再计算
+            <code> FNV-1a 32-bit hash</code> 得到当天随机签号。因为日期每天都会变化，同一批球员每天都会重新洗牌。
           </p>
           <p>
-            排序会根据近 7 天活跃天数做小幅修正：同一天无论打几场，只要有比赛就算 1 个活跃日。
-            每 1 个活跃日会让排序值减少 <code>10000000</code>；近 7 天 0 个活跃日会额外增加
-            <code>30000000</code>。0 天只是软惩罚，不再默认垫底；排序值越小越靠前，所以持续来打会略微优先，
-            但签号随机性仍然保留。
-          </p>
-          <p>
-            系统按签号从小到大排列；如果签号完全相同，就按球员创建时间升序，再按球员 ID 升序兜底。
-            从第二天开始，昨天最终垫底 2 人会先获得优先排序；这些保护规则对所有启用球员生效。
-            如果今天前 2 名仍和昨天最终前 2 名是同一组人，且至少有 3 位启用球员，就把今天第 3 名提到第 2 名，
-            确保前 2 名不会连续两天相同。
-          </p>
-          <p>
-            第一、第二名的计算方式是：所有启用球员先按当天加权排序值排出基础名单；如果昨天最终垫底 2 人仍启用，
-            他们会先进入第一、第二名候选队列，候选队列内部仍按今天的加权签号决定先后。
-            如果候选结果和昨天前 2 名完全相同，就把今天第 3 名提到第 2 名。近 7 天 0 活跃日球员也在同一候选池里，
-            只是带有 <code>30000000</code> 的软惩罚。
-          </p>
-          <p>
-            本次公开重 roll 只额外限定 <code>2026-05-08</code> 当天：球员 <code>gjj</code> 不进入当天前 2 名。
-            这条限定只作用于这一天，到其他日期不会继续生效。
-          </p>
-          <p>
-            如果当天只有 2 位启用球员，前 2 名无法避开重复，系统会保留原始签号顺序。
+            系统按随机签号从小到大排列；极少数签号完全相同时，只用球员创建时间和球员 ID 作为稳定兜底。
             页面打开时会计算距离下一个本地 0 点的时间，到点后自动切换新一天的日期种子并刷新顺序。
           </p>
         </div>
