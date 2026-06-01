@@ -43,8 +43,16 @@ export function fnv1a32(input: string) {
   return hash >>> 0;
 }
 
+// 公开重置盐值：仅对列出的日期生效，把盐值拼到当天种子后强制重算一次随机顺序。
+// 不引入任何战绩/活跃度规律，只是换一个种子让当天结果重新洗牌。
+const RESERVATION_DAY_RESET_SALTS: Record<string, string> = {
+  "2026-06-01": "reset-6",
+};
+
 export function getReservationDrawSeed(dateSeed: string) {
-  return dateSeed;
+  const resetSalt = RESERVATION_DAY_RESET_SALTS[dateSeed];
+
+  return resetSalt ? `${dateSeed}|${resetSalt}` : dateSeed;
 }
 
 function buildHashInput(player: Player, drawSeed: string) {

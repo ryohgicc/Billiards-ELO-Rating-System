@@ -56,12 +56,18 @@ describe("buildReservationOrder", () => {
     );
   });
 
-  it("does not apply reset salts to any day", () => {
+  it("applies a public reset salt only to the listed reset day", () => {
+    expect(getReservationDrawSeed("2026-06-01")).toBe("2026-06-01|reset-6");
     expect(getReservationDrawSeed("2026-05-08")).toBe("2026-05-08");
 
-    const order = buildReservationOrder(players, "2026-05-08");
+    const resetDayOrder = buildReservationOrder(players, "2026-06-01");
+    const normalDayOrder = buildReservationOrder(players, "2026-05-08");
 
-    expect(order.every((entry) => entry.hashInput.startsWith("2026-05-08|"))).toBe(true);
+    expect(resetDayOrder.every((entry) => entry.hashInput.startsWith("2026-06-01|reset-6|"))).toBe(
+      true,
+    );
+    expect(normalDayOrder.every((entry) => entry.hashInput.startsWith("2026-05-08|"))).toBe(true);
+    expect(normalDayOrder.every((entry) => !entry.hashInput.includes("reset"))).toBe(true);
   });
 
   it("excludes inactive players from the daily order", () => {
