@@ -21,6 +21,7 @@ import {
 } from "../src/lib/validation";
 import type { D1Database, D1PreparedStatement, ExecutionContext } from "@cloudflare/workers-types";
 import { generateAiMatchInsights } from "./ai.js";
+import { getLocalMonthKey } from "../src/lib/rating";
 
 type Env = {
   DB: D1Database;
@@ -469,9 +470,9 @@ async function refreshMatchAiArtifacts(match: MatchRecord, request: Request, env
 
   const profilesByPlayerId = buildPlayerProfiles(
     state.players,
-    state.matches,
+    state.matches.filter((stateMatch) => getLocalMonthKey(stateMatch.createdAt) === getLocalMonthKey(match.createdAt)),
     state.photos,
-    state.settings.kFactor,
+    DEFAULT_SETTINGS.kFactor,
     "worker-ai-refresh",
   );
   const winnerProfile = profilesByPlayerId[winner.id];

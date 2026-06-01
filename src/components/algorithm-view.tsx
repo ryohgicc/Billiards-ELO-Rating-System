@@ -1,31 +1,31 @@
 const evenExampleRows = [
-  { label: "赛前积分 / K 因子", playerA: "A：1500 / 60", playerB: "B：1500 / 60" },
-  { label: "胜方加分（A）", playerA: "+25", playerB: "—" },
-  { label: "败方扣分（B）", playerA: "—", playerB: "−15" },
-  { label: "本场净拉开分差", playerA: "+10", playerB: "" },
-  { label: "赛后积分", playerA: "1525", playerB: "1485" },
+  { label: "赛前积分 / K 因子", playerA: "A：1500 / 100", playerB: "B：1500 / 100" },
+  { label: "胜方加分（A）", playerA: "+50", playerB: "—" },
+  { label: "败方扣分（B）", playerA: "—", playerB: "−50" },
+  { label: "本场净变化", playerA: "0", playerB: "" },
+  { label: "赛后积分", playerA: "1550", playerB: "1450" },
 ];
 
 const heavyFavoriteExampleRows = [
-  { label: "赛前积分 / K 因子", playerA: "A：1900 / 60", playerB: "B：1500 / 60" },
-  { label: "胜方加分（A）", playerA: "+12", playerB: "—" },
-  { label: "败方扣分（B）", playerA: "—", playerB: "−3" },
-  { label: "本场净拉开分差", playerA: "+9", playerB: "" },
-  { label: "赛后积分", playerA: "1912", playerB: "1497" },
+  { label: "赛前积分 / K 因子", playerA: "A：1900 / 100", playerB: "B：1500 / 100" },
+  { label: "胜方加分（A）", playerA: "+9", playerB: "—" },
+  { label: "败方扣分（B）", playerA: "—", playerB: "−9" },
+  { label: "本场净变化", playerA: "0", playerB: "" },
+  { label: "赛后积分", playerA: "1909", playerB: "1491" },
 ];
 
 const heavyUpsetExampleRows = [
-  { label: "赛前积分 / K 因子", playerA: "A：1100 / 60", playerB: "B：1500 / 60" },
-  { label: "胜方加分（A）", playerA: "+82", playerB: "—" },
-  { label: "败方扣分（B）", playerA: "—", playerB: "−82" },
-  { label: "本场净分差变化", playerA: "0", playerB: "" },
-  { label: "赛后积分", playerA: "1182", playerB: "1418" },
+  { label: "赛前积分 / K 因子", playerA: "A：1100 / 100", playerB: "B：1500 / 100" },
+  { label: "胜方加分（A）", playerA: "+91", playerB: "—" },
+  { label: "败方扣分（B）", playerA: "—", playerB: "−91" },
+  { label: "本场净变化", playerA: "0", playerB: "" },
+  { label: "赛后积分", playerA: "1191", playerB: "1409" },
 ];
 
 const tierRows = [
-  { tier: "新人段（< 10 场）", k: 80, note: "前 10 场用更大步长，让水平快速被准确捕捉" },
-  { tier: "中段（10 至 30 场）", k: 60, note: "默认 K 值，适合大多数对局" },
-  { tier: "稳定段（≥ 30 场）", k: 40, note: "成熟选手的积分变化更细腻，避免被偶发结果带飞" },
+  { tier: "新人段（< 10 场）", k: 150, note: "每月前 10 场用更大步长，让赛季初快速归位" },
+  { tier: "中段（10 至 30 场）", k: 100, note: "本月默认 K 值，适合大多数对局" },
+  { tier: "稳定段（≥ 30 场）", k: 50, note: "当月成熟样本后降低波动，减少偶发结果扰动" },
 ];
 
 export function AlgorithmView() {
@@ -37,27 +37,25 @@ export function AlgorithmView() {
             <p className="eyebrow">Rating Model</p>
             <h2>Elo 积分算法</h2>
           </div>
-          <span className="section-note">初始分 1000 / 默认 K 值 60 / 单场封顶 ±160</span>
+          <span className="section-note">每月初始分 1000 / 默认 K 值 100 / 不设单场封顶</span>
         </div>
 
         <div className="algorithm-copy">
           <p>
-            这个系统使用非对称 Elo 评分配合分段 K 因子来计算台球排名。每位新球员从 1000 分开始，
-            每场比赛只记录胜者和负者，胜方加分公式与败方扣分公式分别独立计算，
-            <code>winnerDelta + loserDelta</code> 不再恒为零。
+            这个系统按自然月拆分赛季，每个赛季都从 1000 分重新开始。每场比赛只记录胜者和负者，
+            胜方与败方分别使用自己的赛前 K 值计算，K 值不同的时候本场变化不强制守恒。
           </p>
           <p>
-            算法借鉴 FIDE 国际象棋分级 K 因子的思路：每位球员根据已完成的比赛总场数分别使用
+            算法借鉴 FIDE 国际象棋分级 K 因子的思路：每位球员根据本月已完成的比赛总场数分别使用
             不同的 K 值，新人变化大、稳定老手变化小。胜负双方各自查自己的 K 值，互不干扰。
           </p>
           <p>
-            高分球员稳定击败低分球员时，胜方仍能拿到至少 12 分增长，败方只扣 3 到 10 分，
-            本场净拉开分差；反之，低分球员爆冷击败高分球员时，胜方至少加 50 分（分差 ≥ 400 时至少加 80 分），
-            败方扣分被约束在「不超过胜方加分」之内，避免高分球员被一次失利过度惩罚。
+            高分球员稳定击败低分球员时，只拿较小收益；低分球员爆冷击败高分球员时，
+            按 Elo 期望差拿到更大奖励。单场不再封顶，实际变化完全由双方分差和各自 K 值决定。
           </p>
           <p>
-            系统不会只保存最终积分，而是保存完整比赛历史。新增、修改或删除比赛后，会按时间顺序
-            重新回放所有比赛，每场重新计算双方当时的赛前 K 值，所以排行榜永远和算法保持同步。
+            系统不会只保存最终积分，而是保存完整比赛历史。新增、修改或删除比赛后，会在对应自然月内
+            按时间顺序重新回放比赛，并保留每个月最后一个比赛日的月末归档榜。
           </p>
         </div>
       </section>
@@ -99,7 +97,7 @@ export function AlgorithmView() {
             <p className="eyebrow">Formula</p>
             <h2>计算公式</h2>
           </div>
-          <span className="section-note">胜方与败方独立计算</span>
+          <span className="section-note">标准 Elo 期望值 × 双方各自 K</span>
         </div>
 
         <div className="formula-grid">
@@ -108,30 +106,24 @@ export function AlgorithmView() {
             <code>E_winner = 1 / (1 + 10 ^ ((败方分 − 胜方分) / 400))</code>
           </div>
           <div className="formula-card">
-            <span>胜方加分（强者赢，差距 ≥ 0）</span>
-            <code>winnerDelta = max(12, max(12.5, 25 − 差距 × 0.0325) × 胜方K / 60)</code>
+            <span>胜方加分</span>
+            <code>winnerDelta = round(胜方K × (1 − E_winner))</code>
           </div>
           <div className="formula-card">
-            <span>败方扣分（强者赢，差距 ≥ 0）</span>
-            <code>loserDelta = clamp(−败方K × (1 − E_winner) × 0.5, −18, −3)</code>
+            <span>败方扣分</span>
+            <code>loserDelta = round(−败方K × E_loser)，E_loser = 1 − E_winner</code>
           </div>
           <div className="formula-card">
-            <span>胜方加分（爆冷，差距 &lt; 0）</span>
-            <code>
-              winnerDelta = 胜方K × (1 − E_winner) × (1 + min(0.6, 0.5 × (分差 / 400) ^ 1.15))
-              ；分差 ≥ 200 时下限 50，分差 ≥ 400 时下限 80
-            </code>
+            <span>K 值分段</span>
+            <code>本月已赛 &lt; 10：K=150；10-29：K=100；≥30：K=50</code>
           </div>
           <div className="formula-card">
-            <span>败方扣分（爆冷，差距 &lt; 0）</span>
-            <code>
-              loserDelta = max(−winnerDelta, −败方K × (1 − E_winner) × (1 + min(0.6, 0.5 × (分差 / 400) ^ 1.15)))
-              ；分差 ≥ 200 时上限 −25，分差 ≥ 400 时上限 −40
-            </code>
+            <span>月赛季</span>
+            <code>每个自然月独立回放，赛季初积分、战绩、成就、规则称号都从零开始</code>
           </div>
           <div className="formula-card">
-            <span>单场封顶</span>
-            <code>winnerDelta ∈ [1, 160]，loserDelta ∈ [−160, 0]，输出取整</code>
+            <span>单场限制</span>
+            <code>不设 ±160 封顶；极端强弱局可能四舍五入为 0 分变化</code>
           </div>
         </div>
       </section>
@@ -142,7 +134,7 @@ export function AlgorithmView() {
             <p className="eyebrow">Example 1</p>
             <h2>同分对局：A 1500 vs B 1500</h2>
           </div>
-          <span className="section-note">A 胜 B（双方均为中段 K=60）</span>
+          <span className="section-note">A 胜 B（双方均为中段 K=100）</span>
         </div>
 
         <div className="example-table-wrap">
@@ -167,9 +159,8 @@ export function AlgorithmView() {
         </div>
 
         <p className="algorithm-note">
-          胜方加 25、败方仅扣 15，本场净 +10 分。同分对局赢得的奖励比输掉的代价更大，
-          形成「赢得开心、输得体面」的正反馈。新人 K=80 时同样情景胜方拿到 +33；
-          稳定 K=40 时胜方仅 +17 分，避免老手被偶发结果带飞。
+          双方 K 值相同且预期胜率都是 50%，所以胜方 +50、败方 −50。新人 K=150 时同样情景胜方 +75；
+          稳定 K=50 时胜方 +25。
         </p>
       </section>
 
@@ -179,7 +170,7 @@ export function AlgorithmView() {
             <p className="eyebrow">Example 2</p>
             <h2>强者赢弱者：A 1900 vs B 1500</h2>
           </div>
-          <span className="section-note">A 胜 B，分差 +400（双方均为中段 K=60）</span>
+          <span className="section-note">A 胜 B，分差 +400（双方均为中段 K=100）</span>
         </div>
 
         <div className="example-table-wrap">
@@ -204,8 +195,8 @@ export function AlgorithmView() {
         </div>
 
         <p className="algorithm-note">
-          胜方仍获得 +12 的兜底增长，败方只扣 3 分（几乎免罚），本场净 +9 分。
-          这种统治级胜利累积起来会缓慢拉开分差，但不会让弱方被反复轰炸。
+          强者本来就该赢，预期胜率约 91%，因此只拿 +9；弱方输球也只扣 −9。
+          这种对局不会因为没有封顶而额外放大。
         </p>
       </section>
 
@@ -215,7 +206,7 @@ export function AlgorithmView() {
             <p className="eyebrow">Example 3</p>
             <h2>低分爆冷：A 1100 vs B 1500</h2>
           </div>
-          <span className="section-note">A 胜 B，分差 −400（双方均为中段 K=60）</span>
+          <span className="section-note">A 胜 B，分差 −400（双方均为中段 K=100）</span>
         </div>
 
         <div className="example-table-wrap">
@@ -240,8 +231,8 @@ export function AlgorithmView() {
         </div>
 
         <p className="algorithm-note">
-          爆冷胜方拿满 +82 分，败方扣 −82 分（受「不超过胜方加分」约束）。
-          单场最大变化封顶 ±160，避免极端比赛把榜单完全打散。
+          低分方预期胜率约 9%，赢下高分方后获得 +91；高分方按自己的 K 值扣 −91。
+          如果双方 K 值不同，加扣分会按各自 K 值比例自然拉开。
         </p>
       </section>
     </div>

@@ -8,13 +8,14 @@ import { EmptyState } from "@/components/empty-state";
 import { PlayerPhotoFrame } from "@/components/player-photo-frame";
 import { formatCurrency, formatDateTime, formatPercent } from "@/lib/format";
 import { useAppState } from "@/lib/app-state";
-import { groupEntriesByLocalDay } from "@/lib/history";
 import { buildLeaderInsight } from "@/lib/leader-insight";
 import {
+  buildMonthlyRankingSnapshots,
   buildPlayerRankDayCounts,
   buildRankingMovements,
-  buildRankingsThroughLocalDay,
-  getPreviousRankingDateKey,
+  buildRankingsForMonth,
+  getCurrentLocalMonthKey,
+  getLocalMonthKey,
 } from "@/lib/rating";
 import type { RankingMovement } from "@/lib/types";
 
@@ -105,31 +106,40 @@ function RankDayTags({ bottomDays, topDays }: { bottomDays: number; topDays: num
 }
 
 export function RankingsView() {
-  const { rankings, state, timeline, isLoaded, profilesByPlayerId } = useAppState();
-  const dailyGroups = groupEntriesByLocalDay(timeline);
-  const [selectedViewKey, setSelectedViewKey] = useState("overall");
-  const selectedDateGroup = dailyGroups.find((group) => group.dateKey === selectedViewKey);
-  const visibleRankings =
-    selectedViewKey === "overall"
-      ? rankings
-      : buildRankingsThroughLocalDay(
-          state.players,
-          state.matches,
-          selectedViewKey,
-          state.settings.kFactor,
-        );
-  const previousDateKey = getPreviousRankingDateKey(dailyGroups, selectedViewKey);
-  const previousRankings = previousDateKey
-    ? buildRankingsThroughLocalDay(
-        state.players,
-        state.matches,
-        previousDateKey,
-        state.settings.kFactor,
-      )
-    : null;
-  const rankDayCounts = buildPlayerRankDayCounts(
+  const { rankings, state, isLoaded, profilesByPlayerId } = useAppState();
+  const currentMonthKey = getCurrentLocalMonthKey();
+  const monthlySnapshots = buildMonthlyRankingSnapshots(
     state.players,
     state.matches,
+    state.settings.kFactor,
+  );
+  const [selectedViewKey, setSelectedViewKey] = useState(currentMonthKey);
+  const selectedMonthKey = selectedViewKey;
+  const selectedSnapshot = monthlySnapshots.find((snapshot) => snapshot.monthKey === selectedMonthKey);
+  const visibleRankings =
+    selectedMonthKey === currentMonthKey
+      ? rankings
+      : selectedSnapshot?.rankings ??
+        buildRankingsForMonth(state.players, state.matches, selectedMonthKey, state.settings.kFactor);
+  const monthOptions = [
+    {
+      monthKey: currentMonthKey,
+      monthLabel: "本月",
+      snapshotDateKey: "",
+      rankings,
+    },
+    ...monthlySnapshots.filter((snapshot) => snapshot.monthKey !== currentMonthKey),
+  ];
+  const selectedMonthIndex = monthOptions.findIndex((option) => option.monthKey === selectedMonthKey);
+  const previousRankings = selectedMonthIndex >= 0
+    ? monthOptions[selectedMonthIndex + 1]?.rankings ?? null
+    : null;
+  const selectedMonthMatches = state.matches.filter(
+    (match) => getLocalMonthKey(match.createdAt) === selectedMonthKey,
+  );
+  const rankDayCounts = buildPlayerRankDayCounts(
+    state.players,
+    selectedMonthMatches,
     state.settings.kFactor,
   );
   const rankingMovements = buildRankingMovements(visibleRankings, previousRankings);
@@ -170,7 +180,7 @@ export function RankingsView() {
             <span className="spotlight__rank">#1</span>
             <div>
               <p className="eyebrow">
-                {selectedViewKey === "overall" ? "当前榜首" : "当日榜首"}
+                {selectedMonthKey === currentMonthKey ? "本月榜首" : "月度归档榜首"}
               </p>
               <h2>
                 <Link href={`/preview?player=${encodeURIComponent(leader.player.id)}`}>
@@ -257,38 +267,31 @@ export function RankingsView() {
             <h2>积分排行榜</h2>
           </div>
           <span className="section-note">
-            {selectedDateGroup?.dateLabel ?? "总榜"} · K 值 {state.settings.kFactor}
+            {selectedMonthKey === currentMonthKey
+              ? "本月赛季"
+              : `${selectedSnapshot?.monthLabel ?? selectedMonthKey} 归档`}
+            {" · K 值 "}
+            {state.settings.kFactor}
           </span>
         </div>
 
-        <div className="date-switcher" aria-label="按日期查看积分排行榜">
-          <button
-            aria-pressed={selectedViewKey === "overall"}
-            className={
-              selectedViewKey === "overall"
-                ? "date-switcher__button date-switcher__button--active"
-                : "date-switcher__button"
-            }
-            onClick={() => setSelectedViewKey("overall")}
-            type="button"
-          >
-            <span>总榜</span>
-            <strong>{rankings.length} 人</strong>
-          </button>
-          {dailyGroups.map((group) => (
+        <div className="date-switcher" aria-label="按月份查看积分排行榜">
+          {monthOptions.map((group) => (
             <button
-              key={group.dateKey}
-              aria-pressed={group.dateKey === selectedViewKey}
+              key={group.monthKey}
+              aria-pressed={group.monthKey === selectedMonthKey}
               className={
-                group.dateKey === selectedViewKey
+                group.monthKey === selectedMonthKey
                   ? "date-switcher__button date-switcher__button--active"
                   : "date-switcher__button"
               }
-              onClick={() => setSelectedViewKey(group.dateKey)}
+              onClick={() => setSelectedViewKey(group.monthKey)}
               type="button"
             >
-              <span>{group.dateLabel}</span>
-              <strong>截至当天</strong>
+              <span>{group.monthLabel}</span>
+              <strong>
+                {group.snapshotDateKey ? `保留至 ${group.snapshotDateKey}` : `${rankings.length} 人`}
+              </strong>
             </button>
           ))}
         </div>
