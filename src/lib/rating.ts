@@ -12,28 +12,8 @@ function getExpectedScore(playerRating: number, opponentRating: number) {
   return 1 / (1 + 10 ** ((opponentRating - playerRating) / 400));
 }
 
-const SINGLE_MATCH_CAP = 160;
-const EVEN_MATCH_WINNER_DELTA = 25;
-const HEAVY_FAVORITE_WINNER_FLOOR = 12;
-const FAVORITE_DECAY_PER_RATING_POINT = 0.0325;
-const FAVORITE_LOSER_MIN_PENALTY = 3;
-const FAVORITE_LOSER_MAX_PENALTY = 18;
-const FAVORITE_LOSER_SOFTENING = 0.5;
-const UPSET_GAP_THRESHOLD = 200;
-const HEAVY_UPSET_GAP_THRESHOLD = 400;
-const UPSET_WINNER_FLOOR = 50;
-const HEAVY_UPSET_WINNER_FLOOR = 80;
-const UPSET_LOSER_PENALTY_FLOOR = 25;
-const HEAVY_UPSET_LOSER_PENALTY_FLOOR = 40;
-const UPSET_WINNER_MULTIPLIER_CAP = 0.6;
-const UPSET_WINNER_MULTIPLIER_SCALE = 0.5;
-const UPSET_LOSER_MULTIPLIER_CAP = 0.6;
-const UPSET_LOSER_MULTIPLIER_SCALE = 0.5;
-const UPSET_MULTIPLIER_EXPONENT = 1.15;
-const UPSET_LOSER_RELATIVE_CAP = 1.0;
-
-export const NEW_PLAYER_K_FACTOR = 80;
-export const STABLE_PLAYER_K_FACTOR = 40;
+export const NEW_PLAYER_K_FACTOR = 150;
+export const STABLE_PLAYER_K_FACTOR = 50;
 export const NEW_PLAYER_GAME_THRESHOLD = 10;
 export const STABLE_PLAYER_GAME_THRESHOLD = 30;
 
@@ -73,58 +53,12 @@ export function calculateMatchDelta(
       ? kFactorOrOptions
       : kFactorOrOptions.loserKFactor ?? DEFAULT_K_FACTOR;
 
-  const winnerLoserGap = winnerRating - loserRating;
   const winnerExpected = getExpectedScore(winnerRating, loserRating);
-  const loserExpected = 1 - winnerExpected;
-  const baseKScale = DEFAULT_K_FACTOR;
-
-  let rawWinner: number;
-  let rawLoser: number;
-
-  if (winnerLoserGap >= 0) {
-    // 强者赢或同分：胜方加分按基础值线性衰减后，按胜方 K 比例缩放，最后保底兜底；
-    // 败方扣分用标准 Elo 收缩 50% 后落入温和惩罚区间，再按败方 K 比例缩放。
-    const decayed = EVEN_MATCH_WINNER_DELTA - winnerLoserGap * FAVORITE_DECAY_PER_RATING_POINT;
-    const winnerBase = Math.max(EVEN_MATCH_WINNER_DELTA * 0.5, decayed);
-    rawWinner = Math.max(HEAVY_FAVORITE_WINNER_FLOOR, winnerBase * (winnerKFactor / baseKScale));
-
-    const softenedLoser = -loserKFactor * loserExpected * FAVORITE_LOSER_SOFTENING;
-    rawLoser = Math.max(
-      -FAVORITE_LOSER_MAX_PENALTY,
-      Math.min(-FAVORITE_LOSER_MIN_PENALTY, softenedLoser),
-    );
-  } else {
-    // 爆冷：胜方按上调倍率获得高额奖励，败方按上调倍率被加重惩罚（但被胜方加分上限约束）
-    const upsetGap = -winnerLoserGap;
-    const normalizedGap = upsetGap / HEAVY_UPSET_GAP_THRESHOLD;
-    const upsetCurve = Math.pow(normalizedGap, UPSET_MULTIPLIER_EXPONENT);
-
-    const winnerMultiplier =
-      1 + Math.min(UPSET_WINNER_MULTIPLIER_CAP, UPSET_WINNER_MULTIPLIER_SCALE * upsetCurve);
-    const loserPenaltyMultiplier =
-      1 + Math.min(UPSET_LOSER_MULTIPLIER_CAP, UPSET_LOSER_MULTIPLIER_SCALE * upsetCurve);
-
-    rawWinner = winnerKFactor * (1 - winnerExpected) * winnerMultiplier;
-    rawLoser = -loserKFactor * loserExpected * loserPenaltyMultiplier;
-
-    if (upsetGap >= HEAVY_UPSET_GAP_THRESHOLD) {
-      rawWinner = Math.max(HEAVY_UPSET_WINNER_FLOOR, rawWinner);
-      rawLoser = Math.min(-HEAVY_UPSET_LOSER_PENALTY_FLOOR, rawLoser);
-    } else if (upsetGap >= UPSET_GAP_THRESHOLD) {
-      rawWinner = Math.max(UPSET_WINNER_FLOOR, rawWinner);
-      rawLoser = Math.min(-UPSET_LOSER_PENALTY_FLOOR, rawLoser);
-    }
-
-    // 守恒约束：爆冷败方扣分不超过胜方加分，避免高分球员被过度惩罚
-    rawLoser = Math.max(-rawWinner * UPSET_LOSER_RELATIVE_CAP, rawLoser);
-  }
-
-  const cappedWinner = Math.min(SINGLE_MATCH_CAP, Math.max(1, rawWinner));
-  const cappedLoser = Math.max(-SINGLE_MATCH_CAP, Math.min(0, rawLoser));
+  const loserExpected = getExpectedScore(loserRating, winnerRating);
 
   return {
-    winnerDelta: Math.round(cappedWinner),
-    loserDelta: Math.round(cappedLoser),
+    winnerDelta: Math.round(winnerKFactor * (1 - winnerExpected)),
+    loserDelta: Math.round(-loserKFactor * loserExpected),
   };
 }
 
@@ -228,7 +162,7 @@ export function buildRankings(
   }));
 }
 
-function getLocalDateKey(value: string) {
+export function getLocalDateKey(value: string) {
   const date = new Date(value);
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
@@ -237,17 +171,81 @@ function getLocalDateKey(value: string) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+export function getLocalMonthKey(value: string) {
+  return getLocalDateKey(value).slice(0, 7);
+}
+
+function filterMatchesForMonth(matches: MatchRecord[], monthKey: string) {
+  return matches.filter((match) => getLocalMonthKey(match.createdAt) === monthKey);
+}
+
+export function getCurrentLocalMonthKey(date = new Date()) {
+  return getLocalMonthKey(date.toISOString());
+}
+
+export function buildRankingsForMonth(
+  players: Player[],
+  matches: MatchRecord[],
+  monthKey: string,
+  kFactor = DEFAULT_K_FACTOR,
+) {
+  return buildRankings(players, filterMatchesForMonth(matches, monthKey), kFactor);
+}
+
 export function buildRankingsThroughLocalDay(
   players: Player[],
   matches: MatchRecord[],
   dateKey: string,
   kFactor = DEFAULT_K_FACTOR,
 ): RankingEntry[] {
+  const monthKey = dateKey.slice(0, 7);
+
   return buildRankings(
-    players.filter((player) => getLocalDateKey(player.createdAt) <= dateKey),
-    matches.filter((match) => getLocalDateKey(match.createdAt) <= dateKey),
+    players,
+    matches.filter(
+      (match) => getLocalMonthKey(match.createdAt) === monthKey && getLocalDateKey(match.createdAt) <= dateKey,
+    ),
     kFactor,
   );
+}
+
+export type MonthlyRankingSnapshot = {
+  monthKey: string;
+  monthLabel: string;
+  snapshotDateKey: string;
+  rankings: RankingEntry[];
+};
+
+function formatMonthLabel(monthKey: string) {
+  const [year, month] = monthKey.split("-");
+  return `${year}年${Number(month)}月`;
+}
+
+export function buildMonthlyRankingSnapshots(
+  players: Player[],
+  matches: MatchRecord[],
+  kFactor = DEFAULT_K_FACTOR,
+): MonthlyRankingSnapshot[] {
+  const snapshotsByMonth = new Map<string, string>();
+
+  for (const match of matches) {
+    const monthKey = getLocalMonthKey(match.createdAt);
+    const dateKey = getLocalDateKey(match.createdAt);
+    const previous = snapshotsByMonth.get(monthKey);
+
+    if (!previous || dateKey > previous) {
+      snapshotsByMonth.set(monthKey, dateKey);
+    }
+  }
+
+  return [...snapshotsByMonth.entries()]
+    .sort(([left], [right]) => right.localeCompare(left))
+    .map(([monthKey, snapshotDateKey]) => ({
+      monthKey,
+      monthLabel: formatMonthLabel(monthKey),
+      snapshotDateKey,
+      rankings: buildRankingsThroughLocalDay(players, matches, snapshotDateKey, kFactor),
+    }));
 }
 
 export type PlayerRankDayCounts = {
@@ -342,12 +340,20 @@ export function buildMatchTimeline(
   matches: MatchRecord[],
   kFactor = DEFAULT_K_FACTOR,
 ): MatchTimelineEntry[] {
-  const stats = createInitialStats(players);
+  let stats = createInitialStats(players);
+  let activeMonthKey = "";
   const playerMap = Object.fromEntries(players.map((player) => [player.id, player]));
 
   return [...matches]
     .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
     .map((match) => {
+      const monthKey = getLocalMonthKey(match.createdAt);
+
+      if (monthKey !== activeMonthKey) {
+        stats = createInitialStats(players);
+        activeMonthKey = monthKey;
+      }
+
       const winner = stats[match.winnerId];
       const loser = stats[match.loserId];
       const winnerPlayer = playerMap[match.winnerId];

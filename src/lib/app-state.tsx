@@ -13,7 +13,16 @@ import {
 import { api } from "@/lib/api";
 import { DEFAULT_K_FACTOR, DEFAULT_SETTINGS } from "@/lib/constants";
 import { buildPlayerProfiles, mergeAiProfilesIntoPlayerProfiles } from "@/lib/player-honors";
-import { buildMatchTimeline, buildRankings, calculateMatchDelta, getEffectiveKFactor, replayMatches } from "@/lib/rating";
+import {
+  buildMatchTimeline,
+  buildRankings,
+  buildRankingsForMonth,
+  calculateMatchDelta,
+  getCurrentLocalMonthKey,
+  getEffectiveKFactor,
+  getLocalMonthKey,
+  replayMatches,
+} from "@/lib/rating";
 import { createEmptyState, importState } from "@/lib/storage";
 import type { AppState, MatchMomentKey, Player, PlayerPhotoRole, PlayerProfile } from "@/lib/types";
 import {
@@ -49,6 +58,20 @@ function findLatestPendingAiMatchId(state: AppState) {
   return [...state.matches]
     .filter((match) => !reviewedMatchIds.has(match.id))
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0]?.id ?? "";
+}
+
+function normalizeSeasonSettings(state: AppState): AppState {
+  return {
+    ...state,
+    settings: {
+      ...state.settings,
+      kFactor: DEFAULT_K_FACTOR,
+    },
+  };
+}
+
+function filterMatchesForMonth(matches: AppState["matches"], monthKey: string) {
+  return matches.filter((match) => getLocalMonthKey(match.createdAt) === monthKey);
 }
 
 type AppStateContextValue = {
@@ -90,15 +113,17 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const lastBackfilledPendingMatchIdRef = useRef("");
 
   function applyServerState(nextState: AppState) {
+    const normalizedState = normalizeSeasonSettings(nextState);
+
     if (!isMountedRef.current) {
-      return nextState;
+      return normalizedState;
     }
 
     startTransition(() => {
-      setState(nextState);
+      setState(normalizedState);
     });
 
-    return nextState;
+    return normalizedState;
   }
 
   const pollMatchAiArtifacts = useCallback(async (matchId: string) => {
@@ -188,14 +213,16 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       .catch(() => undefined);
   }, [isLoaded, pollMatchAiArtifacts, state]);
 
-  const rankings = buildRankings(state.players, state.matches, state.settings.kFactor);
-  const timeline = buildMatchTimeline(state.players, state.matches, state.settings.kFactor);
+  const currentMonthKey = getCurrentLocalMonthKey();
+  const currentMonthMatches = filterMatchesForMonth(state.matches, currentMonthKey);
+  const rankings = buildRankingsForMonth(state.players, state.matches, currentMonthKey, DEFAULT_K_FACTOR);
+  const timeline = buildMatchTimeline(state.players, state.matches, DEFAULT_K_FACTOR);
   const profilesByPlayerId = mergeAiProfilesIntoPlayerProfiles(
     buildPlayerProfiles(
       state.players,
-      state.matches,
+      currentMonthMatches,
       state.photos,
-      state.settings.kFactor,
+      DEFAULT_K_FACTOR,
       photoSeed,
     ),
     state.aiProfiles,
@@ -240,7 +267,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       validateMatchPlayers(winnerId, loserId, state.players);
       const details = validateMatchDetails(payload);
 
-      const snapshots = replayMatches(state.players, state.matches, state.settings.kFactor);
+      const monthKey = getCurrentLocalMonthKey();
+      const snapshots = replayMatches(
+        state.players,
+        filterMatchesForMonth(state.matches, monthKey),
+        DEFAULT_K_FACTOR,
+      );
       const winner = snapshots[winnerId];
       const loser = snapshots[loserId];
 
@@ -248,7 +280,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         throw new Error("球员不存在");
       }
 
-      const baseKFactor = state.settings.kFactor ?? DEFAULT_K_FACTOR;
+      const baseKFactor = DEFAULT_K_FACTOR;
       const winnerKFactor = getEffectiveKFactor(winner.wins + winner.losses, baseKFactor);
       const loserKFactor = getEffectiveKFactor(loser.wins + loser.losses, baseKFactor);
       const delta = calculateMatchDelta(winner.rating, loser.rating, {
