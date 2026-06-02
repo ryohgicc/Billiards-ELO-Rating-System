@@ -12,10 +12,15 @@ function getExpectedScore(playerRating: number, opponentRating: number) {
   return 1 / (1 + 10 ** ((opponentRating - playerRating) / 400));
 }
 
+function roundRatingDelta(delta: number) {
+  return delta < 0 ? -Math.round(Math.abs(delta)) : Math.round(delta);
+}
+
 export const NEW_PLAYER_K_FACTOR = 150;
 export const STABLE_PLAYER_K_FACTOR = 50;
 export const NEW_PLAYER_GAME_THRESHOLD = 10;
 export const STABLE_PLAYER_GAME_THRESHOLD = 30;
+export const LOSS_PENALTY_MULTIPLIER = 0.5;
 
 /**
  * 根据球员赛前已完成的比赛总场数返回分段 K 值。借鉴 FIDE 国际象棋分级 K 因子思路：
@@ -39,6 +44,25 @@ export type MatchDeltaOptions = {
   loserKFactor?: number;
 };
 
+export type PlayerRatingDeltaOptions = {
+  playerRating: number;
+  opponentRating: number;
+  playerKFactor: number;
+  actualScore: 0 | 1;
+};
+
+export function calculatePlayerRatingDelta({
+  playerRating,
+  opponentRating,
+  playerKFactor,
+  actualScore,
+}: PlayerRatingDeltaOptions) {
+  const expectedScore = getExpectedScore(playerRating, opponentRating);
+  const multiplier = actualScore === 0 ? LOSS_PENALTY_MULTIPLIER : 1;
+
+  return roundRatingDelta(playerKFactor * (actualScore - expectedScore) * multiplier);
+}
+
 export function calculateMatchDelta(
   winnerRating: number,
   loserRating: number,
@@ -53,12 +77,19 @@ export function calculateMatchDelta(
       ? kFactorOrOptions
       : kFactorOrOptions.loserKFactor ?? DEFAULT_K_FACTOR;
 
-  const winnerExpected = getExpectedScore(winnerRating, loserRating);
-  const loserExpected = getExpectedScore(loserRating, winnerRating);
-
   return {
-    winnerDelta: Math.round(winnerKFactor * (1 - winnerExpected)),
-    loserDelta: Math.round(-loserKFactor * loserExpected),
+    winnerDelta: calculatePlayerRatingDelta({
+      playerRating: winnerRating,
+      opponentRating: loserRating,
+      playerKFactor: winnerKFactor,
+      actualScore: 1,
+    }),
+    loserDelta: calculatePlayerRatingDelta({
+      playerRating: loserRating,
+      opponentRating: winnerRating,
+      playerKFactor: loserKFactor,
+      actualScore: 0,
+    }),
   };
 }
 

@@ -8,6 +8,7 @@ import {
   buildRankings,
   buildRankingsForMonth,
   buildRankingsThroughLocalDay,
+  calculatePlayerRatingDelta,
   calculateMatchDelta,
   getEffectiveKFactor,
   getPreviousRankingDateKey,
@@ -72,19 +73,37 @@ describe("getEffectiveKFactor", () => {
 });
 
 describe("calculateMatchDelta", () => {
-  it("uses standard Elo expected score with each player's own K in an even match", () => {
+  it("calculates softened loss penalties from the loser's rating gap and K factor", () => {
+    const weakLosesToStrong = calculatePlayerRatingDelta({
+      playerRating: 1500,
+      opponentRating: 1900,
+      playerKFactor: 100,
+      actualScore: 0,
+    });
+    const strongLosesToWeak = calculatePlayerRatingDelta({
+      playerRating: 1900,
+      opponentRating: 1500,
+      playerKFactor: 100,
+      actualScore: 0,
+    });
+
+    expect(weakLosesToStrong).toBe(-5);
+    expect(strongLosesToWeak).toBe(-45);
+  });
+
+  it("uses standard Elo winner gains and softened loss penalties in an even match", () => {
     const result = calculateMatchDelta(1500, 1500, { winnerKFactor: 100, loserKFactor: 100 });
 
     expect(result.winnerDelta).toBe(50);
-    expect(result.loserDelta).toBe(-50);
-    expect(result.winnerDelta + result.loserDelta).toBe(0);
+    expect(result.loserDelta).toBe(-25);
+    expect(result.winnerDelta + result.loserDelta).toBe(25);
   });
 
   it("scales both sides by their own K values", () => {
     const result = calculateMatchDelta(1500, 1500, { winnerKFactor: 150, loserKFactor: 50 });
 
     expect(result.winnerDelta).toBe(75);
-    expect(result.loserDelta).toBe(-25);
+    expect(result.loserDelta).toBe(-13);
   });
 
   it("gives favorites smaller gains and underdogs larger gains from the same Elo curve", () => {
@@ -92,16 +111,18 @@ describe("calculateMatchDelta", () => {
     const upsetWin = calculateMatchDelta(1500, 1900, { winnerKFactor: 100, loserKFactor: 100 });
 
     expect(favoriteWin.winnerDelta).toBe(9);
-    expect(favoriteWin.loserDelta).toBe(-9);
+    expect(favoriteWin.loserDelta).toBe(-5);
     expect(upsetWin.winnerDelta).toBe(91);
-    expect(upsetWin.loserDelta).toBe(-91);
+    expect(upsetWin.loserDelta).toBe(-45);
+    expect(Math.abs(favoriteWin.loserDelta)).toBeLessThan(Math.abs(upsetWin.loserDelta));
   });
 
   it("does not cap a single match when a very high K player wins a huge upset", () => {
     const result = calculateMatchDelta(1000, 2400, { winnerKFactor: 200, loserKFactor: 200 });
 
     expect(result.winnerDelta).toBeGreaterThan(160);
-    expect(result.loserDelta).toBeLessThan(-160);
+    expect(result.loserDelta).toBeLessThan(-80);
+    expect(Math.abs(result.loserDelta)).toBeLessThan(result.winnerDelta);
   });
 
   it("keeps the winner gain monotonically non-increasing as the favorite gap grows at a fixed K", () => {
@@ -164,8 +185,8 @@ describe("replayMatches", () => {
 
     const result = replayMatches(players.slice(0, 2), matches);
 
-    expect(result.p1.rating).toBe(969);
-    expect(result.p2.rating).toBe(1031);
+    expect(result.p1.rating).toBe(1026);
+    expect(result.p2.rating).toBe(1061);
     expect(result.p1.wins).toBe(1);
     expect(result.p1.losses).toBe(1);
     expect(result.p1.bestWinStreak).toBe(1);
@@ -199,8 +220,8 @@ describe("replayMatches", () => {
     const withoutMiddle = replayMatches(players, matches.filter((match) => match.id !== "m2"));
 
     expect(withoutMiddle.p1.rating).toBe(1075);
-    expect(withoutMiddle.p2.rating).toBe(1016);
-    expect(withoutMiddle.p3.rating).toBe(909);
+    expect(withoutMiddle.p2.rating).toBe(1045);
+    expect(withoutMiddle.p3.rating).toBe(958);
   });
 
   it("tracks longest win and loss streaks per player", () => {
@@ -338,7 +359,7 @@ describe("buildRankingsThroughLocalDay", () => {
 
     expect(snapshot.map((entry) => entry.player.id)).toEqual(["p1", "p2"]);
     expect(snapshot[0].rating).toBe(1075);
-    expect(snapshot[1].rating).toBe(925);
+    expect(snapshot[1].rating).toBe(962);
   });
 
   it("includes all active players in a monthly day snapshot", () => {
@@ -377,11 +398,11 @@ describe("monthly season rankings", () => {
 
     expect(april.map((entry) => [entry.player.id, entry.rating, entry.wins, entry.losses])).toEqual([
       ["p1", 1075, 1, 0],
-      ["p2", 925, 0, 1],
+      ["p2", 962, 0, 1],
     ]);
     expect(may.map((entry) => [entry.player.id, entry.rating, entry.wins, entry.losses])).toEqual([
       ["p2", 1075, 1, 0],
-      ["p1", 925, 0, 1],
+      ["p1", 962, 0, 1],
     ]);
   });
 
@@ -424,9 +445,9 @@ describe("monthly season rankings", () => {
       ["2026-04", "2026-04-28"],
     ]);
     expect(snapshots[1].rankings.map((entry) => [entry.player.id, entry.rating])).toEqual([
-      ["p2", 1031],
+      ["p2", 1061],
+      ["p1", 1026],
       ["p3", 1000],
-      ["p1", 969],
     ]);
   });
 
@@ -449,11 +470,11 @@ describe("monthly season rankings", () => {
     const timeline = buildMatchTimeline(players.slice(0, 2), matches);
 
     expect(timeline.map((entry) => [entry.id, entry.winnerDelta, entry.loserDelta])).toEqual([
-      ["m2", 75, -75],
-      ["m1", 75, -75],
+      ["m2", 75, -38],
+      ["m1", 75, -38],
     ]);
     expect(timeline[0].winnerRatingAfter).toBe(1075);
-    expect(timeline[0].loserRatingAfter).toBe(925);
+    expect(timeline[0].loserRatingAfter).toBe(962);
   });
 });
 
@@ -483,9 +504,9 @@ describe("buildPlayerRankDayCounts", () => {
     const counts = buildPlayerRankDayCounts(players, matches);
 
     expect(counts).toEqual({
-      p1: { topDays: 1, bottomDays: 1 },
+      p1: { topDays: 1, bottomDays: 0 },
       p2: { topDays: 1, bottomDays: 2 },
-      p3: { topDays: 1, bottomDays: 0 },
+      p3: { topDays: 1, bottomDays: 1 },
     });
   });
 });
