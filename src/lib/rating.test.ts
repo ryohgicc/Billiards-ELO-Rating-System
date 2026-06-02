@@ -87,14 +87,17 @@ describe("calculateMatchDelta", () => {
       actualScore: 0,
     });
 
-    expect(weakLosesToStrong).toBe(-5);
-    expect(strongLosesToWeak).toBe(-45);
+    // 弱输强：分差 -400，multiplier ≈ 0.32，扣分 ≈ -3
+    expect(weakLosesToStrong).toBe(-3);
+    // 强输弱：分差 +400，multiplier ≈ 0.68，扣分 ≈ -62
+    expect(strongLosesToWeak).toBe(-62);
   });
 
-  it("uses standard Elo winner gains and softened loss penalties in an even match", () => {
+  it("uses standard Elo winner gains and gap-scaled loss penalties in an even match", () => {
     const result = calculateMatchDelta(1500, 1500, { winnerKFactor: 100, loserKFactor: 100 });
 
     expect(result.winnerDelta).toBe(50);
+    // 同分对局：multiplier = 0.5，扣分 = -25
     expect(result.loserDelta).toBe(-25);
     expect(result.winnerDelta + result.loserDelta).toBe(25);
   });
@@ -106,14 +109,14 @@ describe("calculateMatchDelta", () => {
     expect(result.loserDelta).toBe(-13);
   });
 
-  it("gives favorites smaller gains and underdogs larger gains from the same Elo curve", () => {
+  it("gives favorites smaller gains and underdogs larger gains from the same Elo curve, with gap-scaled loser penalties", () => {
     const favoriteWin = calculateMatchDelta(1900, 1500, { winnerKFactor: 100, loserKFactor: 100 });
     const upsetWin = calculateMatchDelta(1500, 1900, { winnerKFactor: 100, loserKFactor: 100 });
 
     expect(favoriteWin.winnerDelta).toBe(9);
-    expect(favoriteWin.loserDelta).toBe(-5);
+    expect(favoriteWin.loserDelta).toBe(-3); // 弱输强：扣分少 (multiplier ≈ 0.32)
     expect(upsetWin.winnerDelta).toBe(91);
-    expect(upsetWin.loserDelta).toBe(-45);
+    expect(upsetWin.loserDelta).toBe(-62); // 强输弱：扣分多 (multiplier ≈ 0.68)
     expect(Math.abs(favoriteWin.loserDelta)).toBeLessThan(Math.abs(upsetWin.loserDelta));
   });
 
@@ -185,7 +188,9 @@ describe("replayMatches", () => {
 
     const result = replayMatches(players.slice(0, 2), matches);
 
-    expect(result.p1.rating).toBe(1026);
+    // m1: p1(1000) 胜 p2(1000), K=150, 同分 => p1: +75, p2: -37 (系数 0.50)
+    // m2: p2(963) 胜 p1(1075), K=150 => p2: +98, p1: -55 (系数 0.556)
+    expect(result.p1.rating).toBe(1020);
     expect(result.p2.rating).toBe(1061);
     expect(result.p1.wins).toBe(1);
     expect(result.p1.losses).toBe(1);
@@ -219,9 +224,10 @@ describe("replayMatches", () => {
 
     const withoutMiddle = replayMatches(players, matches.filter((match) => match.id !== "m2"));
 
+    // 移除 m2 后：m1 (p1 胜 p2)，m3 (p2 胜 p3)
     expect(withoutMiddle.p1.rating).toBe(1075);
     expect(withoutMiddle.p2.rating).toBe(1045);
-    expect(withoutMiddle.p3.rating).toBe(958);
+    expect(withoutMiddle.p3.rating).toBe(957);
   });
 
   it("tracks longest win and loss streaks per player", () => {
@@ -444,9 +450,10 @@ describe("monthly season rankings", () => {
       ["2026-05", "2026-05-03"],
       ["2026-04", "2026-04-28"],
     ]);
+    // 2026-04 月末: m1 后 p2(963), m2 后 p1(1020), p2(1061)
     expect(snapshots[1].rankings.map((entry) => [entry.player.id, entry.rating])).toEqual([
       ["p2", 1061],
-      ["p1", 1026],
+      ["p1", 1020],
       ["p3", 1000],
     ]);
   });

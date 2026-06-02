@@ -20,7 +20,33 @@ export const NEW_PLAYER_K_FACTOR = 150;
 export const STABLE_PLAYER_K_FACTOR = 50;
 export const NEW_PLAYER_GAME_THRESHOLD = 10;
 export const STABLE_PLAYER_GAME_THRESHOLD = 30;
-export const LOSS_PENALTY_MULTIPLIER = 0.5;
+
+/**
+ * 根据分差计算败者扣分系数。
+ * 
+ * 设计理念：
+ * - 弱者输给强者 → 扣分少（系数小，如 0.1）
+ * - 强者输给弱者 → 扣分多（系数大，如 0.9）
+ * - 实力相当 → 扣分适中（系数 0.5）
+ * 
+ * @param loserRating 败者赛前积分
+ * @param winnerRating 胜者赛前积分
+ * @returns 扣分系数，范围约为 [0.1, 0.9]
+ */
+export function getLossPenaltyMultiplier(loserRating: number, winnerRating: number): number {
+  const gap = loserRating - winnerRating; // 正值 = 败者原本更强，负值 = 败者原本更弱
+  
+  // 使用 sigmoid 曲线：gap 越负（弱输强）系数越小，gap 越正（强输弱）系数越大
+  // 中心值 0.5（实力相当），范围约 [0.1, 0.9]
+  // 400 分差时系数变化约 ±0.35
+  const scaleFactor = 400; // 控制曲线陡峭度
+  const sigmoid = 1 / (1 + Math.exp(-gap / scaleFactor));
+  
+  // 映射到 [0.1, 0.9] 区间
+  const minMultiplier = 0.1;
+  const maxMultiplier = 0.9;
+  return minMultiplier + sigmoid * (maxMultiplier - minMultiplier);
+}
 
 /**
  * 根据球员赛前已完成的比赛总场数返回分段 K 值。借鉴 FIDE 国际象棋分级 K 因子思路：
@@ -58,7 +84,12 @@ export function calculatePlayerRatingDelta({
   actualScore,
 }: PlayerRatingDeltaOptions) {
   const expectedScore = getExpectedScore(playerRating, opponentRating);
-  const multiplier = actualScore === 0 ? LOSS_PENALTY_MULTIPLIER : 1;
+  
+  let multiplier = 1;
+  if (actualScore === 0) {
+    // 败者：根据分差动态计算扣分系数
+    multiplier = getLossPenaltyMultiplier(playerRating, opponentRating);
+  }
 
   return roundRatingDelta(playerKFactor * (actualScore - expectedScore) * multiplier);
 }
