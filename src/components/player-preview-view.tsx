@@ -1,25 +1,71 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { EmptyState } from "@/components/empty-state";
 import { ResultPhotoStage } from "@/components/result-photo-stage";
 import { useAppState } from "@/lib/app-state";
 import { formatCurrency, formatDateTime, formatPercent } from "@/lib/format";
+import {
+  buildMonthlyRankingSnapshots,
+  getCurrentLocalMonthKey,
+  getLocalMonthKey,
+} from "@/lib/rating";
+import { buildPlayerProfiles } from "@/lib/player-honors";
 
 export function PlayerPreviewView() {
   const { state, profilesByPlayerId, isLoaded } = useAppState();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
+  const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentLocalMonthKey());
   const deferredSearch = useDeferredValue(search);
   const normalizedSearch = deferredSearch.trim().toLowerCase();
   const preferredPlayerId = searchParams.get("player") ?? "";
+  
+  // 构建月份选项
+  const monthlySnapshots = buildMonthlyRankingSnapshots(
+    state.players,
+    state.matches,
+    state.settings.kFactor,
+  );
+  const currentMonthKey = getCurrentLocalMonthKey();
+  const monthOptions = [
+    {
+      monthKey: currentMonthKey,
+      monthLabel: "本月",
+      snapshotDateKey: "",
+    },
+    ...monthlySnapshots.filter((snapshot) => snapshot.monthKey !== currentMonthKey),
+  ];
+
+  // 根据选择的月份过滤比赛
+  const selectedMonthMatches = useMemo(() => {
+    return state.matches.filter(
+      (match) => getLocalMonthKey(match.createdAt) === selectedMonthKey,
+    );
+  }, [state.matches, selectedMonthKey]);
+
+  // 计算总战绩（所有月份）
+  const totalProfilesByPlayerId = profilesByPlayerId;
+
+  // 计算当月战绩
+  const monthlyProfilesByPlayerId = useMemo(() => {
+    if (selectedMonthKey === currentMonthKey) {
+      return profilesByPlayerId;
+    }
+    return buildPlayerProfiles(
+      state.players,
+      selectedMonthMatches,
+      state.photos,
+      state.settings.kFactor,
+    );
+  }, [selectedMonthKey, currentMonthKey, profilesByPlayerId, state.players, selectedMonthMatches, state.photos, state.settings.kFactor]);
   const sortedPlayers = [...state.players].sort((left, right) => {
-    const leftProfile = profilesByPlayerId[left.id];
-    const rightProfile = profilesByPlayerId[right.id];
+    const leftProfile = totalProfilesByPlayerId[left.id];
+    const rightProfile = totalProfilesByPlayerId[right.id];
     const valueGap =
       (rightProfile?.marketValue.amountUsd ?? 0) - (leftProfile?.marketValue.amountUsd ?? 0);
 
@@ -38,7 +84,8 @@ export function PlayerPreviewView() {
       ? preferredPlayerId
       : filteredPlayers[0]?.id ?? "";
   const selectedPlayer = filteredPlayers.find((player) => player.id === activePlayerId) ?? filteredPlayers[0];
-  const selectedProfile = selectedPlayer ? profilesByPlayerId[selectedPlayer.id] : null;
+  const totalProfile = selectedPlayer ? totalProfilesByPlayerId[selectedPlayer.id] : null;
+  const monthlyProfile = selectedPlayer ? monthlyProfilesByPlayerId[selectedPlayer.id] : null;
 
   if (!isLoaded) {
     return <section className="panel">正在读取球员预览数据...</section>;
@@ -84,7 +131,7 @@ export function PlayerPreviewView() {
           <div className="preview-workbench">
             <aside className="preview-roster">
               {filteredPlayers.map((player) => {
-                const profile = profilesByPlayerId[player.id];
+                const profile = totalProfilesByPlayerId[player.id];
                 const isSelected = player.id === selectedPlayer?.id;
                 const trend = profile?.recentForm.trend.join("") || "暂无";
 
@@ -113,30 +160,30 @@ export function PlayerPreviewView() {
               })}
             </aside>
 
-            {selectedPlayer && selectedProfile ? (
+            {selectedPlayer && monthlyProfile && totalProfile ? (
               <section className="preview-detail">
                 <div className="preview-detail__hero">
                   <div>
                     <p className="eyebrow">Preview Card</p>
                     <h3>{selectedPlayer.name}</h3>
                     <ResultPhotoStage
-                      photos={selectedProfile.photos}
+                      photos={totalProfile.photos}
                       playerId={selectedPlayer.id}
                       playerName={selectedPlayer.name}
                     />
                     <div className="badge-list">
-                      {selectedProfile.title ? (
+                      {totalProfile.title ? (
                         <span
                           className={
-                            selectedProfile.title.category === "legend"
+                            totalProfile.title.category === "legend"
                               ? "title-pill title-pill--legend"
                               : "title-pill title-pill--fun"
                           }
                         >
-                          {selectedProfile.title.label}
+                          {totalProfile.title.label}
                         </span>
                       ) : null}
-                      {selectedProfile.aiModel ? <span className="section-note">AI 当前称号</span> : null}
+                      {totalProfile.aiModel ? <span className="section-note">AI 当前称号</span> : null}
                       <span
                         className={
                           selectedPlayer.isActive ? "status-pill status-pill--active" : "status-pill"
@@ -146,41 +193,74 @@ export function PlayerPreviewView() {
                       </span>
                     </div>
                     <p className="player-row__note">
-                      {selectedProfile.title?.reason ?? "先打几场比赛，让系统给出更完整的判断。"}
+                      {totalProfile.title?.reason ?? "先打几场比赛，让系统给出更完整的判断。"}
                     </p>
                   </div>
                   <div className="preview-value-card">
-                    <span>{selectedProfile.aiModel ? "AI 当前估值" : "当前估值"}</span>
-                    <strong>{formatCurrency(selectedProfile.marketValue.amountUsd)}</strong>
-                    <p>{selectedProfile.marketValue.tier}</p>
-                    {selectedProfile.aiModel ? <small>模型：{selectedProfile.aiModel}</small> : null}
+                    <span>{totalProfile.aiModel ? "AI 当前估值" : "当前估值"}</span>
+                    <strong>{formatCurrency(totalProfile.marketValue.amountUsd)}</strong>
+                    <p>{totalProfile.marketValue.tier}</p>
+                    {totalProfile.aiModel ? <small>模型：{totalProfile.aiModel}</small> : null}
                   </div>
+                </div>
+
+                <div className="section-heading">
+                  <div>
+                    <p className="eyebrow">Season Stats</p>
+                    <h3>赛季数据</h3>
+                  </div>
+                  <span className="section-note">
+                    {selectedMonthKey === currentMonthKey
+                      ? "本月赛季"
+                      : `${monthOptions.find((m) => m.monthKey === selectedMonthKey)?.monthLabel ?? selectedMonthKey} 归档`}
+                  </span>
+                </div>
+
+                <div className="date-switcher" aria-label="按月份查看球员数据">
+                  {monthOptions.map((group) => (
+                    <button
+                      key={group.monthKey}
+                      aria-pressed={group.monthKey === selectedMonthKey}
+                      className={
+                        group.monthKey === selectedMonthKey
+                          ? "date-switcher__button date-switcher__button--active"
+                          : "date-switcher__button"
+                      }
+                      onClick={() => setSelectedMonthKey(group.monthKey)}
+                      type="button"
+                    >
+                      <span>{group.monthLabel}</span>
+                      <strong>
+                        {group.snapshotDateKey ? `保留至 ${group.snapshotDateKey}` : "当前"}
+                      </strong>
+                    </button>
+                  ))}
                 </div>
 
                 <div className="preview-stat-grid">
                   <article className="preview-stat-card">
                     <span>ELO</span>
-                    <strong>{selectedProfile.rating}</strong>
-                    <p>最近比赛：{formatDateTime(selectedProfile.lastMatchAt)}</p>
+                    <strong>{monthlyProfile.rating}</strong>
+                    <p>最近比赛：{formatDateTime(monthlyProfile.lastMatchAt)}</p>
+                  </article>
+                  <article className="preview-stat-card">
+                    <span>当月战绩</span>
+                    <strong>
+                      {monthlyProfile.wins}-{monthlyProfile.losses}
+                    </strong>
+                    <p>胜率 {formatPercent(monthlyProfile.winRate)}</p>
                   </article>
                   <article className="preview-stat-card">
                     <span>总战绩</span>
                     <strong>
-                      {selectedProfile.wins}-{selectedProfile.losses}
+                      {totalProfile.wins}-{totalProfile.losses}
                     </strong>
-                    <p>胜率 {formatPercent(selectedProfile.winRate)}</p>
-                  </article>
-                  <article className="preview-stat-card">
-                    <span>最近 5 场</span>
-                    <strong>
-                      {selectedProfile.recentForm.wins} 胜 {selectedProfile.recentForm.losses} 负
-                    </strong>
-                    <p>{selectedProfile.recentForm.trend.join(" · ") || "暂无记录"}</p>
+                    <p>总胜率 {formatPercent(totalProfile.winRate)}</p>
                   </article>
                   <article className="preview-stat-card">
                     <span>连串纪录</span>
                     <strong>
-                      {selectedProfile.bestWinStreak} / {selectedProfile.worstLossStreak}
+                      {monthlyProfile.bestWinStreak} / {monthlyProfile.worstLossStreak}
                     </strong>
                     <p>最长连胜 / 最长连败</p>
                   </article>
@@ -194,12 +274,12 @@ export function PlayerPreviewView() {
                         <h3>成就与称号</h3>
                       </div>
                       <span className="section-note">
-                        {selectedProfile.achievements.length} 个成就
+                        {monthlyProfile.achievements.length} 个成就
                       </span>
                     </div>
-                    {selectedProfile.unlockedTitles.length > 0 ? (
+                    {monthlyProfile.unlockedTitles.length > 0 ? (
                       <div className="preview-title-list">
-                        {selectedProfile.unlockedTitles.map((title) => (
+                        {monthlyProfile.unlockedTitles.map((title) => (
                           <article key={title.key} className="preview-title-card">
                             <strong>{title.label}</strong>
                             <span>{title.category === "legend" ? "传奇向" : "整活向"}</span>
@@ -208,9 +288,9 @@ export function PlayerPreviewView() {
                         ))}
                       </div>
                     ) : null}
-                    {selectedProfile.achievements.length > 0 ? (
+                    {monthlyProfile.achievements.length > 0 ? (
                       <div className="preview-achievement-list">
-                        {selectedProfile.achievements.map((achievement) => (
+                        {monthlyProfile.achievements.map((achievement) => (
                           <article key={achievement.key} className="preview-achievement-card">
                             <div className="preview-achievement-card__top">
                               <strong>{achievement.label}</strong>
@@ -229,12 +309,12 @@ export function PlayerPreviewView() {
                     <div className="section-heading">
                       <div>
                         <p className="eyebrow">Market Price</p>
-                        <h3>{selectedProfile.aiModel ? "AI 评价与身价" : "身价评估"}</h3>
+                        <h3>{totalProfile.aiModel ? "AI 评价与身价" : "身价评估"}</h3>
                       </div>
                     </div>
-                    <p className="algorithm-note">{selectedProfile.evaluation}</p>
+                    <p className="algorithm-note">{totalProfile.evaluation}</p>
                     <div className="preview-factor-list">
-                      {selectedProfile.marketValue.factors.map((factor) => (
+                      {totalProfile.marketValue.factors.map((factor) => (
                         <article key={factor} className="preview-factor-card">
                           {factor}
                         </article>
@@ -244,7 +324,7 @@ export function PlayerPreviewView() {
                       <Link href="/players">去球员管理继续上传照片</Link>
                     </p>
                     <p className="player-row__note">
-                      AI 素材：{selectedProfile.aiHooks.join(" · ") || "当前素材不足"}
+                      AI 素材：{totalProfile.aiHooks.join(" · ") || "当前素材不足"}
                     </p>
                   </section>
                 </div>
@@ -255,12 +335,12 @@ export function PlayerPreviewView() {
                       <p className="eyebrow">Head to Head</p>
                       <h3>对阵分析</h3>
                     </div>
-                    <span className="section-note">{selectedProfile.opponentSummaries.length} 位对手</span>
+                    <span className="section-note">{monthlyProfile.opponentSummaries.length} 位对手</span>
                   </div>
 
-                  {selectedProfile.opponentSummaries.length > 0 ? (
+                  {monthlyProfile.opponentSummaries.length > 0 ? (
                     <div className="preview-opponent-grid">
-                      {selectedProfile.opponentSummaries.map((summary) => (
+                      {monthlyProfile.opponentSummaries.map((summary) => (
                         <article key={summary.opponentId} className="preview-opponent-card">
                           <div className="preview-opponent-card__top">
                             <div>
@@ -297,12 +377,12 @@ export function PlayerPreviewView() {
                       <p className="eyebrow">Full History</p>
                       <h3>完整比赛记录</h3>
                     </div>
-                    <span className="section-note">{selectedProfile.matchHistory.length} 场</span>
+                    <span className="section-note">{monthlyProfile.matchHistory.length} 场</span>
                   </div>
 
-                  {selectedProfile.matchHistory.length > 0 ? (
+                  {monthlyProfile.matchHistory.length > 0 ? (
                     <div className="preview-match-list">
-                      {selectedProfile.matchHistory.map((match) => (
+                      {monthlyProfile.matchHistory.map((match) => (
                         <article key={`history-${match.id}`} className="preview-match-card">
                           <div className="preview-match-card__top">
                             <div>
