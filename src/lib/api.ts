@@ -64,6 +64,27 @@ export const api = {
       }),
     });
   },
+  updateMatch(
+    matchId: string,
+    winnerId: string,
+    loserId: string,
+    winnerMoments: MatchMomentKey[],
+    loserMoments: MatchMomentKey[],
+    winnerNote: string,
+    loserNote: string,
+  ) {
+    return requestState(`/api/matches/${encodeURIComponent(matchId)}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        winnerId,
+        loserId,
+        winnerMoments,
+        loserMoments,
+        winnerNote,
+        loserNote,
+      }),
+    });
+  },
   deleteMatch(matchId: string) {
     return requestState(`/api/matches/${encodeURIComponent(matchId)}`, {
       method: "DELETE",

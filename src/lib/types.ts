@@ -98,6 +98,8 @@ export type MatchTimelineEntry = MatchRecord & {
   loserName: string;
   winnerDelta: number;
   loserDelta: number;
+  streakBreakerBonus: number;
+  winStreakBonus: number;
   winnerRatingAfter: number;
   loserRatingAfter: number;
 };

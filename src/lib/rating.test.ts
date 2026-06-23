@@ -10,6 +10,8 @@ import {
   buildRankingsThroughLocalDay,
   calculatePlayerRatingDelta,
   calculateMatchDelta,
+  calculateStreakBreakerBonus,
+  calculateWinStreakBonus,
   getEffectiveKFactor,
   getPreviousRankingDateKey,
   NEW_PLAYER_GAME_THRESHOLD,
@@ -169,6 +171,27 @@ describe("calculateMatchDelta", () => {
   });
 });
 
+describe("calculateStreakBreakerBonus", () => {
+  it("starts at 3 defender wins, scales by the winner K factor, and has no cap", () => {
+    expect(calculateStreakBreakerBonus(2, 100)).toBe(0);
+    expect(calculateStreakBreakerBonus(3, 100)).toBe(5);
+    expect(calculateStreakBreakerBonus(5, 100)).toBe(15);
+    expect(calculateStreakBreakerBonus(10, 150)).toBe(60);
+  });
+});
+
+describe("calculateWinStreakBonus", () => {
+  it("starts when the winner reaches 3 wins, scales by the winner K factor, and has no cap", () => {
+    expect(calculateWinStreakBonus(0, 100)).toBe(0);
+    expect(calculateWinStreakBonus(1, 100)).toBe(0);
+    expect(calculateWinStreakBonus(2, 100)).toBe(3);
+    expect(calculateWinStreakBonus(4, 100)).toBe(9);
+    expect(calculateWinStreakBonus(9, 100)).toBe(24);
+    expect(calculateWinStreakBonus(2, 150)).toBe(5);
+    expect(calculateWinStreakBonus(2, 50)).toBe(2);
+  });
+});
+
 describe("replayMatches", () => {
   it("starts new players at 1000 with the new-player K and accumulates match history in order", () => {
     const matches: MatchRecord[] = [
@@ -270,6 +293,156 @@ describe("replayMatches", () => {
     expect(result.p1.worstLossStreak).toBe(1);
     expect(result.p2.worstLossStreak).toBe(3);
     expect(result.p3.bestWinStreak).toBe(3);
+  });
+
+  it("adds a K-scaled bonus only to the challenger when ending a 3+ win streak", () => {
+    const matches: MatchRecord[] = [
+      createMatch({
+        id: "m1",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-27T11:00:00.000Z",
+      }),
+      createMatch({
+        id: "m2",
+        winnerId: "p1",
+        loserId: "p3",
+        createdAt: "2026-04-27T11:10:00.000Z",
+      }),
+      createMatch({
+        id: "m3",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-27T11:20:00.000Z",
+      }),
+      createMatch({
+        id: "m4",
+        winnerId: "p3",
+        loserId: "p1",
+        createdAt: "2026-04-27T11:30:00.000Z",
+      }),
+    ];
+
+    const timeline = buildMatchTimeline(players, matches);
+    const streakBreaker = timeline.find((entry) => entry.id === "m4");
+    const beforeFinal = replayMatches(players, matches.slice(0, -1));
+    const baseDelta = calculateMatchDelta(beforeFinal.p3.rating, beforeFinal.p1.rating, {
+      winnerKFactor: getEffectiveKFactor(beforeFinal.p3.wins + beforeFinal.p3.losses),
+      loserKFactor: getEffectiveKFactor(beforeFinal.p1.wins + beforeFinal.p1.losses),
+    });
+
+    expect(streakBreaker?.streakBreakerBonus).toBe(8);
+    expect(streakBreaker?.winStreakBonus).toBe(0);
+    expect(streakBreaker?.winnerDelta).toBe(baseDelta.winnerDelta + 8);
+    expect(streakBreaker?.loserDelta).toBe(baseDelta.loserDelta);
+    expect(streakBreaker?.winnerRatingAfter).toBe(
+      beforeFinal.p3.rating + streakBreaker!.winnerDelta,
+    );
+    expect(streakBreaker?.loserRatingAfter).toBe(beforeFinal.p1.rating + baseDelta.loserDelta);
+
+    const result = replayMatches(players, matches);
+
+    expect(result.p3.rating).toBe(streakBreaker?.winnerRatingAfter);
+    expect(result.p1.rating).toBe(streakBreaker?.loserRatingAfter);
+  });
+
+  it("adds a K-scaled bonus only to the winner when extending their own 3+ win streak", () => {
+    const matches: MatchRecord[] = [
+      createMatch({
+        id: "m1",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-27T11:00:00.000Z",
+      }),
+      createMatch({
+        id: "m2",
+        winnerId: "p1",
+        loserId: "p3",
+        createdAt: "2026-04-27T11:10:00.000Z",
+      }),
+      createMatch({
+        id: "m3",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-27T11:20:00.000Z",
+      }),
+    ];
+
+    const timeline = buildMatchTimeline(players, matches);
+    const streakExtension = timeline.find((entry) => entry.id === "m3");
+    const beforeFinal = replayMatches(players, matches.slice(0, -1));
+    const baseDelta = calculateMatchDelta(beforeFinal.p1.rating, beforeFinal.p2.rating, {
+      winnerKFactor: getEffectiveKFactor(beforeFinal.p1.wins + beforeFinal.p1.losses),
+      loserKFactor: getEffectiveKFactor(beforeFinal.p2.wins + beforeFinal.p2.losses),
+    });
+
+    expect(streakExtension?.winStreakBonus).toBe(5);
+    expect(streakExtension?.winnerDelta).toBe(baseDelta.winnerDelta + 5);
+    expect(streakExtension?.loserDelta).toBe(baseDelta.loserDelta);
+
+    const result = replayMatches(players, matches);
+
+    expect(result.p1.rating).toBe(streakExtension?.winnerRatingAfter);
+    expect(result.p2.rating).toBe(streakExtension?.loserRatingAfter);
+  });
+
+  it("stacks win-streak and streak-breaker bonuses without extra loser penalties", () => {
+    const matches: MatchRecord[] = [
+      createMatch({
+        id: "m1",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-27T11:00:00.000Z",
+      }),
+      createMatch({
+        id: "m2",
+        winnerId: "p1",
+        loserId: "p3",
+        createdAt: "2026-04-27T11:10:00.000Z",
+      }),
+      createMatch({
+        id: "m3",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-27T11:20:00.000Z",
+      }),
+      createMatch({
+        id: "m4",
+        winnerId: "p3",
+        loserId: "p2",
+        createdAt: "2026-04-27T11:30:00.000Z",
+      }),
+      createMatch({
+        id: "m5",
+        winnerId: "p3",
+        loserId: "p2",
+        createdAt: "2026-04-27T11:40:00.000Z",
+      }),
+      createMatch({
+        id: "m6",
+        winnerId: "p3",
+        loserId: "p1",
+        createdAt: "2026-04-27T11:50:00.000Z",
+      }),
+    ];
+
+    const timeline = buildMatchTimeline(players, matches);
+    const stackedBonusMatch = timeline.find((entry) => entry.id === "m6");
+    const beforeFinal = replayMatches(players, matches.slice(0, -1));
+    const baseDelta = calculateMatchDelta(beforeFinal.p3.rating, beforeFinal.p1.rating, {
+      winnerKFactor: getEffectiveKFactor(beforeFinal.p3.wins + beforeFinal.p3.losses),
+      loserKFactor: getEffectiveKFactor(beforeFinal.p1.wins + beforeFinal.p1.losses),
+    });
+
+    const winStreakBonus = calculateWinStreakBonus(
+      beforeFinal.p3.currentWinStreak,
+      getEffectiveKFactor(beforeFinal.p3.wins + beforeFinal.p3.losses),
+    );
+
+    expect(stackedBonusMatch?.winStreakBonus).toBe(winStreakBonus);
+    expect(stackedBonusMatch?.streakBreakerBonus).toBe(8);
+    expect(stackedBonusMatch?.winnerDelta).toBe(baseDelta.winnerDelta + winStreakBonus + 8);
+    expect(stackedBonusMatch?.loserDelta).toBe(baseDelta.loserDelta);
   });
 
   it("produces deterministic deltas and final ratings across repeated calls", () => {

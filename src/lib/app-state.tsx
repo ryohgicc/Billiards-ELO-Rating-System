@@ -18,6 +18,8 @@ import {
   buildRankings,
   buildRankingsForMonth,
   calculateMatchDelta,
+  calculateStreakBreakerBonus,
+  calculateWinStreakBonus,
   getCurrentLocalMonthKey,
   getEffectiveKFactor,
   getLocalMonthKey,
@@ -39,6 +41,8 @@ type MatchFeedback = {
   loserName: string;
   winnerDelta: number;
   loserDelta: number;
+  streakBreakerBonus: number;
+  winStreakBonus: number;
   winnerMoments: MatchMomentKey[];
   loserMoments: MatchMomentKey[];
   aiReview: string;
@@ -96,6 +100,17 @@ type AppStateContextValue = {
     winnerNote: string;
     loserNote: string;
   }) => Promise<MatchFeedback>;
+  updateMatch: (
+    matchId: string,
+    payload: {
+      winnerId: string;
+      loserId: string;
+      winnerMoments: MatchMomentKey[];
+      loserMoments: MatchMomentKey[];
+      winnerNote: string;
+      loserNote: string;
+    },
+  ) => Promise<void>;
   removeMatch: (matchId: string) => Promise<void>;
   updateTitle: (title: string) => Promise<void>;
   replaceStateFromImport: (payload: string) => Promise<void>;
@@ -287,6 +302,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         winnerKFactor,
         loserKFactor,
       });
+      const streakBreakerBonus = calculateStreakBreakerBonus(
+        loser.currentWinStreak,
+        winnerKFactor,
+      );
+      const winStreakBonus = calculateWinStreakBonus(winner.currentWinStreak, winnerKFactor);
+      const winnerDelta = delta.winnerDelta + streakBreakerBonus + winStreakBonus;
 
       const nextState = await api.createMatch(
         winnerId,
@@ -310,8 +331,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         matchId: createdMatch?.id ?? "",
         winnerName: winner.player.name,
         loserName: loser.player.name,
-        winnerDelta: delta.winnerDelta,
+        winnerDelta,
         loserDelta: delta.loserDelta,
+        streakBreakerBonus,
+        winStreakBonus,
         winnerMoments: details.winnerMoments,
         loserMoments: details.loserMoments,
         aiReview,
@@ -320,6 +343,23 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     },
     async removeMatch(matchId) {
       applyServerState(await api.deleteMatch(matchId));
+    },
+    async updateMatch(matchId, payload) {
+      const { winnerId, loserId } = payload;
+      validateMatchPlayers(winnerId, loserId, state.players);
+      const details = validateMatchDetails(payload);
+
+      applyServerState(
+        await api.updateMatch(
+          matchId,
+          winnerId,
+          loserId,
+          details.winnerMoments,
+          details.loserMoments,
+          details.winnerNote,
+          details.loserNote,
+        ),
+      );
     },
     async updateTitle(title) {
       const normalized = title.trim();

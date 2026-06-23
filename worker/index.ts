@@ -2,6 +2,7 @@ import { DEFAULT_SETTINGS } from "../src/lib/constants";
 import { normalizeMatchMomentKeys, normalizeMatchNote } from "../src/lib/match-moments";
 import { buildPlayerProfiles } from "../src/lib/player-honors";
 import { normalizePlayerPhotoImageData, normalizePlayerPhotoRole } from "../src/lib/player-photos";
+import { buildSlackBattleReport, isValidBattleReportDate } from "../src/lib/slack-battle-report";
 import type {
   AiModelConfig,
   AppState,
@@ -785,6 +786,55 @@ async function deleteMatch(matchId: string, request: Request, env: Env) {
   return freshStateResponse(request, env);
 }
 
+async function updateMatch(matchId: string, request: Request, env: Env) {
+  const body = (await readJson(request)) as {
+    winnerId?: unknown;
+    loserId?: unknown;
+    winnerMoments?: unknown;
+    loserMoments?: unknown;
+    winnerNote?: unknown;
+    loserNote?: unknown;
+  };
+  const existingMatch = await env.DB
+    .prepare("SELECT winner_id, loser_id FROM matches WHERE id = ?")
+    .bind(matchId)
+    .first<{ winner_id: string; loser_id: string }>();
+
+  if (!existingMatch) {
+    return errorResponse("比赛记录不存在", 404);
+  }
+
+  const state = await loadState(env.DB);
+  const winnerId = String(body.winnerId ?? "");
+  const loserId = String(body.loserId ?? "");
+  const details = validateMatchDetails(body);
+
+  validateMatchPlayers(winnerId, loserId, state.players);
+
+  await env.DB.batch([
+    env.DB
+      .prepare(
+        "UPDATE matches SET winner_id = ?, loser_id = ?, winner_moments = ?, loser_moments = ?, winner_note = ?, loser_note = ? WHERE id = ?",
+      )
+      .bind(
+        winnerId,
+        loserId,
+        JSON.stringify(details.winnerMoments),
+        JSON.stringify(details.loserMoments),
+        details.winnerNote,
+        details.loserNote,
+        matchId,
+      ),
+    env.DB.prepare("DELETE FROM match_ai_reviews WHERE match_id = ?").bind(matchId),
+    env.DB.prepare("DELETE FROM player_ai_profiles WHERE player_id = ?").bind(existingMatch.winner_id),
+    env.DB.prepare("DELETE FROM player_ai_profiles WHERE player_id = ?").bind(existingMatch.loser_id),
+    env.DB.prepare("DELETE FROM player_ai_profiles WHERE player_id = ?").bind(winnerId),
+    env.DB.prepare("DELETE FROM player_ai_profiles WHERE player_id = ?").bind(loserId),
+  ]);
+
+  return freshStateResponse(request, env);
+}
+
 async function updateSettings(request: Request, env: Env) {
   const body = (await readJson(request)) as { title?: unknown };
   const title = String(body.title ?? "").trim() || DEFAULT_SETTINGS.title;
@@ -870,6 +920,20 @@ async function clearState(request: Request, env: Env) {
   return freshStateResponse(request, env);
 }
 
+async function getSlackBattleReport(request: Request, env: Env) {
+  const url = new URL(request.url);
+  const date = url.searchParams.get("date") ?? "";
+
+  if (!isValidBattleReportDate(date)) {
+    return errorResponse("date 必须是有效的 YYYY-MM-DD 日期");
+  }
+
+  return jsonResponse(buildSlackBattleReport({
+    state: await loadState(env.DB),
+    date,
+  }));
+}
+
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url);
@@ -877,6 +941,10 @@ const worker = {
     try {
       if (url.pathname === "/api/state" && request.method === "GET") {
         return cachedStateResponse(request, env, ctx);
+      }
+
+      if (url.pathname === "/api/slack/battle-report" && request.method === "GET") {
+        return getSlackBattleReport(request, env);
       }
 
       if (url.pathname === "/api/players" && request.method === "POST") {
@@ -915,6 +983,10 @@ const worker = {
       }
 
       const matchMatch = url.pathname.match(/^\/api\/matches\/([^/]+)$/);
+      if (matchMatch && request.method === "PUT") {
+        return updateMatch(matchMatch[1], request, env);
+      }
+
       if (matchMatch && request.method === "DELETE") {
         return deleteMatch(matchMatch[1], request, env);
       }

@@ -124,6 +124,22 @@ export function calculateMatchDelta(
   };
 }
 
+export function calculateStreakBreakerBonus(defenderWinStreak: number, winnerKFactor: number) {
+  if (defenderWinStreak < 3) {
+    return 0;
+  }
+
+  return Math.round(winnerKFactor * 0.05 * (defenderWinStreak - 2));
+}
+
+export function calculateWinStreakBonus(winnerWinStreakBefore: number, winnerKFactor: number) {
+  if (winnerWinStreakBefore < 2) {
+    return 0;
+  }
+
+  return Math.round(winnerKFactor * 0.03 * (winnerWinStreakBefore - 1));
+}
+
 function createInitialStats(players: Player[]) {
   return players.reduce<Record<string, PlayerStats>>((accumulator, player) => {
     accumulator[player.id] = {
@@ -166,8 +182,14 @@ export function replayMatches(
       winnerKFactor,
       loserKFactor,
     });
+    const streakBreakerBonus = calculateStreakBreakerBonus(
+      loser.currentWinStreak,
+      winnerKFactor,
+    );
+    const winStreakBonus = calculateWinStreakBonus(winner.currentWinStreak, winnerKFactor);
+    const winnerDelta = delta.winnerDelta + streakBreakerBonus + winStreakBonus;
 
-    winner.rating += delta.winnerDelta;
+    winner.rating += winnerDelta;
     winner.wins += 1;
     winner.currentWinStreak += 1;
     winner.currentLossStreak = 0;
@@ -431,17 +453,25 @@ export function buildMatchTimeline(
         winnerKFactor,
         loserKFactor,
       });
+      const streakBreakerBonus = calculateStreakBreakerBonus(
+        loser.currentWinStreak,
+        winnerKFactor,
+      );
+      const winStreakBonus = calculateWinStreakBonus(winner.currentWinStreak, winnerKFactor);
+      const winnerDelta = delta.winnerDelta + streakBreakerBonus + winStreakBonus;
       const entry: MatchTimelineEntry = {
         ...match,
         winnerName: winnerPlayer.name,
         loserName: loserPlayer.name,
-        winnerDelta: delta.winnerDelta,
+        winnerDelta,
         loserDelta: delta.loserDelta,
-        winnerRatingAfter: winner.rating + delta.winnerDelta,
+        streakBreakerBonus,
+        winStreakBonus,
+        winnerRatingAfter: winner.rating + winnerDelta,
         loserRatingAfter: loser.rating + delta.loserDelta,
       };
 
-      winner.rating += delta.winnerDelta;
+      winner.rating += winnerDelta;
       winner.wins += 1;
       winner.currentWinStreak += 1;
       winner.currentLossStreak = 0;

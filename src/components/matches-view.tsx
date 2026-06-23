@@ -102,11 +102,15 @@ export function MatchesView() {
       ]
         .filter(Boolean)
         .join("；");
+      const streakBreakerSummary =
+        result.streakBreakerBonus > 0 ? `；终结连胜奖励 +${result.streakBreakerBonus}` : "";
+      const winStreakSummary =
+        result.winStreakBonus > 0 ? `；连胜延续奖励 +${result.winStreakBonus}` : "";
 
       setSuccess(
         `${result.winnerName} 记一胜，积分 +${result.winnerDelta}；${result.loserName} 积分 ${result.loserDelta}${
           highlightSummary ? `；${highlightSummary}` : ""
-        }${
+        }${streakBreakerSummary}${winStreakSummary}${
           result.aiReview
             ? `；AI 锐评：${result.aiReview}`
             : result.aiReviewPending

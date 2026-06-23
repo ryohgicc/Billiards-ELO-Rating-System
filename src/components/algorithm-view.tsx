@@ -22,6 +22,24 @@ const heavyUpsetExampleRows = [
   { label: "赛后积分", playerA: "1191", playerB: "1438" },
 ];
 
+const streakBreakerExampleRows = [
+  { label: "赛前积分 / K 因子", playerA: "A：1500 / 100", playerB: "B：1500 / 100" },
+  { label: "B 赛前连胜", playerA: "—", playerB: "5 连胜" },
+  { label: "基础 Elo 加分（A）", playerA: "+50", playerB: "—" },
+  { label: "终结连胜奖励（A）", playerA: "+15", playerB: "—" },
+  { label: "败方扣分（B）", playerA: "—", playerB: "−25（无额外惩罚）" },
+  { label: "赛后积分", playerA: "1565", playerB: "1475" },
+];
+
+const winStreakExampleRows = [
+  { label: "赛前积分 / K 因子", playerA: "A：1500 / 100", playerB: "B：1500 / 100" },
+  { label: "A 赛前连胜", playerA: "4 连胜", playerB: "—" },
+  { label: "基础 Elo 加分（A）", playerA: "+50", playerB: "—" },
+  { label: "连胜延续奖励（A）", playerA: "+9", playerB: "—" },
+  { label: "败方扣分（B）", playerA: "—", playerB: "−25（无额外惩罚）" },
+  { label: "赛后积分", playerA: "1559", playerB: "1475" },
+];
+
 const tierRows = [
   { tier: "新人段（< 10 场）", k: 150, note: "每月前 10 场用更大步长，让赛季初快速归位" },
   { tier: "中段（10 至 30 场）", k: 100, note: "本月默认 K 值，适合大多数对局" },
@@ -45,6 +63,7 @@ export function AlgorithmView() {
             这个系统按自然月拆分赛季，每个赛季都从 1000 分重新开始。每场比赛只记录胜者和负者，
             胜方按标准 Elo 公式计算加分，败方根据分差动态计算扣分系数（范围 0.1 至 0.9）：
             <strong>弱者输给强者扣分很少，强者输给弱者扣分很多</strong>，单场加分和扣分不再守恒。
+            如果胜方延续自己的 3 场及以上连胜，或终结败方赛前 3 场及以上连胜，还会按胜方 K 值获得额外奖励，败方不额外扣分。
           </p>
           <p>
             算法借鉴 FIDE 国际象棋分级 K 因子的思路：每位球员根据本月已完成的比赛总场数分别使用
@@ -113,7 +132,15 @@ export function AlgorithmView() {
           </div>
           <div className="formula-card">
             <span>胜方加分</span>
-            <code>winnerDelta = round(胜方K × (1 − E_winner))</code>
+            <code>winnerDelta = round(胜方K × (1 − E_winner)) + 终结连胜奖励 + 连胜延续奖励</code>
+          </div>
+          <div className="formula-card">
+            <span>终结连胜奖励</span>
+            <code>败方赛前连胜 ≥ 3 时：round(胜方K × 0.05 × (败方赛前连胜 − 2))；无封顶，只加胜方</code>
+          </div>
+          <div className="formula-card">
+            <span>连胜延续奖励</span>
+            <code>胜方赛前连胜 ≥ 2 时：round(胜方K × 0.03 × (胜方赛前连胜 − 1))；无封顶，只加胜方</code>
           </div>
           <div className="formula-card">
             <span>败方扣分</span>
@@ -132,6 +159,78 @@ export function AlgorithmView() {
             <code>不设 ±160 封顶；极端强弱局可能四舍五入为 0 分变化</code>
           </div>
         </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Win Streak</p>
+            <h2>连胜延续奖励：A 延续自己的 4 连胜</h2>
+          </div>
+          <span className="section-note">A 胜 B（双方均为中段 K=100）</span>
+        </div>
+
+        <div className="example-table-wrap">
+          <table className="ranking-table">
+            <thead>
+              <tr>
+                <th>步骤</th>
+                <th>球员 A</th>
+                <th>球员 B</th>
+              </tr>
+            </thead>
+            <tbody>
+              {winStreakExampleRows.map((row) => (
+                <tr key={row.label}>
+                  <td>{row.label}</td>
+                  <td>{row.playerA}</td>
+                  <td>{row.playerB}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="algorithm-note">
+          A 赛前 4 连胜，本场赢球后延续到 5 连胜，触发奖励：round(100 × 0.03 × (4 − 1)) = +9。
+          这部分只加给连胜者 A；B 仍只按原本 Elo 动态扣分，不因为对手连胜而额外受罚。
+        </p>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Streak Breaker</p>
+            <h2>终结连胜奖励：A 打断 B 的 5 连胜</h2>
+          </div>
+          <span className="section-note">A 胜 B（双方均为中段 K=100）</span>
+        </div>
+
+        <div className="example-table-wrap">
+          <table className="ranking-table">
+            <thead>
+              <tr>
+                <th>步骤</th>
+                <th>球员 A</th>
+                <th>球员 B</th>
+              </tr>
+            </thead>
+            <tbody>
+              {streakBreakerExampleRows.map((row) => (
+                <tr key={row.label}>
+                  <td>{row.label}</td>
+                  <td>{row.playerA}</td>
+                  <td>{row.playerB}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="algorithm-note">
+          B 赛前 5 连胜，A 赢球后触发破势奖励：round(100 × 0.05 × (5 − 2)) = +15。
+          这部分只加给挑战者 A；B 仍只按原本 Elo 动态扣分，不因为连胜被终结而额外受罚。
+        </p>
       </section>
 
       <section className="panel">
