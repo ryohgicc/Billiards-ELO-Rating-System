@@ -56,7 +56,7 @@ export function getReservationDrawSeed(dateSeed: string) {
 }
 
 function buildHashInput(player: Player, drawSeed: string) {
-  return `${drawSeed}|${player.id}|${player.name}|${player.createdAt}`;
+  return `${drawSeed}|${player.id}|${player.createdAt}`;
 }
 
 function formatDrawNumber(drawNumber: number) {
