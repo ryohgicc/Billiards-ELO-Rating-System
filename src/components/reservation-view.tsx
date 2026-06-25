@@ -163,7 +163,7 @@ export function ReservationView() {
             每天的日期种子是浏览器本地日期，格式为 <code>YYYY-MM-DD</code>。参与名单只包含当前启用中的球员。
           </p>
           <p>
-            每位球员的输入为 <code>日期|球员ID|球员名称|创建时间</code>，再计算
+            每位球员的输入为 <code>日期|球员ID|创建时间</code>，再计算
             <code> FNV-1a 32-bit hash</code> 得到当天随机签号。因为日期每天都会变化，同一批球员每天都会重新洗牌。
           </p>
           <p>

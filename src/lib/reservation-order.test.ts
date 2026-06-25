@@ -76,6 +76,28 @@ describe("buildReservationOrder", () => {
     expect(order.map((entry) => entry.player.id)).not.toContain("p4");
   });
 
+  it("keeps the draw number stable when a player is renamed", () => {
+    const originalOrder = buildReservationOrder(players, "2026-05-07");
+    const renamedOrder = buildReservationOrder(
+      players.map((player) =>
+        player.id === "p1"
+          ? {
+              ...player,
+              name: "Zed",
+            }
+          : player,
+      ),
+      "2026-05-07",
+    );
+
+    const originalEntry = originalOrder.find((entry) => entry.player.id === "p1");
+    const renamedEntry = renamedOrder.find((entry) => entry.player.id === "p1");
+
+    expect(renamedEntry?.drawNumber).toBe(originalEntry?.drawNumber);
+    expect(renamedEntry?.drawNumberLabel).toBe(originalEntry?.drawNumberLabel);
+    expect(renamedEntry?.hashInput).toBe(originalEntry?.hashInput);
+  });
+
   it("sorts by draw number with creation time and id only as tie breakers", () => {
     const tiedPlayers: Player[] = [
       {
