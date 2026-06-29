@@ -57,8 +57,9 @@
 
 ### 6. Slack 战报接口
 - `GET /api/slack/battle-report?date=YYYY-MM-DD`
-- 返回 `application/json`，日期按 `Asia/Shanghai` 解释
+- 返回 `application/json`，日期按 `Asia/Shanghai` 解释；不传 `date` 时默认使用上海当天
 - 响应包含 `message` 字段，可直接交给 Slack 机器人发送；同时返回 `matches` 逐场明细和 `records` 当日胜负榜
+- `matches` 中会返回 `streakBreakerBonus` 和 `winStreakBonus`，文案也会标注终结连胜奖励和连胜延续奖励
 - 单场积分变化、赛后积分和当日榜单都从历史比赛按自然月回放重算，不写入数据库
 
 示例：
@@ -191,10 +192,10 @@ npx wrangler d1 migrations list billiards-elo-db --remote
 - 开启 Brotli 压缩
 - 开启 HTTP/3
 - 开启 Early Hints
-- 为 `/_next/static/*` 和图片资源配置长缓存
+- 为 `/_next/*` 配置短缓存，为图片资源配置长缓存
 - 为 `/api/*` 配置跳过缓存，避免录入比赛后数据长时间不刷新
 
-仓库里的 `public/_headers` 已经为静态资源和 HTML 配置了保守缓存；`/api/state` 在 Worker 内有 10 秒短缓存，并会在写入后清理。更详细的免费加速清单见 `docs/deployment/cloudflare-free-acceleration.md`。
+仓库里的 `public/_headers` 已经为 Next.js chunk、静态资源和 HTML 配置了保守缓存；页面响应会清理站点旧缓存，避免浏览器继续使用过期 JS；`/api/state` 在 Worker 内有 10 秒短缓存，并会在写入后清理。更详细的免费加速清单见 `docs/deployment/cloudflare-free-acceleration.md`。
 
 ## 数据说明
 

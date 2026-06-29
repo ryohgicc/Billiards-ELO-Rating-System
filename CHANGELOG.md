@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - 每日排序随机签号不再把球员名称放入 hash 输入，改名不会影响当天抽签结果。
+- 将 `/_next/*` 缓存从长期 immutable 调整为 5 分钟短缓存，并让页面响应清理站点旧缓存，避免浏览器复用旧 JS chunk 导致历史页编辑按钮等新 UI 不出现。
 - 扩展 `public/_headers` 的缓存兜底规则，补充 `/_next/*`、`.txt`、`.json` 和 `/api/*` 的缓存声明。
 - **败方扣分系数范围扩大为 0.1 至 0.9**：相比之前的 0.3-0.7 范围，新范围使得弱输强时保护更强（系数可低至 0.1），强输弱时惩罚更重（系数可高至 0.9），分差效应更加明显。
 - 积分系统改为自然月赛季：每月从 `1000` 分重新开始，排行榜默认展示本月，旧月份以月度归档保留该月最后一个比赛日快照。
@@ -38,6 +39,9 @@ All notable changes to this project will be documented in this file.
 - AI 赛后锐评 prompt 现在会传入比赛标签含义和事实边界，减少把未勾选标签、比分或额外剧情写成事实的情况。
 
 ### Fixed
+- Slack 战报接口改为使用与网页历史页一致的固定赛季 K 值，避免 D1 旧 `settings.kFactor` 导致同一场比赛积分变化与网页不一致。
+- Slack 战报接口在未传 `date` 时默认返回上海当天战报，避免机器人直接请求 `/api/slack/battle-report` 拿不到数据。
+- Slack 战报接口补充 `streakBreakerBonus` 和 `winStreakBonus` 字段，并在逐场结果文案中标注终结连胜奖励和连胜延续奖励。
 - 修复比赛历史缺少编辑入口的问题，并将历史卡片操作按钮固定为独立操作区，避免窄屏布局下消失。
 - 重构排行榜和比赛历史的移动端卡片排版，避免积分、最近比赛、AI 评价和徽章在窄屏中互相挤压。
 - 修复手机端日期切换、排行榜卡片和比赛历史长文案在窄屏下被省略或右侧裁切的问题。

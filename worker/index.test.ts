@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import worker from "./index";
 
@@ -84,6 +84,10 @@ function createCtx(): ExecutionContext {
 }
 
 describe("worker Slack battle report API", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("returns a daily battle report for Slack bots", async () => {
     const response = await worker.fetch(
       new Request("https://score.example.com/api/slack/battle-report?date=2026-06-23", {
@@ -141,6 +145,55 @@ describe("worker Slack battle report API", () => {
       ],
     });
     expect(body.message).toContain("*今日战报（2026-06-23）*");
+  });
+
+  it("defaults to the current Shanghai date when date is omitted", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-23T03:30:00.000Z"));
+
+    const response = await worker.fetch(
+      new Request("https://score.example.com/api/slack/battle-report"),
+      {
+        DB: createDb({
+          players: [
+            {
+              id: "player-gjj",
+              name: "gjj",
+              created_at: "2026-06-01T00:00:00.000Z",
+              is_active: 1,
+            },
+            {
+              id: "player-cwj",
+              name: "cwj",
+              created_at: "2026-06-01T00:01:00.000Z",
+              is_active: 1,
+            },
+          ],
+          matches: [
+            {
+              id: "match-001",
+              winner_id: "player-gjj",
+              loser_id: "player-cwj",
+              created_at: "2026-06-23T11:12:00.000Z",
+              winner_moments: JSON.stringify([]),
+              loser_moments: JSON.stringify([]),
+              winner_note: "",
+              loser_note: "",
+            },
+          ],
+          settings: [{ key: "kFactor", value: "100" }],
+        }),
+      },
+      createCtx(),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      date: "2026-06-23",
+      timezone: "Asia/Shanghai",
+      matchCount: 1,
+    });
   });
 
   it("rejects malformed report dates", async () => {
