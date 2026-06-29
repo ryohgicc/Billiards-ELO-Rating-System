@@ -2,7 +2,11 @@ import { DEFAULT_SETTINGS } from "../src/lib/constants";
 import { normalizeMatchMomentKeys, normalizeMatchNote } from "../src/lib/match-moments";
 import { buildPlayerProfiles } from "../src/lib/player-honors";
 import { normalizePlayerPhotoImageData, normalizePlayerPhotoRole } from "../src/lib/player-photos";
-import { buildSlackBattleReport, isValidBattleReportDate } from "../src/lib/slack-battle-report";
+import {
+  buildSlackBattleReport,
+  getShanghaiTodayKey,
+  isValidBattleReportDate,
+} from "../src/lib/slack-battle-report";
 import type {
   AiModelConfig,
   AppState,
@@ -922,7 +926,7 @@ async function clearState(request: Request, env: Env) {
 
 async function getSlackBattleReport(request: Request, env: Env) {
   const url = new URL(request.url);
-  const date = url.searchParams.get("date") ?? "";
+  const date = url.searchParams.get("date") ?? getShanghaiTodayKey();
 
   if (!isValidBattleReportDate(date)) {
     return errorResponse("date 必须是有效的 YYYY-MM-DD 日期");

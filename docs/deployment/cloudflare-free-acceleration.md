@@ -25,8 +25,9 @@ Create rules in this order:
 1. Static Next.js assets
    - Match: URI path starts with `/_next/static/`
    - Cache eligibility: Cache
-   - Edge TTL: 1 year
-   - Browser TTL: 1 year
+   - Edge TTL: 5 minutes
+   - Browser TTL: 5 minutes
+   - Do not mark these assets immutable unless their filenames are confirmed content-hashed after every deploy.
 
 2. Public images and icons
    - Match: URI path ends with `.svg`, `.png`, `.jpg`, `.jpeg`, `.webp`, or `.ico`
@@ -44,9 +45,10 @@ The Worker already gives `/api/state` a 10 second edge cache and clears that cac
 
 The repository includes `public/_headers` as a deploy-time fallback for static asset caching:
 
-- `/_next/static/*` is immutable for 1 year.
+- `/_next/static/*` and `/_next/*` use a short 5 minute cache because exported Turbopack chunk names can be reused between deploys.
 - common image/icon assets are cached for 7 days.
 - HTML and `/` are cached for 60 seconds with stale-while-revalidate.
+- Route HTML responses include `Clear-Site-Data: "cache"` so browsers drop stale JS chunks after deploys.
 
 These headers are intentionally conservative so the site can update quickly after a deploy while still avoiding repeated static asset downloads.
 

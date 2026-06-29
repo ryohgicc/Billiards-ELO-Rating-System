@@ -1,3 +1,4 @@
+import { DEFAULT_K_FACTOR } from "@/lib/constants";
 import { buildMatchTimeline } from "@/lib/rating";
 import type { AppState, MatchMomentKey } from "@/lib/types";
 
@@ -13,6 +14,8 @@ export type SlackBattleReportMatch = {
   loserName: string;
   winnerDelta: number;
   loserDelta: number;
+  streakBreakerBonus: number;
+  winStreakBonus: number;
   winnerRatingAfter: number;
   loserRatingAfter: number;
   winnerMoments: MatchMomentKey[];
@@ -55,6 +58,10 @@ function getShanghaiDateKey(value: string) {
   return toShanghaiISOString(new Date(value)).slice(0, 10);
 }
 
+export function getShanghaiTodayKey(date = new Date()) {
+  return toShanghaiISOString(date).slice(0, 10);
+}
+
 function getShanghaiTimeLabel(value: string) {
   return toShanghaiISOString(new Date(value)).slice(11, 16);
 }
@@ -82,8 +89,14 @@ function buildMessage(date: string, matches: SlackBattleReportMatch[], records: 
 
   lines.push("", "*逐场结果*");
   matches.forEach((match, index) => {
+    const bonusLabels = [
+      match.streakBreakerBonus > 0 ? `终结连胜奖励 +${match.streakBreakerBonus}` : "",
+      match.winStreakBonus > 0 ? `连胜延续奖励 +${match.winStreakBonus}` : "",
+    ].filter(Boolean);
+    const bonusText = bonusLabels.length > 0 ? `，含${bonusLabels.join("，")}` : "";
+
     lines.push(
-      `${index + 1}. ${match.timeLabel} ${match.winnerName} 胜 ${match.loserName} （${formatSignedDelta(match.winnerDelta)} / ${formatSignedDelta(match.loserDelta)}）`,
+      `${index + 1}. ${match.timeLabel} ${match.winnerName} 胜 ${match.loserName} （${formatSignedDelta(match.winnerDelta)} / ${formatSignedDelta(match.loserDelta)}${bonusText}）`,
     );
   });
 
@@ -146,7 +159,7 @@ export function buildSlackBattleReport({
   date,
   generatedAt = new Date(),
 }: BuildSlackBattleReportOptions): SlackBattleReport {
-  const matches = buildMatchTimeline(state.players, state.matches, state.settings.kFactor)
+  const matches = buildMatchTimeline(state.players, state.matches, DEFAULT_K_FACTOR)
     .filter((entry) => getShanghaiDateKey(entry.createdAt) === date)
     .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
     .map((entry): SlackBattleReportMatch => ({
@@ -159,6 +172,8 @@ export function buildSlackBattleReport({
       loserName: entry.loserName,
       winnerDelta: entry.winnerDelta,
       loserDelta: entry.loserDelta,
+      streakBreakerBonus: entry.streakBreakerBonus,
+      winStreakBonus: entry.winStreakBonus,
       winnerRatingAfter: entry.winnerRatingAfter,
       loserRatingAfter: entry.loserRatingAfter,
       winnerMoments: entry.winnerMoments,
