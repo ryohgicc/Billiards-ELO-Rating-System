@@ -2,6 +2,7 @@ import { DEFAULT_SETTINGS } from "../src/lib/constants";
 import { normalizeMatchMomentKeys, normalizeMatchNote } from "../src/lib/match-moments";
 import { buildPlayerProfiles } from "../src/lib/player-honors";
 import { normalizePlayerPhotoImageData, normalizePlayerPhotoRole } from "../src/lib/player-photos";
+import { buildReservationOrder, getReservationDrawSeed } from "../src/lib/reservation-order";
 import {
   buildSlackBattleReport,
   getShanghaiTodayKey,
@@ -108,6 +109,11 @@ const STATE_CACHE_HEADERS = {
   "cache-control": `public, max-age=${STATE_CACHE_TTL_SECONDS}, s-maxage=${STATE_CACHE_TTL_SECONDS}`,
   "cdn-cache-control": `max-age=${STATE_CACHE_TTL_SECONDS}`,
   "cloudflare-cdn-cache-control": `max-age=${STATE_CACHE_TTL_SECONDS}`,
+};
+const TIMEZONE = "Asia/Shanghai";
+const RESERVATION_ORDER_ALGORITHM = "fnv1a32-v1";
+const PLAYER_SLACK_USER_IDS: Record<string, string> = {
+  "player-df56bb1c-8f28-4668-b167-b47961e8b922": "U09A9LMK1UG",
 };
 
 function jsonResponse(payload: unknown, init?: ResponseInit) {
@@ -938,6 +944,34 @@ async function getSlackBattleReport(request: Request, env: Env) {
   }));
 }
 
+async function getReservationOrderReport(request: Request, env: Env) {
+  const url = new URL(request.url);
+  const dateSeed = url.searchParams.get("date") ?? getShanghaiTodayKey();
+
+  if (!isValidBattleReportDate(dateSeed)) {
+    return errorResponse("date 必须是有效的 YYYY-MM-DD 日期");
+  }
+
+  const state = await loadState(env.DB);
+  const entries = buildReservationOrder(state.players, dateSeed).map((entry) => ({
+    order: entry.order,
+    playerId: entry.player.id,
+    name: entry.player.name,
+    drawNumber: entry.drawNumber,
+    drawNumberLabel: entry.drawNumberLabel,
+    slackUserId: PLAYER_SLACK_USER_IDS[entry.player.id] ?? "",
+  }));
+
+  return jsonResponse({
+    dateSeed,
+    drawSeed: getReservationDrawSeed(dateSeed),
+    timezone: TIMEZONE,
+    algorithm: RESERVATION_ORDER_ALGORITHM,
+    generatedAt: new Date().toISOString(),
+    entries,
+  });
+}
+
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url);
@@ -949,6 +983,10 @@ const worker = {
 
       if (url.pathname === "/api/slack/battle-report" && request.method === "GET") {
         return getSlackBattleReport(request, env);
+      }
+
+      if (url.pathname === "/api/reservation-order" && request.method === "GET") {
+        return getReservationOrderReport(request, env);
       }
 
       if (url.pathname === "/api/players" && request.method === "POST") {

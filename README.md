@@ -44,6 +44,7 @@
 - 排序只看随机签号，极少数签号相同才用创建时间和球员 ID 兜底
 - 不参考战绩、活跃天数、昨天名次、指定球员或任何补偿规则
 - 页面公开日期种子和随机签号，方便确认当天排序来源
+- `GET /api/reservation-order?date=YYYY-MM-DD` 可返回同一套排序 JSON；不传 `date` 时默认使用上海当天，响应包含 `dateSeed`、`drawSeed`、`algorithm` 和扁平化的 `entries`
 
 ### 5. 比赛历史
 - 支持按比赛日期切换查看历史

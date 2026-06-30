@@ -208,6 +208,96 @@ describe("worker Slack battle report API", () => {
   });
 });
 
+describe("worker reservation order API", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns the daily reservation order for bot integrations", async () => {
+    const response = await worker.fetch(
+      new Request("https://score.example.com/api/reservation-order?date=2026-06-30"),
+      {
+        DB: createDb({
+          players: [
+            {
+              id: "player-df56bb1c-8f28-4668-b167-b47961e8b922",
+              name: "jiale",
+              created_at: "2026-05-07T11:11:43.512Z",
+              is_active: 1,
+            },
+            {
+              id: "player-disabled",
+              name: "disabled",
+              created_at: "2026-05-07T11:11:44.512Z",
+              is_active: 0,
+            },
+          ],
+          settings: [{ key: "kFactor", value: "100" }],
+        }),
+      },
+      createCtx(),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      dateSeed: "2026-06-30",
+      drawSeed: "2026-06-30",
+      timezone: "Asia/Shanghai",
+      algorithm: "fnv1a32-v1",
+      entries: [
+        {
+          order: 1,
+          playerId: "player-df56bb1c-8f28-4668-b167-b47961e8b922",
+          name: "jiale",
+          drawNumber: expect.any(Number),
+          drawNumberLabel: expect.stringMatching(/^[0-9A-F]{8}$/),
+          slackUserId: "U09A9LMK1UG",
+        },
+      ],
+    });
+    expect(typeof body.generatedAt).toBe("string");
+  });
+
+  it("defaults reservation order to the current Shanghai date when date is omitted", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-30T01:00:00.000Z"));
+
+    const response = await worker.fetch(
+      new Request("https://score.example.com/api/reservation-order"),
+      {
+        DB: createDb({
+          players: [
+            {
+              id: "player-df56bb1c-8f28-4668-b167-b47961e8b922",
+              name: "jiale",
+              created_at: "2026-05-07T11:11:43.512Z",
+              is_active: 1,
+            },
+          ],
+          settings: [{ key: "kFactor", value: "100" }],
+        }),
+      },
+      createCtx(),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.dateSeed).toBe("2026-06-30");
+  });
+
+  it("rejects malformed reservation order dates", async () => {
+    const response = await worker.fetch(
+      new Request("https://score.example.com/api/reservation-order?date=2026-02-30"),
+      { DB: createDb({}) },
+      createCtx(),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: "date 必须是有效的 YYYY-MM-DD 日期" });
+  });
+});
+
 describe("worker match API", () => {
   it("updates a match and clears stale AI artifacts", async () => {
     const db = createDb({

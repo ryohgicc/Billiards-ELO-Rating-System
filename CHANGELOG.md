@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 ### Added
+- 新增 `GET /api/reservation-order?date=YYYY-MM-DD`，返回指定上海日期的每日排序 JSON，供 Slack 机器人读取抽签顺序。
 - 新增 `GET /api/slack/battle-report?date=YYYY-MM-DD`，返回指定上海日期的 Slack 今日战报 JSON，包含可直接发送的 Markdown 文案、逐场积分变化和当日胜负榜。
 - 比赛历史支持编辑单场比赛，可修改胜负方、精彩瞬间和双方备注，保存后自动重算积分并清理该场旧 AI 锐评。
 - 积分系统新增连胜延续奖励：胜者赢下本场后达到 3 连胜及以上时，按自己的 K 值获得额外加分，并可与终结连胜奖励叠加。
