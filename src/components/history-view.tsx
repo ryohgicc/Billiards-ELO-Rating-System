@@ -138,15 +138,76 @@ export function HistoryView() {
                 const isEditing = editingMatch?.id === entry.id;
                 const winnerOptions = state.players.filter((player) => player.id !== editingMatch?.loserId);
                 const loserOptions = state.players.filter((player) => player.id !== editingMatch?.winnerId);
+                const actionButtons = isEditing && editingMatch ? (
+                  <>
+                    <button
+                      className="button button--primary"
+                      onClick={() => {
+                        updateMatch(entry.id, editingMatch)
+                          .then(() => {
+                            setEditingMatch(null);
+                            setEditingError("");
+                          })
+                          .catch((error) => {
+                            setEditingError(error instanceof Error ? error.message : "更新比赛失败");
+                          });
+                      }}
+                      type="button"
+                    >
+                      保存
+                    </button>
+                    <button
+                      className="button"
+                      onClick={() => {
+                        setEditingMatch(null);
+                        setEditingError("");
+                      }}
+                      type="button"
+                    >
+                      取消
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="button"
+                      onClick={() => {
+                        setEditingMatch(createEditingMatchState(entry));
+                        setEditingError("");
+                      }}
+                      type="button"
+                    >
+                      编辑
+                    </button>
+                    <button
+                      className="button button--danger"
+                      onClick={() => {
+                        if (window.confirm("删除后会重算积分，确定继续吗？")) {
+                          removeMatch(entry.id).catch((error) => {
+                            window.alert(error instanceof Error ? error.message : "删除比赛失败");
+                          });
+                        }
+                      }}
+                      type="button"
+                    >
+                      删除
+                    </button>
+                  </>
+                );
 
                 return (
                 <article key={entry.id} className="history-card">
                   <div className="history-card__body">
                     <div className="history-card__title">
-                      <h3>
-                        {entry.winnerName} 胜 {entry.loserName}
-                      </h3>
-                      <span>{formatDateTime(entry.createdAt)}</span>
+                      <div>
+                        <h3>
+                          {entry.winnerName} 胜 {entry.loserName}
+                        </h3>
+                        <span>{formatDateTime(entry.createdAt)}</span>
+                      </div>
+                      <div className="history-card__actions history-card__actions--inline">
+                        {actionButtons}
+                      </div>
                     </div>
                     {isEditing && editingMatch ? (
                       <div className="history-edit">
@@ -310,64 +371,6 @@ export function HistoryView() {
                         ) : null}
                         {entry.winnerNote ? <p>胜者备注：{entry.winnerNote}</p> : null}
                         {entry.loserNote ? <p>负者备注：{entry.loserNote}</p> : null}
-                      </>
-                    )}
-                  </div>
-                  <div className="history-card__actions">
-                    {isEditing && editingMatch ? (
-                      <>
-                        <button
-                          className="button button--primary"
-                          onClick={() => {
-                            updateMatch(entry.id, editingMatch)
-                              .then(() => {
-                                setEditingMatch(null);
-                                setEditingError("");
-                              })
-                              .catch((error) => {
-                                setEditingError(error instanceof Error ? error.message : "更新比赛失败");
-                              });
-                          }}
-                          type="button"
-                        >
-                          保存
-                        </button>
-                        <button
-                          className="button"
-                          onClick={() => {
-                            setEditingMatch(null);
-                            setEditingError("");
-                          }}
-                          type="button"
-                        >
-                          取消
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          className="button"
-                          onClick={() => {
-                            setEditingMatch(createEditingMatchState(entry));
-                            setEditingError("");
-                          }}
-                          type="button"
-                        >
-                          编辑
-                        </button>
-                        <button
-                          className="button button--danger"
-                          onClick={() => {
-                            if (window.confirm("删除后会重算积分，确定继续吗？")) {
-                              removeMatch(entry.id).catch((error) => {
-                                window.alert(error instanceof Error ? error.message : "删除比赛失败");
-                              });
-                            }
-                          }}
-                          type="button"
-                        >
-                          删除
-                        </button>
                       </>
                     )}
                   </div>

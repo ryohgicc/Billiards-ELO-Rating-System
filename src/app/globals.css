@@ -1759,6 +1759,10 @@ button {
   align-items: center;
 }
 
+.history-card__actions--inline {
+  justify-content: flex-end;
+}
+
 .history-edit {
   display: grid;
   gap: 0.75rem;
@@ -2679,8 +2683,15 @@ button {
   }
 
   .history-card__title {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     align-items: flex-start;
-    gap: 0.35rem 0.55rem;
+    gap: 0.6rem;
+    width: 100%;
+  }
+
+  .history-card__actions--inline {
+    grid-template-columns: 1fr 1fr;
   }
 
   .history-card__title h3 {
