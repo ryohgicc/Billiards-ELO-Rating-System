@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { EmptyState } from "@/components/empty-state";
 import { PlayerPhotoFrame } from "@/components/player-photo-frame";
+import { DEFAULT_K_FACTOR } from "@/lib/constants";
 import { formatCurrency, formatDateTime, formatPercent } from "@/lib/format";
 import { useAppState } from "@/lib/app-state";
 import { buildLeaderInsight } from "@/lib/leader-insight";
@@ -111,7 +112,7 @@ export function RankingsView() {
   const monthlySnapshots = buildMonthlyRankingSnapshots(
     state.players,
     state.matches,
-    state.settings.kFactor,
+    DEFAULT_K_FACTOR,
   );
   const [selectedViewKey, setSelectedViewKey] = useState(currentMonthKey);
   const selectedMonthKey = selectedViewKey;
@@ -120,7 +121,7 @@ export function RankingsView() {
     selectedMonthKey === currentMonthKey
       ? rankings
       : selectedSnapshot?.rankings ??
-        buildRankingsForMonth(state.players, state.matches, selectedMonthKey, state.settings.kFactor);
+        buildRankingsForMonth(state.players, state.matches, selectedMonthKey, DEFAULT_K_FACTOR);
   const monthOptions = [
     {
       monthKey: currentMonthKey,
@@ -140,7 +141,7 @@ export function RankingsView() {
   const rankDayCounts = buildPlayerRankDayCounts(
     state.players,
     selectedMonthMatches,
-    state.settings.kFactor,
+    DEFAULT_K_FACTOR,
   );
   const rankingMovements = buildRankingMovements(visibleRankings, previousRankings);
   const leader = visibleRankings[0];
@@ -271,7 +272,7 @@ export function RankingsView() {
               ? "本月赛季"
               : `${selectedSnapshot?.monthLabel ?? selectedMonthKey} 归档`}
             {" · K 值 "}
-            {state.settings.kFactor}
+            {DEFAULT_K_FACTOR}
           </span>
         </div>
 

@@ -6,7 +6,7 @@ import { CalendarClock, Hash, TimerReset } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { useAppState } from "@/lib/app-state";
 import {
-  buildReservationOrder,
+  buildReservationOrderHistory,
   calculateMillisecondsUntilNextLocalMidnight,
   getLocalDateKey,
 } from "@/lib/reservation-order";
@@ -26,6 +26,7 @@ export function ReservationView() {
   const { activePlayers, isLoaded } = useAppState();
   const [now, setNow] = useState(() => new Date());
   const [dateSeed, setDateSeed] = useState(() => getLocalDateKey());
+  const [selectedDateKey, setSelectedDateKey] = useState(dateSeed);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -44,6 +45,7 @@ export function ReservationView() {
 
       setNow(nextNow);
       setDateSeed(getLocalDateKey(nextNow));
+      setSelectedDateKey(getLocalDateKey(nextNow));
     }, calculateMillisecondsUntilNextLocalMidnight(currentNow));
 
     return () => {
@@ -51,10 +53,13 @@ export function ReservationView() {
     };
   }, [dateSeed]);
 
-  const reservationOrder = useMemo(
-    () => buildReservationOrder(activePlayers, dateSeed),
+  const reservationHistory = useMemo(
+    () => buildReservationOrderHistory(activePlayers, dateSeed),
     [activePlayers, dateSeed],
   );
+  const selectedDay = reservationHistory.find((day) => day.dateKey === selectedDateKey);
+  const visibleDay = selectedDay ?? reservationHistory[0];
+  const reservationOrder = visibleDay?.entries ?? [];
   const millisecondsUntilRefresh = calculateMillisecondsUntilNextLocalMidnight(now);
 
   return (
@@ -76,7 +81,7 @@ export function ReservationView() {
           </span>
           <span>
             <Hash aria-hidden="true" size={18} />
-            <strong>{reservationOrder.length}</strong>
+            <strong>{reservationHistory[0]?.entries.length ?? 0}</strong>
             参与球员
           </span>
           <span>
@@ -93,15 +98,33 @@ export function ReservationView() {
             <p className="eyebrow">Queue</p>
             <h2>每日排序</h2>
           </div>
-          <span className="section-note">仅启用球员参与</span>
+          <span className="section-note">{visibleDay?.dateLabel ?? "仅启用球员参与"}</span>
         </div>
 
         {!isLoaded ? <p>正在读取云端球员数据...</p> : null}
-        {isLoaded && reservationOrder.length === 0 ? (
+        {isLoaded && reservationHistory.length === 0 ? (
           <EmptyState
             title="还没有可预约球员"
             description="先在球员管理里新增并启用球员，每日排序会在每天 0 点自动生成。"
           />
+        ) : null}
+
+        {reservationHistory.length > 0 ? (
+          <div className="date-switcher reservation-history" aria-label="查看每日排序历史">
+            {reservationHistory.map((day) => (
+              <button
+                className={`date-switcher__button${
+                  day.dateKey === visibleDay?.dateKey ? " date-switcher__button--active" : ""
+                }`}
+                key={day.dateKey}
+                onClick={() => setSelectedDateKey(day.dateKey)}
+                type="button"
+              >
+                <span>{day.dateKey === dateSeed ? "今天" : "历史"}</span>
+                <strong>{day.dateLabel}</strong>
+              </button>
+            ))}
+          </div>
         ) : null}
 
         {reservationOrder.length > 0 ? (

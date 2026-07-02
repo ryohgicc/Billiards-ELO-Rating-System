@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 
 import { EmptyState } from "@/components/empty-state";
 import { ResultPhotoStage } from "@/components/result-photo-stage";
+import { DEFAULT_K_FACTOR } from "@/lib/constants";
 import { useAppState } from "@/lib/app-state";
 import { formatCurrency, formatDateTime, formatPercent } from "@/lib/format";
 import {
@@ -29,7 +30,7 @@ export function PlayerPreviewView() {
   const monthlySnapshots = buildMonthlyRankingSnapshots(
     state.players,
     state.matches,
-    state.settings.kFactor,
+    DEFAULT_K_FACTOR,
   );
   const currentMonthKey = getCurrentLocalMonthKey();
   const monthOptions = [
@@ -60,9 +61,9 @@ export function PlayerPreviewView() {
       state.players,
       selectedMonthMatches,
       state.photos,
-      state.settings.kFactor,
+      DEFAULT_K_FACTOR,
     );
-  }, [selectedMonthKey, currentMonthKey, profilesByPlayerId, state.players, selectedMonthMatches, state.photos, state.settings.kFactor]);
+  }, [selectedMonthKey, currentMonthKey, profilesByPlayerId, state.players, selectedMonthMatches, state.photos]);
   const sortedPlayers = [...state.players].sort((left, right) => {
     const leftProfile = totalProfilesByPlayerId[left.id];
     const rightProfile = totalProfilesByPlayerId[right.id];

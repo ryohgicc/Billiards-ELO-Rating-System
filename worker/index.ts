@@ -235,6 +235,10 @@ async function loadState(db: D1Database): Promise<AppState> {
   const settingsMap = Object.fromEntries(
     (settingsResult.results ?? []).map((row) => [row.key, row.value]),
   );
+  const settings = {
+    title: settingsMap.title || DEFAULT_SETTINGS.title,
+    kFactor: DEFAULT_SETTINGS.kFactor,
+  };
 
   return {
     players,
@@ -243,10 +247,7 @@ async function loadState(db: D1Database): Promise<AppState> {
     aiProfiles,
     aiReviews,
     aiModels,
-    settings: {
-      title: settingsMap.title || DEFAULT_SETTINGS.title,
-      kFactor: Number(settingsMap.kFactor || DEFAULT_SETTINGS.kFactor),
-    },
+    settings,
   };
 }
 

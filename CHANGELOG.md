@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 ### Added
+- 预约页每日排序带上历史记录，可按日期查看从首位启用球员创建日到今天的每一天排序。
 - 新增 `GET /api/reservation-order?date=YYYY-MM-DD`，返回指定上海日期的每日排序 JSON，供 Slack 机器人读取抽签顺序。
 - 新增 `GET /api/slack/battle-report?date=YYYY-MM-DD`，返回指定上海日期的 Slack 今日战报 JSON，包含可直接发送的 Markdown 文案、逐场积分变化和当日胜负榜。
 - 比赛历史支持编辑单场比赛，可修改胜负方、精彩瞬间和双方备注，保存后自动重算积分并清理该场旧 AI 锐评。
@@ -21,6 +22,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - 将 `/_next/static/*` 恢复为长期 immutable 缓存，并把 HTML 页面入口改为 `no-cache` 校验，移除常驻 `Clear-Site-Data`，减少代理和弱网环境下重复下载前端资源。
+- 固定赛季评分统一使用 `DEFAULT_K_FACTOR=100`，排行榜月度归档、球员预览和 Worker 状态接口都会忽略 D1 中遗留的旧 `settings.kFactor`，避免历史页与排行榜分数不一致。
 - 每日排序随机签号不再把球员名称放入 hash 输入，改名不会影响当天抽签结果。
 - 将 `/_next/*` 缓存从长期 immutable 调整为 5 分钟短缓存，并让页面响应清理站点旧缓存，避免浏览器复用旧 JS chunk 导致历史页编辑按钮等新 UI 不出现。
 - 扩展 `public/_headers` 的缓存兜底规则，补充 `/_next/*`、`.txt`、`.json` 和 `/api/*` 的缓存声明。

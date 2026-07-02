@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildReservationOrderHistory,
   buildReservationOrder,
   getLocalDateKey,
   getNextLocalMidnight,
@@ -172,6 +173,55 @@ describe("buildReservationOrder", () => {
 
     expect(order.map((entry) => entry.player.id)).toEqual(["p1", "gjj-id", "p3", "p4"]);
     expect(order.slice(0, 2).map((entry) => entry.player.name)).toEqual(["Alice", "gjj"]);
+  });
+});
+
+describe("buildReservationOrderHistory", () => {
+  it("builds newest-first daily order snapshots from the first active player day through today", () => {
+    const history = buildReservationOrderHistory(players, "2026-04-29");
+
+    expect(history.map((day) => day.dateKey)).toEqual([
+      "2026-04-29",
+      "2026-04-28",
+      "2026-04-27",
+    ]);
+    expect(history.map((day) => day.dateLabel)).toEqual([
+      "2026年4月29日",
+      "2026年4月28日",
+      "2026年4月27日",
+    ]);
+    expect(history.every((day) => day.entries.length === 3)).toBe(true);
+    expect(history[0].entries.every((entry) => entry.dateSeed === "2026-04-29")).toBe(true);
+    expect(history[2].entries.every((entry) => entry.dateSeed === "2026-04-27")).toBe(true);
+  });
+
+  it("does not include active players before their creation day in historical snapshots", () => {
+    const staggeredPlayers: Player[] = [
+      players[0],
+      {
+        ...players[1],
+        createdAt: "2026-04-29T10:01:00.000Z",
+      },
+    ];
+
+    const history = buildReservationOrderHistory(staggeredPlayers, "2026-04-29");
+
+    expect(history.find((day) => day.dateKey === "2026-04-29")?.entries).toHaveLength(2);
+    expect(
+      history.find((day) => day.dateKey === "2026-04-28")?.entries.map((entry) => entry.player.id),
+    ).toEqual(["p1"]);
+  });
+
+  it("returns no history when there are no active players", () => {
+    const history = buildReservationOrderHistory(
+      players.map((player) => ({
+        ...player,
+        isActive: false,
+      })),
+      "2026-04-29",
+    );
+
+    expect(history).toEqual([]);
   });
 });
 

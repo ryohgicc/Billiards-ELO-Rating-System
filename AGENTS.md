@@ -104,3 +104,10 @@ git status -sb
 ```
 
 Never revert unrelated changes. If committing, stage only files that belong to the current task.
+
+Version and deployment discipline:
+- Before merging, cherry-picking, pushing, or deploying, run `git fetch --prune` and confirm the relationship between local `main`, `origin/main`, the current branch, and the commit intended for deployment.
+- Do not deploy a local build while leaving GitHub `main` behind unless the user explicitly asks for a deploy-only hotfix. If a deploy-only hotfix is unavoidable, state clearly which commit is deployed and which branch still needs pushing.
+- Do not switch branches with unrelated uncommitted work in the tree. First identify whether each modified file belongs to the current task; stash or commit unrelated WIP before changing branches.
+- When moving work from a feature branch to `main`, prefer a clear merge/PR. If cherry-picking, verify with `git log --graph --oneline --decorate --all -n 20` before and after, and make sure the final `main` contains the intended commits.
+- Before final handoff after deployment or push, report three separate states: Cloudflare deployed version, GitHub branch/commit pushed, and whether the local worktree is clean.

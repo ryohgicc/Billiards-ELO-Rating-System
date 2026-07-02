@@ -18,6 +18,21 @@ Object.assign(globalThis, {
 
 type Row = Record<string, unknown>;
 
+const basePlayers = [
+  {
+    id: "player-gjj",
+    name: "gjj",
+    created_at: "2026-06-01T00:00:00.000Z",
+    is_active: 1,
+  },
+  {
+    id: "player-ppz",
+    name: "ppz",
+    created_at: "2026-06-01T00:01:00.000Z",
+    is_active: 1,
+  },
+];
+
 function createDb(rowsByTable: Record<string, Row[]>) {
   const statements: { sql: string; values: unknown[] }[] = [];
 
@@ -82,6 +97,25 @@ function createCtx(): ExecutionContext {
     props: {},
   };
 }
+
+describe("worker state API", () => {
+  it("normalizes legacy stored K factor to the fixed season K factor", async () => {
+    const response = await worker.fetch(
+      new Request("https://score.example.com/api/state"),
+      {
+        DB: createDb({
+          players: basePlayers,
+          settings: [{ key: "kFactor", value: "60" }],
+        }),
+      },
+      createCtx(),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.settings.kFactor).toBe(100);
+  });
+});
 
 describe("worker Slack battle report API", () => {
   afterEach(() => {

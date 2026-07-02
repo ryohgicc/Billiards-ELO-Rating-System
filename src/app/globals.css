@@ -1863,6 +1863,10 @@ button {
   display: none;
 }
 
+.reservation-history {
+  margin-bottom: 0.9rem;
+}
+
 .reservation-card {
   display: grid;
   gap: 0.8rem;

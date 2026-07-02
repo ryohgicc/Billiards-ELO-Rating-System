@@ -10,6 +10,12 @@ export type ReservationOrderEntry = {
   hashInput: string;
 };
 
+export type ReservationOrderDay = {
+  dateKey: string;
+  dateLabel: string;
+  entries: ReservationOrderEntry[];
+};
+
 type HashFunction = (input: string) => number;
 
 function padNumber(value: number) {
@@ -103,4 +109,54 @@ export function buildReservationOrder(
       ...entry,
       order: index + 1,
     }));
+}
+
+function parseLocalDateKey(dateKey: string) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+
+  return new Date(year, month - 1, day);
+}
+
+function formatDateLabel(dateKey: string) {
+  const date = parseLocalDateKey(dateKey);
+
+  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
+export function buildReservationOrderHistory(
+  players: Player[],
+  todayDateKey = getLocalDateKey(),
+  hashFunction: HashFunction = fnv1a32,
+): ReservationOrderDay[] {
+  const activePlayers = players.filter((player) => player.isActive);
+
+  if (activePlayers.length === 0) {
+    return [];
+  }
+
+  const firstPlayerDateKey = activePlayers
+    .map((player) => getLocalDateKey(new Date(player.createdAt)))
+    .sort()[0];
+  const firstDate = parseLocalDateKey(firstPlayerDateKey);
+  const today = parseLocalDateKey(todayDateKey);
+  const days: ReservationOrderDay[] = [];
+
+  for (
+    let cursor = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    cursor.getTime() >= firstDate.getTime();
+    cursor.setDate(cursor.getDate() - 1)
+  ) {
+    const dateKey = getLocalDateKey(cursor);
+    const playersForDay = activePlayers.filter(
+      (player) => getLocalDateKey(new Date(player.createdAt)) <= dateKey,
+    );
+
+    days.push({
+      dateKey,
+      dateLabel: formatDateLabel(dateKey),
+      entries: buildReservationOrder(playersForDay, dateKey, hashFunction),
+    });
+  }
+
+  return days;
 }
