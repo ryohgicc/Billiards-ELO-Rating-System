@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 - 为 `2026-06-01` 每日排序追加公开重置盐值 `reset-6`，强制重新生成当天随机顺序。
 
 ### Changed
+- 将 `/_next/static/*` 恢复为长期 immutable 缓存，并把 HTML 页面入口改为 `no-cache` 校验，移除常驻 `Clear-Site-Data`，减少代理和弱网环境下重复下载前端资源。
 - 每日排序随机签号不再把球员名称放入 hash 输入，改名不会影响当天抽签结果。
 - 将 `/_next/*` 缓存从长期 immutable 调整为 5 分钟短缓存，并让页面响应清理站点旧缓存，避免浏览器复用旧 JS chunk 导致历史页编辑按钮等新 UI 不出现。
 - 扩展 `public/_headers` 的缓存兜底规则，补充 `/_next/*`、`.txt`、`.json` 和 `/api/*` 的缓存声明。

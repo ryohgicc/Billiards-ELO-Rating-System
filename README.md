@@ -193,10 +193,10 @@ npx wrangler d1 migrations list billiards-elo-db --remote
 - 开启 Brotli 压缩
 - 开启 HTTP/3
 - 开启 Early Hints
-- 为 `/_next/*` 配置短缓存，为图片资源配置长缓存
+- 为 `/_next/static/*` 配置长期 immutable 缓存，为 HTML 入口配置 `no-cache`
 - 为 `/api/*` 配置跳过缓存，避免录入比赛后数据长时间不刷新
 
-仓库里的 `public/_headers` 已经为 Next.js chunk、静态资源和 HTML 配置了保守缓存；页面响应会清理站点旧缓存，避免浏览器继续使用过期 JS；`/api/state` 在 Worker 内有 10 秒短缓存，并会在写入后清理。更详细的免费加速清单见 `docs/deployment/cloudflare-free-acceleration.md`。
+仓库里的 `public/_headers` 已经为 Next.js chunk、静态资源和 HTML 配置了缓存兜底；带 hash 的 `/_next/static/*` 使用长期 immutable 缓存，HTML 入口使用 `no-cache` 以便每次校验最新构建引用，避免长期使用 `Clear-Site-Data` 反复清空浏览器缓存；`/api/state` 在 Worker 内有 10 秒短缓存，并会在写入后清理。更详细的免费加速清单见 `docs/deployment/cloudflare-free-acceleration.md`。
 
 ## 数据说明
 
