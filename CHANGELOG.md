@@ -43,7 +43,7 @@ All notable changes to this project will be documented in this file.
 - AI 赛后锐评 prompt 现在会传入比赛标签含义和事实边界，减少把未勾选标签、比分或额外剧情写成事实的情况。
 
 ### Fixed
-- 修复预约页每日排序历史日期在桌面端被压缩成省略号的问题，并让排序表格回到更紧凑的两列展示。
+- 修复预约页每日排序历史日期在桌面端被压缩成省略号的问题，并统一使用排序名单行展示，确保球员名称在桌面和手机端都可见。
 - Slack 战报接口改为使用与网页历史页一致的固定赛季 K 值，避免 D1 旧 `settings.kFactor` 导致同一场比赛积分变化与网页不一致。
 - Slack 战报接口在未传 `date` 时默认返回上海当天战报，避免机器人直接请求 `/api/slack/battle-report` 拿不到数据。
 - Slack 战报接口补充 `streakBreakerBonus` 和 `winStreakBonus` 字段，并在逐场结果文案中标注终结连胜奖励和连胜延续奖励。

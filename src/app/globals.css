@@ -1859,10 +1859,6 @@ button {
   line-height: 1.1;
 }
 
-.reservation-list {
-  display: none;
-}
-
 .reservation-history {
   gap: 0.5rem;
   margin-bottom: 0.9rem;
@@ -1881,18 +1877,9 @@ button {
   white-space: nowrap;
 }
 
-.reservation-table-wrap .ranking-table {
-  table-layout: fixed;
-}
-
-.reservation-table-wrap .ranking-table th:first-child,
-.reservation-table-wrap .ranking-table td:first-child {
-  width: 7rem;
-}
-
-.reservation-table-wrap .ranking-table th:last-child,
-.reservation-table-wrap .ranking-table td:last-child {
-  text-align: right;
+.reservation-list {
+  display: grid;
+  gap: 0.55rem;
 }
 
 .reservation-card {
@@ -1924,6 +1911,10 @@ button {
 .reservation-card h3 {
   color: var(--text);
   font-size: 1.08rem;
+}
+
+.reservation-card > div {
+  min-width: 0;
 }
 
 .reservation-table-wrap code,
@@ -2855,11 +2846,6 @@ button {
 
   .reservation-hero__meta {
     grid-template-columns: 1fr;
-  }
-
-  .reservation-list {
-    display: grid;
-    gap: 0.65rem;
   }
 
   .academy-hero__cue {

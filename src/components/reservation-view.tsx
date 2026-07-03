@@ -128,38 +128,17 @@ export function ReservationView() {
         ) : null}
 
         {reservationOrder.length > 0 ? (
-          <>
-            <div className="reservation-list">
-              {reservationOrder.map((entry) => (
-                <article className="reservation-card" key={entry.player.id}>
-                  <span className="reservation-card__order">#{entry.order}</span>
-                  <div>
-                    <h3>{entry.player.name}</h3>
-                    <p>随机签号 {entry.drawNumberLabel}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-
-            <div className="table-wrap reservation-table-wrap">
-              <table className="ranking-table">
-                <thead>
-                  <tr>
-                    <th>顺序</th>
-                    <th>球员</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reservationOrder.map((entry) => (
-                    <tr key={entry.player.id}>
-                      <td>#{entry.order}</td>
-                      <td>{entry.player.name}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+          <div className="reservation-list" aria-label="每日排序名单">
+            {reservationOrder.map((entry) => (
+              <article className="reservation-card" key={entry.player.id}>
+                <span className="reservation-card__order">#{entry.order}</span>
+                <div>
+                  <h3>{entry.player.name}</h3>
+                  <p>随机签号 {entry.drawNumberLabel}</p>
+                </div>
+              </article>
+            ))}
+          </div>
         ) : null}
       </section>
 
