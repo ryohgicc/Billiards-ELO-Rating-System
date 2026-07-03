@@ -900,6 +900,15 @@ button {
   color: #ffc6bf;
 }
 
+.button--icon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.65rem;
+  min-width: 2.65rem;
+  min-height: 2.65rem;
+  padding: 0;
+}
+
 .feedback {
   margin-top: 0.9rem;
   padding: 0.9rem 1rem;
@@ -2695,8 +2704,8 @@ button {
   }
 
   .history-card__actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-wrap: wrap;
     width: 100%;
   }
 
@@ -2714,7 +2723,7 @@ button {
   }
 
   .history-card__actions--inline {
-    grid-template-columns: 1fr 1fr;
+    justify-content: flex-start;
   }
 
   .history-card__title h3 {
@@ -2741,7 +2750,13 @@ button {
   }
 
   .history-card .button {
-    width: 100%;
+    flex: 1 1 7rem;
+    width: auto;
+  }
+
+  .history-card .button--icon {
+    flex: 0 0 2.65rem;
+    width: 2.65rem;
   }
 
   .player-row {

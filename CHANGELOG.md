@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 - 预约页每日排序带上历史记录，可按日期查看从首位启用球员创建日到今天的每一天排序。
 - 新增 `GET /api/reservation-order?date=YYYY-MM-DD`，返回指定上海日期的每日排序 JSON，供 Slack 机器人读取抽签顺序。
 - 新增 `GET /api/slack/battle-report?date=YYYY-MM-DD`，返回指定上海日期的 Slack 今日战报 JSON，包含可直接发送的 Markdown 文案、逐场积分变化和当日胜负榜。
+- 比赛历史支持上移/下移单场比赛，保存到 D1 后会按新顺序回放并重算积分。
 - 比赛历史支持编辑单场比赛，可修改胜负方、精彩瞬间和双方备注，保存后自动重算积分并清理该场旧 AI 锐评。
 - 积分系统新增连胜延续奖励：胜者赢下本场后达到 3 连胜及以上时，按自己的 K 值获得额外加分，并可与终结连胜奖励叠加。
 - 积分系统新增终结连胜奖励：打断对手 3 连胜及以上时，胜者按自己的 K 值获得额外加分，历史页和录入成功提示会显示奖励来源。
@@ -53,6 +54,7 @@ All notable changes to this project will be documented in this file.
 - 优化排行榜手机端布局，修复榜首卡、球员照片和排名卡片在窄屏下挤出屏幕或占用过高的问题。
 - 收紧排行榜首屏布局，减少顶部、导航、榜首卡和表格行距，避免桌面视口需要滚动过多才能看到核心排名信息。
 - 球员列表和预览中的 AI 素材不再重复展示 AI 称号、身价和评价，避免和独立评价字段混在一起。
+- 调整比赛历史顺序会清理旧球员 AI 概览，避免赛季积分回放改变后继续展示旧评价。
 
 ### Tested
 - `npm test -- worker/index.test.ts`

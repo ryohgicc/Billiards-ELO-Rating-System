@@ -413,4 +413,76 @@ describe("worker match API", () => {
       ]),
     );
   });
+
+  it("reorders adjacent matches by swapping their timestamps and clears player AI profiles", async () => {
+    const db = createDb({
+      players: [
+        {
+          id: "player-gjj",
+          name: "gjj",
+          created_at: "2026-06-01T00:00:00.000Z",
+          is_active: 1,
+        },
+        {
+          id: "player-ppz",
+          name: "ppz",
+          created_at: "2026-06-01T00:01:00.000Z",
+          is_active: 1,
+        },
+      ],
+      matches: [
+        {
+          id: "match-001",
+          winner_id: "player-gjj",
+          loser_id: "player-ppz",
+          created_at: "2026-06-23T08:02:00.000Z",
+          winner_moments: JSON.stringify([]),
+          loser_moments: JSON.stringify([]),
+          winner_note: "",
+          loser_note: "",
+        },
+        {
+          id: "match-002",
+          winner_id: "player-ppz",
+          loser_id: "player-gjj",
+          created_at: "2026-06-23T08:03:00.000Z",
+          winner_moments: JSON.stringify([]),
+          loser_moments: JSON.stringify([]),
+          winner_note: "",
+          loser_note: "",
+        },
+      ],
+      settings: [{ key: "kFactor", value: "100" }],
+    });
+
+    const response = await worker.fetch(
+      new Request("https://score.example.com/api/matches/match-002/reorder", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ targetMatchId: "match-001" }),
+      }),
+      { DB: db },
+      createCtx(),
+    );
+
+    expect(response.status).toBe(200);
+    expect(db.statements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sql: "UPDATE matches SET created_at = ? WHERE id = ?",
+          values: ["2026-06-23T08:02:00.000Z", "match-002"],
+        }),
+        expect.objectContaining({
+          sql: "UPDATE matches SET created_at = ? WHERE id = ?",
+          values: ["2026-06-23T08:03:00.000Z", "match-001"],
+        }),
+        expect.objectContaining({
+          sql: "DELETE FROM player_ai_profiles",
+          values: [],
+        }),
+      ]),
+    );
+  });
 });

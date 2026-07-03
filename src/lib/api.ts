@@ -90,6 +90,12 @@ export const api = {
       method: "DELETE",
     });
   },
+  reorderMatch(matchId: string, targetMatchId: string) {
+    return requestState(`/api/matches/${encodeURIComponent(matchId)}/reorder`, {
+      method: "POST",
+      body: JSON.stringify({ targetMatchId }),
+    });
+  },
   updateTitle(title: string) {
     return requestState("/api/settings", {
       method: "PUT",

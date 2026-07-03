@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
 import { formatDateTime } from "@/lib/format";
@@ -54,11 +55,12 @@ function toggleMoment(keys: MatchMomentKey[], nextKey: MatchMomentKey) {
 }
 
 export function HistoryView() {
-  const { timeline, removeMatch, updateMatch, isLoaded, state } = useAppState();
+  const { timeline, removeMatch, updateMatch, moveMatch, isLoaded, state } = useAppState();
   const dailyGroups = groupEntriesByLocalDay(timeline);
   const [selectedDateKey, setSelectedDateKey] = useState(dailyGroups[0]?.dateKey ?? "");
   const [editingMatch, setEditingMatch] = useState<EditingMatchState | null>(null);
   const [editingError, setEditingError] = useState("");
+  const [movingMatchId, setMovingMatchId] = useState("");
   const selectedGroup = dailyGroups.find((group) => group.dateKey === selectedDateKey) ?? dailyGroups[0];
   const dailyMovement = summarizeDailyRatingMovement(selectedGroup?.entries ?? []);
   const aiReviewsByMatchId = Object.fromEntries(
@@ -134,10 +136,23 @@ export function HistoryView() {
             </div>
 
             <div className="history-list">
-              {selectedGroup.entries.map((entry) => {
+              {selectedGroup.entries.map((entry, entryIndex) => {
                 const isEditing = editingMatch?.id === entry.id;
                 const winnerOptions = state.players.filter((player) => player.id !== editingMatch?.loserId);
                 const loserOptions = state.players.filter((player) => player.id !== editingMatch?.winnerId);
+                const previousEntry = selectedGroup.entries[entryIndex - 1];
+                const nextEntry = selectedGroup.entries[entryIndex + 1];
+                const isMoving = movingMatchId === entry.id;
+                const moveMatchTo = (targetMatchId: string) => {
+                  setMovingMatchId(entry.id);
+                  moveMatch(entry.id, targetMatchId)
+                    .catch((error) => {
+                      window.alert(error instanceof Error ? error.message : "调整顺序失败");
+                    })
+                    .finally(() => {
+                      setMovingMatchId("");
+                    });
+                };
                 const actionButtons = isEditing && editingMatch ? (
                   <>
                     <button
@@ -170,7 +185,36 @@ export function HistoryView() {
                 ) : (
                   <>
                     <button
+                      aria-label="上移这场比赛"
+                      className="button button--icon"
+                      disabled={!previousEntry || Boolean(movingMatchId)}
+                      onClick={() => {
+                        if (previousEntry) {
+                          moveMatchTo(previousEntry.id);
+                        }
+                      }}
+                      title="上移"
+                      type="button"
+                    >
+                      <ArrowUp aria-hidden="true" size={16} strokeWidth={2.6} />
+                    </button>
+                    <button
+                      aria-label="下移这场比赛"
+                      className="button button--icon"
+                      disabled={!nextEntry || Boolean(movingMatchId)}
+                      onClick={() => {
+                        if (nextEntry) {
+                          moveMatchTo(nextEntry.id);
+                        }
+                      }}
+                      title="下移"
+                      type="button"
+                    >
+                      <ArrowDown aria-hidden="true" size={16} strokeWidth={2.6} />
+                    </button>
+                    <button
                       className="button"
+                      disabled={isMoving}
                       onClick={() => {
                         setEditingMatch(createEditingMatchState(entry));
                         setEditingError("");
@@ -181,6 +225,7 @@ export function HistoryView() {
                     </button>
                     <button
                       className="button button--danger"
+                      disabled={isMoving}
                       onClick={() => {
                         if (window.confirm("删除后会重算积分，确定继续吗？")) {
                           removeMatch(entry.id).catch((error) => {

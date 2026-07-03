@@ -112,6 +112,7 @@ type AppStateContextValue = {
     },
   ) => Promise<void>;
   removeMatch: (matchId: string) => Promise<void>;
+  moveMatch: (matchId: string, targetMatchId: string) => Promise<void>;
   updateTitle: (title: string) => Promise<void>;
   replaceStateFromImport: (payload: string) => Promise<void>;
   clearAllData: () => Promise<void>;
@@ -343,6 +344,13 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     },
     async removeMatch(matchId) {
       applyServerState(await api.deleteMatch(matchId));
+    },
+    async moveMatch(matchId, targetMatchId) {
+      if (matchId === targetMatchId) {
+        return;
+      }
+
+      applyServerState(await api.reorderMatch(matchId, targetMatchId));
     },
     async updateMatch(matchId, payload) {
       const { winnerId, loserId } = payload;

@@ -846,6 +846,39 @@ async function updateMatch(matchId: string, request: Request, env: Env) {
   return freshStateResponse(request, env);
 }
 
+async function reorderMatch(matchId: string, request: Request, env: Env) {
+  const body = (await readJson(request)) as { targetMatchId?: unknown };
+  const targetMatchId = String(body.targetMatchId ?? "");
+
+  if (!targetMatchId || targetMatchId === matchId) {
+    return errorResponse("目标比赛记录无效");
+  }
+
+  const matchesResult = await env.DB
+    .prepare("SELECT id, created_at FROM matches WHERE id IN (?, ?)")
+    .bind(matchId, targetMatchId)
+    .all<{ id: string; created_at: string }>();
+  const matches = matchesResult.results ?? [];
+  const currentMatch = matches.find((match) => match.id === matchId);
+  const targetMatch = matches.find((match) => match.id === targetMatchId);
+
+  if (!currentMatch || !targetMatch) {
+    return errorResponse("比赛记录不存在", 404);
+  }
+
+  await env.DB.batch([
+    env.DB
+      .prepare("UPDATE matches SET created_at = ? WHERE id = ?")
+      .bind(targetMatch.created_at, currentMatch.id),
+    env.DB
+      .prepare("UPDATE matches SET created_at = ? WHERE id = ?")
+      .bind(currentMatch.created_at, targetMatch.id),
+    env.DB.prepare("DELETE FROM player_ai_profiles"),
+  ]);
+
+  return freshStateResponse(request, env);
+}
+
 async function updateSettings(request: Request, env: Env) {
   const body = (await readJson(request)) as { title?: unknown };
   const title = String(body.title ?? "").trim() || DEFAULT_SETTINGS.title;
@@ -1023,6 +1056,11 @@ const worker = {
 
       if (url.pathname === "/api/matches" && request.method === "POST") {
         return createMatch(request, env, ctx);
+      }
+
+      const matchReorderMatch = url.pathname.match(/^\/api\/matches\/([^/]+)\/reorder$/);
+      if (matchReorderMatch && request.method === "POST") {
+        return reorderMatch(matchReorderMatch[1], request, env);
       }
 
       const matchMatch = url.pathname.match(/^\/api\/matches\/([^/]+)$/);
