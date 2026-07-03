@@ -147,8 +147,6 @@ export function ReservationView() {
                   <tr>
                     <th>顺序</th>
                     <th>球员</th>
-                    <th>随机签号</th>
-                    <th>每日种子</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -156,10 +154,6 @@ export function ReservationView() {
                     <tr key={entry.player.id}>
                       <td>#{entry.order}</td>
                       <td>{entry.player.name}</td>
-                      <td>
-                        <code>{entry.drawNumberLabel}</code>
-                      </td>
-                      <td>{entry.drawSeed}</td>
                     </tr>
                   ))}
                 </tbody>

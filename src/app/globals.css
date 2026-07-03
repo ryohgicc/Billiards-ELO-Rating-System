@@ -1864,7 +1864,35 @@ button {
 }
 
 .reservation-history {
+  gap: 0.5rem;
   margin-bottom: 0.9rem;
+  overflow-y: hidden;
+}
+
+.reservation-history .date-switcher__button {
+  flex: 0 0 10.8rem;
+  min-width: 10.8rem;
+}
+
+.reservation-history .date-switcher__button span,
+.reservation-history .date-switcher__button strong {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.reservation-table-wrap .ranking-table {
+  table-layout: fixed;
+}
+
+.reservation-table-wrap .ranking-table th:first-child,
+.reservation-table-wrap .ranking-table td:first-child {
+  width: 7rem;
+}
+
+.reservation-table-wrap .ranking-table th:last-child,
+.reservation-table-wrap .ranking-table td:last-child {
+  text-align: right;
 }
 
 .reservation-card {
