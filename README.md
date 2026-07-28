@@ -142,6 +142,10 @@ npm run dev
 
 打开 [http://localhost:3000](http://localhost:3000) 查看网站。
 
+## Agent 工作流
+
+`docs/agent-workflow.md` 记录了可复用的 agent 协作流程，包括任务分级、命令矩阵模板、迁移安全、部署交付、Git 安全、文档和交接规则。仓库根目录的 `AGENTS.md` 是当前项目的适配层，保留项目画像、命令清单、D1 风险区域和本项目专属约定。
+
 ## 可用命令
 
 ```bash

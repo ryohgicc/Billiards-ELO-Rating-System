@@ -22,6 +22,7 @@ All notable changes to this project will be documented in this file.
 - 为 `2026-06-01` 每日排序追加公开重置盐值 `reset-6`，强制重新生成当天随机顺序。
 
 ### Changed
+- 新增 `docs/agent-workflow.md` 作为可复用的 agent 工作流模板，并将 `AGENTS.md` 收窄为当前项目的适配层；通用流程现在要求新项目自动创建并持续维护 `README.md`。
 - 将 `/_next/static/*` 恢复为长期 immutable 缓存，并把 HTML 页面入口改为 `no-cache` 校验，移除常驻 `Clear-Site-Data`，减少代理和弱网环境下重复下载前端资源。
 - 固定赛季评分统一使用 `DEFAULT_K_FACTOR=100`，排行榜月度归档、球员预览和 Worker 状态接口都会忽略 D1 中遗留的旧 `settings.kFactor`，避免历史页与排行榜分数不一致。
 - 每日排序随机签号不再把球员名称放入 hash 输入，改名不会影响当天抽签结果。
