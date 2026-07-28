@@ -235,15 +235,15 @@ describe("buildSlackBattleReport", () => {
 
     expect(report.matches[2]).toMatchObject({
       id: "match-003",
-      winStreakBonus: 5,
+      winStreakBonus: 0,
       streakBreakerBonus: 0,
     });
     expect(report.matches[3]).toMatchObject({
       id: "match-004",
-      streakBreakerBonus: 8,
+      streakBreakerBonus: 0,
       winStreakBonus: 0,
     });
-    expect(report.message).toContain("连胜延续奖励 +5");
-    expect(report.message).toContain("终结连胜奖励 +8");
+    expect(report.message).not.toContain("连胜延续奖励");
+    expect(report.message).not.toContain("终结连胜奖励");
   });
 });

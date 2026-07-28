@@ -116,6 +116,16 @@ export type PlayerStats = {
   lastMatchAt?: string;
 };
 
+export type MonthlyPlayerRating = PlayerStats & {
+  monthKey: string;
+  seedHiddenRating: number;
+  calibratedRating: number;
+  calibrationMatches: number;
+  formalStartRating: number | null;
+  isCalibrated: boolean;
+  formalRatingDelta: number;
+};
+
 export type RankingEntry = PlayerStats & {
   rank: number;
   winRate: number;
@@ -124,6 +134,16 @@ export type RankingEntry = PlayerStats & {
 export type RankingMovement = {
   status: "up" | "down" | "same" | "new";
   places: number;
+};
+
+export type PlayerMonthlyRatingSummary = {
+  monthKey: string;
+  seedHiddenRating: number;
+  calibratedRating: number;
+  calibrationMatches: number;
+  formalStartRating: number | null;
+  finalRating: number;
+  isCalibrated: boolean;
 };
 
 export type PlayerTitle = {
@@ -194,6 +214,8 @@ export type PlayerProfile = {
   worstLossStreak: number;
   currentWinStreak: number;
   currentLossStreak: number;
+  monthlyRating: PlayerMonthlyRatingSummary;
+  monthlyRatings: PlayerMonthlyRatingSummary[];
   recentForm: PlayerRecentForm;
   recentMatches: PlayerRecentMatch[];
   matchHistory: PlayerRecentMatch[];

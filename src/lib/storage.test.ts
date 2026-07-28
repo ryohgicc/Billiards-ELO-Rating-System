@@ -182,7 +182,7 @@ describe("storage helpers", () => {
     const csv = exportMatchRecordsCsv(state, "2026-04");
 
     expect(csv).toContain("序号,比赛ID,比赛时间,月份,胜者,负者");
-    expect(csv).toContain("1,m1,2026-04-27T11:00:00.000Z,2026-04,Alice,\"Bob, Jr.\",+75,-38");
+    expect(csv).toContain("1,m1,2026-04-27T11:00:00.000Z,2026-04,Alice,\"Bob, Jr.\",+75,-75");
     expect(csv).toContain("一杆清台,误进黑八,开球后一路收完,\"输在\"\"黑八\"\"\"");
     expect(csv).not.toContain("m2");
   });

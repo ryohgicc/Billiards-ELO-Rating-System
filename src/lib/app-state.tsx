@@ -17,13 +17,7 @@ import {
   buildMatchTimeline,
   buildRankings,
   buildRankingsForMonth,
-  calculateMatchDelta,
-  calculateStreakBreakerBonus,
-  calculateWinStreakBonus,
   getCurrentLocalMonthKey,
-  getEffectiveKFactor,
-  getLocalMonthKey,
-  replayMatches,
 } from "@/lib/rating";
 import { createEmptyState, importState } from "@/lib/storage";
 import type { AppState, MatchMomentKey, Player, PlayerPhotoRole, PlayerProfile } from "@/lib/types";
@@ -72,10 +66,6 @@ function normalizeSeasonSettings(state: AppState): AppState {
       kFactor: DEFAULT_K_FACTOR,
     },
   };
-}
-
-function filterMatchesForMonth(matches: AppState["matches"], monthKey: string) {
-  return matches.filter((match) => getLocalMonthKey(match.createdAt) === monthKey);
 }
 
 type AppStateContextValue = {
@@ -230,16 +220,16 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   }, [isLoaded, pollMatchAiArtifacts, state]);
 
   const currentMonthKey = getCurrentLocalMonthKey();
-  const currentMonthMatches = filterMatchesForMonth(state.matches, currentMonthKey);
   const rankings = buildRankingsForMonth(state.players, state.matches, currentMonthKey, DEFAULT_K_FACTOR);
   const timeline = buildMatchTimeline(state.players, state.matches, DEFAULT_K_FACTOR);
   const profilesByPlayerId = mergeAiProfilesIntoPlayerProfiles(
     buildPlayerProfiles(
       state.players,
-      currentMonthMatches,
+      state.matches,
       state.photos,
       DEFAULT_K_FACTOR,
       photoSeed,
+      currentMonthKey,
     ),
     state.aiProfiles,
   );
@@ -283,33 +273,6 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       validateMatchPlayers(winnerId, loserId, state.players);
       const details = validateMatchDetails(payload);
 
-      const monthKey = getCurrentLocalMonthKey();
-      const snapshots = replayMatches(
-        state.players,
-        filterMatchesForMonth(state.matches, monthKey),
-        DEFAULT_K_FACTOR,
-      );
-      const winner = snapshots[winnerId];
-      const loser = snapshots[loserId];
-
-      if (!winner || !loser) {
-        throw new Error("球员不存在");
-      }
-
-      const baseKFactor = DEFAULT_K_FACTOR;
-      const winnerKFactor = getEffectiveKFactor(winner.wins + winner.losses, baseKFactor);
-      const loserKFactor = getEffectiveKFactor(loser.wins + loser.losses, baseKFactor);
-      const delta = calculateMatchDelta(winner.rating, loser.rating, {
-        winnerKFactor,
-        loserKFactor,
-      });
-      const streakBreakerBonus = calculateStreakBreakerBonus(
-        loser.currentWinStreak,
-        winnerKFactor,
-      );
-      const winStreakBonus = calculateWinStreakBonus(winner.currentWinStreak, winnerKFactor);
-      const winnerDelta = delta.winnerDelta + streakBreakerBonus + winStreakBonus;
-
       const nextState = await api.createMatch(
         winnerId,
         loserId,
@@ -323,6 +286,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       const aiReview =
         nextState.aiReviews.find((review) => review.matchId === createdMatch?.id)?.review ?? "";
       const aiReviewPending = Boolean(createdMatch?.id) && !aiReview;
+      const updatedTimeline = buildMatchTimeline(
+        nextState.players,
+        nextState.matches,
+        DEFAULT_K_FACTOR,
+      );
+      const feedbackEntry = updatedTimeline.find((entry) => entry.id === createdMatch?.id);
 
       if (createdMatch?.id && aiReviewPending) {
         void pollMatchAiArtifacts(createdMatch.id);
@@ -330,12 +299,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
       return {
         matchId: createdMatch?.id ?? "",
-        winnerName: winner.player.name,
-        loserName: loser.player.name,
-        winnerDelta,
-        loserDelta: delta.loserDelta,
-        streakBreakerBonus,
-        winStreakBonus,
+        winnerName: feedbackEntry?.winnerName ?? "",
+        loserName: feedbackEntry?.loserName ?? "",
+        winnerDelta: feedbackEntry?.winnerDelta ?? 0,
+        loserDelta: feedbackEntry?.loserDelta ?? 0,
+        streakBreakerBonus: feedbackEntry?.streakBreakerBonus ?? 0,
+        winStreakBonus: feedbackEntry?.winStreakBonus ?? 0,
         winnerMoments: details.winnerMoments,
         loserMoments: details.loserMoments,
         aiReview,

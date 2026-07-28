@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">隐藏分、定分赛、正式赛机制图</title>
+  <desc id="desc">解释近三个月隐藏分、每月五场定分赛和第六场起正式赛的台球积分机制。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#10100c"/>
+      <stop offset="0.55" stop-color="#18170f"/>
+      <stop offset="1" stop-color="#0a0a08"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <style>
+      .title { font: 800 64px Arial, "PingFang SC", "Microsoft YaHei", sans-serif; fill: #fff8d8; }
+      .subtitle { font: 400 25px Arial, "PingFang SC", "Microsoft YaHei", sans-serif; fill: #cfc6a2; }
+      .panel-title { font: 800 36px Arial, "PingFang SC", "Microsoft YaHei", sans-serif; fill: #17140b; }
+      .label { font: 700 24px Arial, "PingFang SC", "Microsoft YaHei", sans-serif; fill: #fff5c7; }
+      .body { font: 500 25px Arial, "PingFang SC", "Microsoft YaHei", sans-serif; fill: #f7efd3; }
+      .muted { font: 500 22px Arial, "PingFang SC", "Microsoft YaHei", sans-serif; fill: #c9c0a1; }
+      .formula { font: 700 25px Arial, "PingFang SC", "Microsoft YaHei", sans-serif; fill: #141207; }
+      .small { font: 700 20px Arial, "PingFang SC", "Microsoft YaHei", sans-serif; fill: #141207; }
+      .tiny { font: 700 18px Arial, "PingFang SC", "Microsoft YaHei", sans-serif; fill: #ffdd47; }
+      .outline { stroke: #ffcf2e; stroke-width: 2; fill: rgba(255, 207, 46, 0.08); }
+      .panel { fill: #202019; stroke: #46422f; stroke-width: 2; }
+      .gold { fill: #ffcf2e; }
+      .cream { fill: #fff4c0; }
+      .dark { fill: #141207; }
+      .line { stroke: #ffcf2e; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <path d="M95 165 H1505" stroke="#322f20" stroke-width="2"/>
+  <path d="M95 755 H1505" stroke="#322f20" stroke-width="2"/>
+
+  <g transform="translate(90 72)">
+    <text class="title" x="0" y="0" dominant-baseline="hanging">隐藏分 + 定分赛 + 正式赛</text>
+    <text class="subtitle" x="4" y="86">近 3 个月决定实力锚点，前 5 场完成校准，第 6 场起固定 K=100 冲榜</text>
+  </g>
+
+  <g transform="translate(88 202)" filter="url(#shadow)">
+    <rect class="panel" x="0" y="0" width="430" height="500" rx="18"/>
+    <rect class="gold" x="28" y="28" width="260" height="60" rx="14"/>
+    <text class="panel-title" x="52" y="58" dominant-baseline="middle">1. 月初隐藏分</text>
+
+    <g transform="translate(42 128)">
+      <rect class="outline" x="0" y="0" width="346" height="106" rx="16"/>
+      <circle class="cream" cx="56" cy="53" r="35"/>
+      <circle class="dark" cx="56" cy="53" r="24"/>
+      <text class="tiny" x="49" y="60">8</text>
+      <text class="body" x="112" y="42">取近 3 个月</text>
+      <text class="body" x="112" y="76">月末隐藏分平均值</text>
+    </g>
+
+    <g transform="translate(42 270)">
+      <rect class="cream" x="0" y="0" width="346" height="78" rx="14"/>
+      <text class="formula" x="24" y="49">seedHidden = avg(近3月)</text>
+    </g>
+
+    <text class="body" x="42" y="400">无历史记录：默认 1000</text>
+    <text class="muted" x="42" y="440">隐藏分不直接等于排行榜分</text>
+  </g>
+
+  <g transform="translate(540 202)" filter="url(#shadow)">
+    <rect class="panel" x="0" y="0" width="520" height="500" rx="18"/>
+    <rect class="gold" x="28" y="28" width="300" height="60" rx="14"/>
+    <text class="panel-title" x="52" y="58" dominant-baseline="middle">2. 前 5 场定分赛</text>
+
+    <g transform="translate(44 130)">
+      <rect class="outline" x="0" y="0" width="432" height="95" rx="16"/>
+      <g transform="translate(28 24)">
+        <circle class="gold" cx="24" cy="24" r="24"/><text class="small" x="10" y="31">1/5</text>
+        <circle class="gold" cx="102" cy="24" r="24"/><text class="small" x="88" y="31">2/5</text>
+        <circle class="gold" cx="180" cy="24" r="24"/><text class="small" x="166" y="31">3/5</text>
+        <circle class="gold" cx="258" cy="24" r="24"/><text class="small" x="244" y="31">4/5</text>
+        <circle class="gold" cx="336" cy="24" r="24"/><text class="small" x="322" y="31">5/5</text>
+      </g>
+    </g>
+
+    <text class="body" x="44" y="270">K_cal = 150</text>
+    <text class="body" x="44" y="310">根据双方隐藏分计算胜负预期</text>
+    <text class="muted" x="44" y="350">不用场次分段 K，只做本月校准</text>
+
+    <g transform="translate(44 386)">
+      <rect class="cream" x="0" y="0" width="432" height="78" rx="14"/>
+      <text class="formula" x="22" y="49">deltaHidden = round(150 × (actual - expected))</text>
+    </g>
+  </g>
+
+  <g transform="translate(1082 202)" filter="url(#shadow)">
+    <rect class="panel" x="0" y="0" width="430" height="500" rx="18"/>
+    <rect class="gold" x="28" y="28" width="306" height="60" rx="14"/>
+    <text class="panel-title" x="52" y="58" dominant-baseline="middle">3. 第 6 场起正式赛</text>
+
+    <g transform="translate(46 126)">
+      <rect class="outline" x="0" y="0" width="338" height="116" rx="16"/>
+      <text class="label" x="28" y="45">正式起始分</text>
+      <text class="title" x="28" y="62" font-size="56">1272</text>
+    </g>
+
+    <text class="body" x="46" y="300">定分赛结束后确定起跑线</text>
+    <text class="body" x="46" y="340">固定 K_formal = 100</text>
+    <text class="muted" x="46" y="380">保留现有胜负、扣分、连胜逻辑</text>
+
+    <g transform="translate(46 414)">
+      <rect class="cream" x="0" y="0" width="338" height="58" rx="14"/>
+      <text class="formula" x="22" y="38">publicDelta = 现有规则, K=100</text>
+    </g>
+  </g>
+
+  <g>
+    <path class="line" d="M518 452 H540"/>
+    <path class="line" d="M1060 452 H1082"/>
+    <path class="line" d="M528 438 L542 452 L528 466"/>
+    <path class="line" d="M1070 438 L1084 452 L1070 466"/>
+  </g>
+
+  <g transform="translate(250 785)">
+    <rect x="0" y="0" width="1100" height="70" rx="20" fill="#14140f" stroke="#49442d" stroke-width="2"/>
+    <text class="label" x="72" y="44">近 3 个月</text>
+    <path class="line" d="M250 35 H370"/>
+    <path class="line" d="M356 22 L372 35 L356 48"/>
+    <text class="label" x="430" y="44">5 场定分</text>
+    <path class="line" d="M610 35 H730"/>
+    <path class="line" d="M716 22 L732 35 L716 48"/>
+    <text class="label" x="790" y="44">正式赛冲榜</text>
+  </g>
+</svg>

@@ -1,6 +1,12 @@
 import { DEFAULT_K_FACTOR, DEFAULT_RATING } from "@/lib/constants";
 import { MATCH_MOMENT_OPTIONS, formatMatchMomentLabel } from "@/lib/match-moments";
-import { buildMatchTimeline, replayMatches } from "@/lib/rating";
+import {
+  buildMatchTimeline,
+  buildMonthlyPlayerRatings,
+  getCurrentLocalMonthKey,
+  getLocalMonthKey,
+  getMonthlyPlayerRating,
+} from "@/lib/rating";
 import type {
   MatchMomentKey,
   MatchRecord,
@@ -9,6 +15,7 @@ import type {
   PlayerAchievement,
   PlayerAiProfile,
   PlayerMarketValue,
+  PlayerMonthlyRatingSummary,
   PlayerOpponentSummary,
   PlayerPhoto,
   PlayerPhotoRole,
@@ -469,6 +476,14 @@ function pickResultAwareFeaturedPhoto(
   return resultOnlyPhotos[resultOnlyPhotos.length - 1] ?? null;
 }
 
+function getLatestMatchMonthKey(matches: MatchRecord[]) {
+  const latestMatch = [...matches].sort((left, right) =>
+    right.createdAt.localeCompare(left.createdAt),
+  )[0];
+
+  return latestMatch ? getLocalMonthKey(latestMatch.createdAt) : getCurrentLocalMonthKey();
+}
+
 function roundMarketValue(value: number) {
   return Math.round(value / 50) * 50;
 }
@@ -580,10 +595,13 @@ export function buildPlayerProfiles(
   photos: PlayerPhoto[] = [],
   kFactor = DEFAULT_K_FACTOR,
   photoSeed = "default-photo-seed",
+  monthKey = getLatestMatchMonthKey(matches),
 ): Record<string, PlayerProfile> {
   void photoSeed;
-  const stats = replayMatches(players, matches, kFactor);
-  const timeline = buildMatchTimeline(players, matches, kFactor);
+  const stats = getMonthlyPlayerRating(players, matches, monthKey);
+  const monthMatches = matches.filter((match) => getLocalMonthKey(match.createdAt) === monthKey);
+  const timeline = buildMatchTimeline(players, monthMatches, kFactor);
+  const monthlyRatingsByMonth = buildMonthlyPlayerRatings(players, matches);
   const photosByPlayerId = players.reduce<Record<string, PlayerPhoto[]>>((accumulator, player) => {
     accumulator[player.id] = photos
       .filter((photo) => photo.playerId === player.id)
@@ -627,14 +645,46 @@ export function buildPlayerProfiles(
     const stat = stats[player.id];
     const totalMatches = (stat?.wins ?? 0) + (stat?.losses ?? 0);
     const winRate = totalMatches === 0 ? 0 : (stat?.wins ?? 0) / totalMatches;
+    const finalRating = stat?.isCalibrated
+      ? stat.rating
+      : stat?.calibratedRating ?? DEFAULT_RATING;
+    const monthlyRatings: PlayerMonthlyRatingSummary[] = Object.entries(monthlyRatingsByMonth)
+      .map(([ratingMonthKey, ratingsByPlayerId]) => {
+        const rating = ratingsByPlayerId[player.id];
+
+        if (!rating || rating.wins + rating.losses === 0) {
+          return null;
+        }
+
+        return {
+          monthKey: ratingMonthKey,
+          seedHiddenRating: rating.seedHiddenRating,
+          calibratedRating: rating.calibratedRating,
+          calibrationMatches: rating.calibrationMatches,
+          formalStartRating: rating.formalStartRating,
+          finalRating: rating.isCalibrated ? rating.rating : rating.calibratedRating,
+          isCalibrated: rating.isCalibrated,
+        };
+      })
+      .filter((rating): rating is PlayerMonthlyRatingSummary => Boolean(rating))
+      .sort((left, right) => right.monthKey.localeCompare(left.monthKey));
+    const monthlyRating = monthlyRatings.find((rating) => rating.monthKey === monthKey) ?? {
+      monthKey,
+      seedHiddenRating: stat?.seedHiddenRating ?? DEFAULT_RATING,
+      calibratedRating: stat?.calibratedRating ?? DEFAULT_RATING,
+      calibrationMatches: stat?.calibrationMatches ?? 0,
+      formalStartRating: stat?.formalStartRating ?? null,
+      finalRating,
+      isCalibrated: stat?.isCalibrated ?? false,
+    };
     const context: TitleContext = {
       player,
       wins: stat?.wins ?? 0,
       losses: stat?.losses ?? 0,
-      rating: stat?.rating ?? DEFAULT_RATING,
+      rating: finalRating,
       totalMatches,
       winRate,
-      ratingGain: (stat?.rating ?? DEFAULT_RATING) - DEFAULT_RATING,
+      ratingGain: finalRating - DEFAULT_RATING,
       currentWinStreak: stat?.currentWinStreak ?? 0,
       currentLossStreak: stat?.currentLossStreak ?? 0,
       bestWinStreak: stat?.bestWinStreak ?? 0,
@@ -680,6 +730,8 @@ export function buildPlayerProfiles(
       worstLossStreak: context.worstLossStreak,
       currentWinStreak: context.currentWinStreak,
       currentLossStreak: context.currentLossStreak,
+      monthlyRating,
+      monthlyRatings,
       recentForm,
       recentMatches,
       matchHistory,

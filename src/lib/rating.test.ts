@@ -211,10 +211,9 @@ describe("replayMatches", () => {
 
     const result = replayMatches(players.slice(0, 2), matches);
 
-    // m1: p1(1000) 胜 p2(1000), K=150, 同分 => p1: +75, p2: -37 (系数 0.50)
-    // m2: p2(963) 胜 p1(1075), K=150 => p2: +98, p1: -55 (系数 0.556)
-    expect(result.p1.rating).toBe(1020);
-    expect(result.p2.rating).toBe(1061);
+    // 前 5 场为定分赛，K=150 且使用标准 Elo，不套用正式赛败方动态扣分。
+    expect(result.p1.rating).toBe(969);
+    expect(result.p2.rating).toBe(1031);
     expect(result.p1.wins).toBe(1);
     expect(result.p1.losses).toBe(1);
     expect(result.p1.bestWinStreak).toBe(1);
@@ -249,8 +248,8 @@ describe("replayMatches", () => {
 
     // 移除 m2 后：m1 (p1 胜 p2)，m3 (p2 胜 p3)
     expect(withoutMiddle.p1.rating).toBe(1075);
-    expect(withoutMiddle.p2.rating).toBe(1045);
-    expect(withoutMiddle.p3.rating).toBe(957);
+    expect(withoutMiddle.p2.rating).toBe(1016);
+    expect(withoutMiddle.p3.rating).toBe(909);
   });
 
   it("tracks longest win and loss streaks per player", () => {
@@ -325,20 +324,11 @@ describe("replayMatches", () => {
 
     const timeline = buildMatchTimeline(players, matches);
     const streakBreaker = timeline.find((entry) => entry.id === "m4");
-    const beforeFinal = replayMatches(players, matches.slice(0, -1));
-    const baseDelta = calculateMatchDelta(beforeFinal.p3.rating, beforeFinal.p1.rating, {
-      winnerKFactor: getEffectiveKFactor(beforeFinal.p3.wins + beforeFinal.p3.losses),
-      loserKFactor: getEffectiveKFactor(beforeFinal.p1.wins + beforeFinal.p1.losses),
-    });
 
-    expect(streakBreaker?.streakBreakerBonus).toBe(8);
+    expect(streakBreaker?.streakBreakerBonus).toBe(0);
     expect(streakBreaker?.winStreakBonus).toBe(0);
-    expect(streakBreaker?.winnerDelta).toBe(baseDelta.winnerDelta + 8);
-    expect(streakBreaker?.loserDelta).toBe(baseDelta.loserDelta);
-    expect(streakBreaker?.winnerRatingAfter).toBe(
-      beforeFinal.p3.rating + streakBreaker!.winnerDelta,
-    );
-    expect(streakBreaker?.loserRatingAfter).toBe(beforeFinal.p1.rating + baseDelta.loserDelta);
+    expect(streakBreaker?.winnerDelta).toBe(118);
+    expect(streakBreaker?.loserDelta).toBe(-118);
 
     const result = replayMatches(players, matches);
 
@@ -370,15 +360,10 @@ describe("replayMatches", () => {
 
     const timeline = buildMatchTimeline(players, matches);
     const streakExtension = timeline.find((entry) => entry.id === "m3");
-    const beforeFinal = replayMatches(players, matches.slice(0, -1));
-    const baseDelta = calculateMatchDelta(beforeFinal.p1.rating, beforeFinal.p2.rating, {
-      winnerKFactor: getEffectiveKFactor(beforeFinal.p1.wins + beforeFinal.p1.losses),
-      loserKFactor: getEffectiveKFactor(beforeFinal.p2.wins + beforeFinal.p2.losses),
-    });
 
-    expect(streakExtension?.winStreakBonus).toBe(5);
-    expect(streakExtension?.winnerDelta).toBe(baseDelta.winnerDelta + 5);
-    expect(streakExtension?.loserDelta).toBe(baseDelta.loserDelta);
+    expect(streakExtension?.winStreakBonus).toBe(0);
+    expect(streakExtension?.winnerDelta).toBe(35);
+    expect(streakExtension?.loserDelta).toBe(-35);
 
     const result = replayMatches(players, matches);
 
@@ -428,21 +413,10 @@ describe("replayMatches", () => {
 
     const timeline = buildMatchTimeline(players, matches);
     const stackedBonusMatch = timeline.find((entry) => entry.id === "m6");
-    const beforeFinal = replayMatches(players, matches.slice(0, -1));
-    const baseDelta = calculateMatchDelta(beforeFinal.p3.rating, beforeFinal.p1.rating, {
-      winnerKFactor: getEffectiveKFactor(beforeFinal.p3.wins + beforeFinal.p3.losses),
-      loserKFactor: getEffectiveKFactor(beforeFinal.p1.wins + beforeFinal.p1.losses),
-    });
 
-    const winStreakBonus = calculateWinStreakBonus(
-      beforeFinal.p3.currentWinStreak,
-      getEffectiveKFactor(beforeFinal.p3.wins + beforeFinal.p3.losses),
-    );
-
-    expect(stackedBonusMatch?.winStreakBonus).toBe(winStreakBonus);
-    expect(stackedBonusMatch?.streakBreakerBonus).toBe(8);
-    expect(stackedBonusMatch?.winnerDelta).toBe(baseDelta.winnerDelta + winStreakBonus + 8);
-    expect(stackedBonusMatch?.loserDelta).toBe(baseDelta.loserDelta);
+    expect(stackedBonusMatch?.winStreakBonus).toBe(0);
+    expect(stackedBonusMatch?.streakBreakerBonus).toBe(0);
+    expect(stackedBonusMatch?.loserDelta).toBe(-101);
   });
 
   it("produces deterministic deltas and final ratings across repeated calls", () => {
@@ -538,7 +512,7 @@ describe("buildRankingsThroughLocalDay", () => {
 
     expect(snapshot.map((entry) => entry.player.id)).toEqual(["p1", "p2"]);
     expect(snapshot[0].rating).toBe(1075);
-    expect(snapshot[1].rating).toBe(962);
+    expect(snapshot[1].rating).toBe(925);
   });
 
   it("includes all active players in a monthly day snapshot", () => {
@@ -577,11 +551,11 @@ describe("monthly season rankings", () => {
 
     expect(april.map((entry) => [entry.player.id, entry.rating, entry.wins, entry.losses])).toEqual([
       ["p1", 1075, 1, 0],
-      ["p2", 962, 0, 1],
+      ["p2", 925, 0, 1],
     ]);
     expect(may.map((entry) => [entry.player.id, entry.rating, entry.wins, entry.losses])).toEqual([
-      ["p2", 1075, 1, 0],
-      ["p1", 962, 0, 1],
+      ["p2", 1031, 1, 0],
+      ["p1", 969, 0, 1],
     ]);
   });
 
@@ -623,11 +597,11 @@ describe("monthly season rankings", () => {
       ["2026-05", "2026-05-03"],
       ["2026-04", "2026-04-28"],
     ]);
-    // 2026-04 月末: m1 后 p2(963), m2 后 p1(1020), p2(1061)
+    // 2026-04 月末: 前 2 场仍在定分赛，按标准 Elo K=150 更新。
     expect(snapshots[1].rankings.map((entry) => [entry.player.id, entry.rating])).toEqual([
-      ["p2", 1061],
-      ["p1", 1020],
+      ["p2", 1031],
       ["p3", 1000],
+      ["p1", 969],
     ]);
   });
 
@@ -650,11 +624,11 @@ describe("monthly season rankings", () => {
     const timeline = buildMatchTimeline(players.slice(0, 2), matches);
 
     expect(timeline.map((entry) => [entry.id, entry.winnerDelta, entry.loserDelta])).toEqual([
-      ["m2", 75, -38],
-      ["m1", 75, -38],
+      ["m2", 106, -106],
+      ["m1", 75, -75],
     ]);
-    expect(timeline[0].winnerRatingAfter).toBe(1075);
-    expect(timeline[0].loserRatingAfter).toBe(962);
+    expect(timeline[0].winnerRatingAfter).toBe(1031);
+    expect(timeline[0].loserRatingAfter).toBe(969);
   });
 });
 
@@ -684,9 +658,9 @@ describe("buildPlayerRankDayCounts", () => {
     const counts = buildPlayerRankDayCounts(players, matches);
 
     expect(counts).toEqual({
-      p1: { topDays: 1, bottomDays: 0 },
+      p1: { topDays: 1, bottomDays: 1 },
       p2: { topDays: 1, bottomDays: 2 },
-      p3: { topDays: 1, bottomDays: 1 },
+      p3: { topDays: 1, bottomDays: 0 },
     });
   });
 });

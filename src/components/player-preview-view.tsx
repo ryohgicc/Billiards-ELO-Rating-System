@@ -12,7 +12,6 @@ import { formatCurrency, formatDateTime, formatPercent } from "@/lib/format";
 import {
   buildMonthlyRankingSnapshots,
   getCurrentLocalMonthKey,
-  getLocalMonthKey,
 } from "@/lib/rating";
 import { buildPlayerProfiles, mergeAiProfilesIntoPlayerProfiles } from "@/lib/player-honors";
 
@@ -49,12 +48,6 @@ export function PlayerPreviewView() {
   ];
 
   // 根据选择的月份过滤比赛
-  const selectedMonthMatches = useMemo(() => {
-    return state.matches.filter(
-      (match) => getLocalMonthKey(match.createdAt) === selectedMonthKey,
-    );
-  }, [state.matches, selectedMonthKey]);
-
   // 计算当月战绩
   const monthlyProfilesByPlayerId = useMemo(() => {
     if (selectedMonthKey === currentMonthKey) {
@@ -62,11 +55,13 @@ export function PlayerPreviewView() {
     }
     return buildPlayerProfiles(
       state.players,
-      selectedMonthMatches,
+      state.matches,
       state.photos,
       DEFAULT_K_FACTOR,
+      "default-photo-seed",
+      selectedMonthKey,
     );
-  }, [selectedMonthKey, currentMonthKey, profilesByPlayerId, state.players, selectedMonthMatches, state.photos]);
+  }, [selectedMonthKey, currentMonthKey, profilesByPlayerId, state.players, state.matches, state.photos]);
   const sortedPlayers = [...state.players].sort((left, right) => {
     const leftProfile = totalProfilesByPlayerId[left.id];
     const rightProfile = totalProfilesByPlayerId[right.id];
@@ -90,6 +85,7 @@ export function PlayerPreviewView() {
   const selectedPlayer = filteredPlayers.find((player) => player.id === activePlayerId) ?? filteredPlayers[0];
   const totalProfile = selectedPlayer ? totalProfilesByPlayerId[selectedPlayer.id] : null;
   const monthlyProfile = selectedPlayer ? monthlyProfilesByPlayerId[selectedPlayer.id] : null;
+  const monthlyRanking = monthlyProfile ? monthlyProfile.monthlyRating : null;
 
   if (!isLoaded) {
     return <section className="panel">正在读取球员预览数据...</section>;
@@ -234,14 +230,15 @@ export function PlayerPreviewView() {
                       type="button"
                     >
                       <span>{group.monthLabel}</span>
-                      <strong>
-                        {group.snapshotDateKey ? `保留至 ${group.snapshotDateKey}` : "当前"}
-                      </strong>
-                    </button>
-                  ))}
-                </div>
+                    <strong>
+                      {group.snapshotDateKey ? `保留至 ${group.snapshotDateKey}` : "当前"}
+                    </strong>
+                    {group.monthKey !== currentMonthKey ? null : <small>当前月隐藏分已结算</small>}
+                  </button>
+                ))}
+              </div>
 
-                <div className="preview-stat-grid">
+              <div className="preview-stat-grid">
                   <article className="preview-stat-card">
                     <span>ELO</span>
                     <strong>{monthlyProfile.rating}</strong>
@@ -267,6 +264,15 @@ export function PlayerPreviewView() {
                       {monthlyProfile.bestWinStreak} / {monthlyProfile.worstLossStreak}
                     </strong>
                     <p>最长连胜 / 最长连败</p>
+                  </article>
+                  <article className="preview-stat-card">
+                    <span>月度隐藏分</span>
+                    <strong>{monthlyRanking?.finalRating ?? monthlyProfile.rating}</strong>
+                    <p>
+                      {monthlyRanking?.isCalibrated
+                        ? `定分 ${monthlyRanking.calibrationMatches} 场 · 起始 ${monthlyRanking.formalStartRating ?? monthlyRanking.seedHiddenRating}`
+                        : `校准中 ${monthlyRanking?.calibrationMatches ?? 0}/5`}
+                    </p>
                   </article>
                 </div>
 
@@ -428,6 +434,45 @@ export function PlayerPreviewView() {
                     </div>
                   ) : (
                     <p className="algorithm-note">还没有完整战绩可展示。</p>
+                  )}
+                </section>
+
+                <section className="preview-panel">
+                  <div className="section-heading">
+                    <div>
+                      <p className="eyebrow">Monthly Hidden</p>
+                      <h3>每月隐藏分</h3>
+                    </div>
+                    <span className="section-note">{monthlyProfile.monthlyRatings.length} 个月</span>
+                  </div>
+
+                  {monthlyProfile.monthlyRatings.length > 0 ? (
+                    <div className="preview-match-list">
+                      {monthlyProfile.monthlyRatings.map((rating) => (
+                        <article key={rating.monthKey} className="preview-match-card">
+                          <div className="preview-match-card__top">
+                            <div>
+                              <strong>{rating.monthKey}</strong>
+                              <p>
+                                起始 {rating.seedHiddenRating} · 定分后 {rating.calibratedRating}
+                              </p>
+                            </div>
+                            <div className="preview-match-card__meta">
+                              <span className="title-pill title-pill--legend">
+                                {rating.finalRating}
+                              </span>
+                              <small>
+                                {rating.isCalibrated
+                                  ? `正式 ${rating.formalStartRating ?? rating.seedHiddenRating}`
+                                  : `校准 ${rating.calibrationMatches}/5`}
+                              </small>
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="algorithm-note">还没有月度隐藏分样本。</p>
                   )}
                 </section>
               </section>

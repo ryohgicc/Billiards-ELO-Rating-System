@@ -2,6 +2,7 @@ import { DEFAULT_K_FACTOR, DEFAULT_RATING } from "@/lib/constants";
 import type {
   MatchRecord,
   MatchTimelineEntry,
+  MonthlyPlayerRating,
   Player,
   PlayerStats,
   RankingEntry,
@@ -20,6 +21,10 @@ export const NEW_PLAYER_K_FACTOR = 150;
 export const STABLE_PLAYER_K_FACTOR = 50;
 export const NEW_PLAYER_GAME_THRESHOLD = 10;
 export const STABLE_PLAYER_GAME_THRESHOLD = 30;
+export const CALIBRATION_GAME_COUNT = 5;
+export const CALIBRATION_K_FACTOR = 150;
+export const FORMAL_K_FACTOR = 100;
+export const HIDDEN_RATING_WEIGHTS = [0.5, 0.3, 0.2] as const;
 
 /**
  * 根据分差计算败者扣分系数。
@@ -158,53 +163,251 @@ function createInitialStats(players: Player[]) {
   }, {});
 }
 
+function createInitialMonthlyStats(
+  players: Player[],
+  seedHiddenRatings: Record<string, number>,
+  monthKey: string,
+) {
+  return players.reduce<Record<string, MonthlyPlayerRating>>((accumulator, player) => {
+    const seedHiddenRating = seedHiddenRatings[player.id] ?? DEFAULT_RATING;
+
+    accumulator[player.id] = {
+      player,
+      monthKey,
+      seedHiddenRating,
+      calibratedRating: seedHiddenRating,
+      calibrationMatches: 0,
+      formalStartRating: null,
+      isCalibrated: false,
+      formalRatingDelta: 0,
+      rating: seedHiddenRating,
+      wins: 0,
+      losses: 0,
+      currentWinStreak: 0,
+      currentLossStreak: 0,
+      bestWinStreak: 0,
+      worstLossStreak: 0,
+      lastMatchAt: undefined,
+    };
+
+    return accumulator;
+  }, {});
+}
+
+function getVisibleRating(entry: MonthlyPlayerRating) {
+  return entry.isCalibrated ? entry.rating : entry.calibratedRating;
+}
+
+function calculateCalibrationDelta(playerRating: number, opponentRating: number, actualScore: 0 | 1) {
+  return roundRatingDelta(
+    CALIBRATION_K_FACTOR * (actualScore - getExpectedScore(playerRating, opponentRating)),
+  );
+}
+
+function finalizeCalibration(entry: MonthlyPlayerRating) {
+  if (entry.isCalibrated || entry.calibrationMatches < CALIBRATION_GAME_COUNT) {
+    return;
+  }
+
+  entry.formalStartRating = Math.round(
+    entry.seedHiddenRating * 0.4 + entry.calibratedRating * 0.6,
+  );
+  entry.rating = entry.formalStartRating;
+  entry.isCalibrated = true;
+}
+
+function getWeightedHiddenSeed(monthEndRatings: number[]) {
+  let weightedTotal = 0;
+  let totalWeight = 0;
+
+  for (let index = 0; index < HIDDEN_RATING_WEIGHTS.length; index += 1) {
+    const rating = monthEndRatings[monthEndRatings.length - 1 - index];
+
+    if (rating === undefined) {
+      continue;
+    }
+
+    const weight = HIDDEN_RATING_WEIGHTS[index];
+    weightedTotal += rating * weight;
+    totalWeight += weight;
+  }
+
+  return totalWeight > 0 ? Math.round(weightedTotal / totalWeight) : DEFAULT_RATING;
+}
+
+function updateStreaks(winner: PlayerStats, loser: PlayerStats, createdAt: string) {
+  winner.wins += 1;
+  winner.currentWinStreak += 1;
+  winner.currentLossStreak = 0;
+  winner.bestWinStreak = Math.max(winner.bestWinStreak, winner.currentWinStreak);
+  winner.lastMatchAt = createdAt;
+
+  loser.losses += 1;
+  loser.currentLossStreak += 1;
+  loser.currentWinStreak = 0;
+  loser.worstLossStreak = Math.max(loser.worstLossStreak, loser.currentLossStreak);
+  loser.lastMatchAt = createdAt;
+}
+
+function applyMonthlyMatch(
+  winner: MonthlyPlayerRating,
+  loser: MonthlyPlayerRating,
+  createdAt: string,
+) {
+  const winnerWasCalibrated = winner.isCalibrated;
+  const loserWasCalibrated = loser.isCalibrated;
+  const winnerRatingBefore = getVisibleRating(winner);
+  const loserRatingBefore = getVisibleRating(loser);
+
+  if (!winnerWasCalibrated) {
+    const winnerCalibrationDelta = calculateCalibrationDelta(
+      winnerRatingBefore,
+      loserRatingBefore,
+      1,
+    );
+
+    winner.calibratedRating += winnerCalibrationDelta;
+    winner.calibrationMatches += 1;
+  }
+
+  if (!loserWasCalibrated) {
+    const loserCalibrationDelta = calculateCalibrationDelta(
+      loserRatingBefore,
+      winnerRatingBefore,
+      0,
+    );
+
+    loser.calibratedRating += loserCalibrationDelta;
+    loser.calibrationMatches += 1;
+  }
+
+  finalizeCalibration(winner);
+  finalizeCalibration(loser);
+
+  if (winnerWasCalibrated) {
+    const delta = calculateMatchDelta(winnerRatingBefore, loserRatingBefore, FORMAL_K_FACTOR);
+    const streakBreakerBonus = calculateStreakBreakerBonus(
+      loser.currentWinStreak,
+      FORMAL_K_FACTOR,
+    );
+    const winStreakBonus = calculateWinStreakBonus(winner.currentWinStreak, FORMAL_K_FACTOR);
+    const winnerDelta = delta.winnerDelta + streakBreakerBonus + winStreakBonus;
+
+    winner.rating += winnerDelta;
+    winner.formalRatingDelta += winnerDelta;
+  }
+
+  if (loserWasCalibrated) {
+    const delta = calculateMatchDelta(winnerRatingBefore, loserRatingBefore, FORMAL_K_FACTOR);
+
+    loser.rating += delta.loserDelta;
+    loser.formalRatingDelta += delta.loserDelta;
+  }
+
+  updateStreaks(winner, loser, createdAt);
+}
+
+function buildMonthlyRatingState(
+  players: Player[],
+  matches: MatchRecord[],
+) {
+  const sortedMatches = [...matches].sort((left, right) =>
+    left.createdAt.localeCompare(right.createdAt),
+  );
+  const monthKeys = [...new Set(sortedMatches.map((match) => getLocalMonthKey(match.createdAt)))].sort();
+  const monthEndRatingHistory = players.reduce<Record<string, number[]>>((accumulator, player) => {
+    accumulator[player.id] = [];
+    return accumulator;
+  }, {});
+  const monthlyStatsByMonth: Record<string, Record<string, MonthlyPlayerRating>> = {};
+
+  for (const monthKey of monthKeys) {
+    const seedHiddenRatings = players.reduce<Record<string, number>>((accumulator, player) => {
+      accumulator[player.id] = getWeightedHiddenSeed(monthEndRatingHistory[player.id] ?? []);
+      return accumulator;
+    }, {});
+    const stats = createInitialMonthlyStats(players, seedHiddenRatings, monthKey);
+
+    for (const match of sortedMatches.filter((entry) => getLocalMonthKey(entry.createdAt) === monthKey)) {
+      const winner = stats[match.winnerId];
+      const loser = stats[match.loserId];
+
+      if (!winner || !loser) {
+        continue;
+      }
+
+      applyMonthlyMatch(winner, loser, match.createdAt);
+    }
+
+    monthlyStatsByMonth[monthKey] = stats;
+
+    for (const player of players) {
+      const entry = stats[player.id];
+
+      if (entry && entry.wins + entry.losses > 0) {
+        monthEndRatingHistory[player.id].push(getVisibleRating(entry));
+      }
+    }
+  }
+
+  return monthlyStatsByMonth;
+}
+
+export function buildMonthlyPlayerRatings(
+  players: Player[],
+  matches: MatchRecord[],
+) {
+  return buildMonthlyRatingState(players, matches);
+}
+
+export function getMonthlyPlayerRating(
+  players: Player[],
+  matches: MatchRecord[],
+  monthKey: string,
+) {
+  return buildMonthlyRatingState(players, matches)[monthKey] ?? createInitialMonthlyStats(
+    players,
+    players.reduce<Record<string, number>>((accumulator, player) => {
+      accumulator[player.id] = DEFAULT_RATING;
+      return accumulator;
+    }, {}),
+    monthKey,
+  );
+}
+
 export function replayMatches(
   players: Player[],
   matches: MatchRecord[],
   kFactor = DEFAULT_K_FACTOR,
 ) {
-  const stats = createInitialStats(players);
-  const sortedMatches = [...matches].sort((left, right) =>
-    left.createdAt.localeCompare(right.createdAt),
-  );
+  void kFactor;
 
-  for (const match of sortedMatches) {
-    const winner = stats[match.winnerId];
-    const loser = stats[match.loserId];
-
-    if (!winner || !loser) {
-      continue;
-    }
-
-    const winnerKFactor = getEffectiveKFactor(winner.wins + winner.losses, kFactor);
-    const loserKFactor = getEffectiveKFactor(loser.wins + loser.losses, kFactor);
-    const delta = calculateMatchDelta(winner.rating, loser.rating, {
-      winnerKFactor,
-      loserKFactor,
-    });
-    const streakBreakerBonus = calculateStreakBreakerBonus(
-      loser.currentWinStreak,
-      winnerKFactor,
-    );
-    const winStreakBonus = calculateWinStreakBonus(winner.currentWinStreak, winnerKFactor);
-    const winnerDelta = delta.winnerDelta + streakBreakerBonus + winStreakBonus;
-
-    winner.rating += winnerDelta;
-    winner.wins += 1;
-    winner.currentWinStreak += 1;
-    winner.currentLossStreak = 0;
-    winner.bestWinStreak = Math.max(winner.bestWinStreak, winner.currentWinStreak);
-    winner.lastMatchAt = match.createdAt;
-
-    loser.rating += delta.loserDelta;
-    loser.losses += 1;
-    loser.currentLossStreak += 1;
-    loser.currentWinStreak = 0;
-    loser.worstLossStreak = Math.max(loser.worstLossStreak, loser.currentLossStreak);
-    loser.lastMatchAt = match.createdAt;
+  if (matches.length === 0) {
+    return createInitialStats(players);
   }
 
-  return stats;
+  const monthKey = getLocalMonthKey(
+    [...matches].sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0].createdAt,
+  );
+  const monthlyStats = getMonthlyPlayerRating(players, matches, monthKey);
+
+  return players.reduce<Record<string, PlayerStats>>((accumulator, player) => {
+    const entry = monthlyStats[player.id];
+
+    accumulator[player.id] = {
+      player,
+      rating: entry ? getVisibleRating(entry) : DEFAULT_RATING,
+      wins: entry?.wins ?? 0,
+      losses: entry?.losses ?? 0,
+      currentWinStreak: entry?.currentWinStreak ?? 0,
+      currentLossStreak: entry?.currentLossStreak ?? 0,
+      bestWinStreak: entry?.bestWinStreak ?? 0,
+      worstLossStreak: entry?.worstLossStreak ?? 0,
+      lastMatchAt: entry?.lastMatchAt,
+    };
+
+    return accumulator;
+  }, {});
 }
 
 export function buildRankings(
@@ -259,10 +462,6 @@ export function getLocalMonthKey(value: string) {
   return getLocalDateKey(value).slice(0, 7);
 }
 
-function filterMatchesForMonth(matches: MatchRecord[], monthKey: string) {
-  return matches.filter((match) => getLocalMonthKey(match.createdAt) === monthKey);
-}
-
 export function getCurrentLocalMonthKey(date = new Date()) {
   return getLocalMonthKey(date.toISOString());
 }
@@ -273,7 +472,49 @@ export function buildRankingsForMonth(
   monthKey: string,
   kFactor = DEFAULT_K_FACTOR,
 ) {
-  return buildRankings(players, filterMatchesForMonth(matches, monthKey), kFactor);
+  void kFactor;
+
+  const monthlyStats = getMonthlyPlayerRating(players, matches, monthKey);
+
+  return Object.values(monthlyStats)
+    .filter((entry) => entry.player.isActive)
+    .map((entry) => {
+      const total = entry.wins + entry.losses;
+      const winRate = total === 0 ? 0 : entry.wins / total;
+
+      return {
+        player: entry.player,
+        rating: getVisibleRating(entry),
+        wins: entry.wins,
+        losses: entry.losses,
+        currentWinStreak: entry.currentWinStreak,
+        currentLossStreak: entry.currentLossStreak,
+        bestWinStreak: entry.bestWinStreak,
+        worstLossStreak: entry.worstLossStreak,
+        lastMatchAt: entry.lastMatchAt,
+        winRate,
+        rank: 0,
+      };
+    })
+    .sort((left, right) => {
+      if (right.rating !== left.rating) {
+        return right.rating - left.rating;
+      }
+
+      if (right.winRate !== left.winRate) {
+        return right.winRate - left.winRate;
+      }
+
+      if (right.wins !== left.wins) {
+        return right.wins - left.wins;
+      }
+
+      return left.player.createdAt.localeCompare(right.player.createdAt);
+    })
+    .map((entry, index) => ({
+      ...entry,
+      rank: index + 1,
+    }));
 }
 
 export function buildRankingsThroughLocalDay(
@@ -282,14 +523,12 @@ export function buildRankingsThroughLocalDay(
   dateKey: string,
   kFactor = DEFAULT_K_FACTOR,
 ): RankingEntry[] {
-  const monthKey = dateKey.slice(0, 7);
+  void kFactor;
 
-  return buildRankings(
+  return buildRankingsForMonth(
     players,
-    matches.filter(
-      (match) => getLocalMonthKey(match.createdAt) === monthKey && getLocalDateKey(match.createdAt) <= dateKey,
-    ),
-    kFactor,
+    matches.filter((match) => getLocalDateKey(match.createdAt) <= dateKey),
+    dateKey.slice(0, 7),
   );
 }
 
@@ -424,17 +663,50 @@ export function buildMatchTimeline(
   matches: MatchRecord[],
   kFactor = DEFAULT_K_FACTOR,
 ): MatchTimelineEntry[] {
-  let stats = createInitialStats(players);
-  let activeMonthKey = "";
-  const playerMap = Object.fromEntries(players.map((player) => [player.id, player]));
+  void kFactor;
 
-  return [...matches]
-    .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
+  let activeMonthKey = "";
+  let stats = createInitialMonthlyStats(
+    players,
+    players.reduce<Record<string, number>>((accumulator, player) => {
+      accumulator[player.id] = DEFAULT_RATING;
+      return accumulator;
+    }, {}),
+    "",
+  );
+  const monthEndRatingHistory = players.reduce<Record<string, number[]>>((accumulator, player) => {
+    accumulator[player.id] = [];
+    return accumulator;
+  }, {});
+  const playerMap = Object.fromEntries(players.map((player) => [player.id, player]));
+  const sortedMatches = [...matches].sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+
+  function closeActiveMonth() {
+    if (!activeMonthKey) {
+      return;
+    }
+
+    for (const player of players) {
+      const entry = stats[player.id];
+
+      if (entry && entry.wins + entry.losses > 0) {
+        monthEndRatingHistory[player.id].push(getVisibleRating(entry));
+      }
+    }
+  }
+
+  const timeline = sortedMatches
     .map((match) => {
       const monthKey = getLocalMonthKey(match.createdAt);
 
       if (monthKey !== activeMonthKey) {
-        stats = createInitialStats(players);
+        closeActiveMonth();
+        const seedHiddenRatings = players.reduce<Record<string, number>>((accumulator, player) => {
+          accumulator[player.id] = getWeightedHiddenSeed(monthEndRatingHistory[player.id] ?? []);
+          return accumulator;
+        }, {});
+
+        stats = createInitialMonthlyStats(players, seedHiddenRatings, monthKey);
         activeMonthKey = monthKey;
       }
 
@@ -447,45 +719,62 @@ export function buildMatchTimeline(
         return null;
       }
 
-      const winnerKFactor = getEffectiveKFactor(winner.wins + winner.losses, kFactor);
-      const loserKFactor = getEffectiveKFactor(loser.wins + loser.losses, kFactor);
-      const delta = calculateMatchDelta(winner.rating, loser.rating, {
-        winnerKFactor,
-        loserKFactor,
-      });
-      const streakBreakerBonus = calculateStreakBreakerBonus(
-        loser.currentWinStreak,
-        winnerKFactor,
-      );
-      const winStreakBonus = calculateWinStreakBonus(winner.currentWinStreak, winnerKFactor);
-      const winnerDelta = delta.winnerDelta + streakBreakerBonus + winStreakBonus;
+      const winnerWasCalibrated = winner.isCalibrated;
+      const loserWasCalibrated = loser.isCalibrated;
+      const winnerRatingBefore = getVisibleRating(winner);
+      const loserRatingBefore = getVisibleRating(loser);
+      let winnerDelta = 0;
+      let loserDelta = 0;
+      let streakBreakerBonus = 0;
+      let winStreakBonus = 0;
+
+      if (winnerWasCalibrated) {
+        const delta = calculateMatchDelta(winnerRatingBefore, loserRatingBefore, FORMAL_K_FACTOR);
+        streakBreakerBonus = calculateStreakBreakerBonus(
+          loser.currentWinStreak,
+          FORMAL_K_FACTOR,
+        );
+        winStreakBonus = calculateWinStreakBonus(winner.currentWinStreak, FORMAL_K_FACTOR);
+        winnerDelta = delta.winnerDelta + streakBreakerBonus + winStreakBonus;
+      } else {
+        winnerDelta = calculateCalibrationDelta(winnerRatingBefore, loserRatingBefore, 1);
+      }
+
+      if (loserWasCalibrated) {
+        loserDelta = calculateMatchDelta(
+          winnerRatingBefore,
+          loserRatingBefore,
+          FORMAL_K_FACTOR,
+        ).loserDelta;
+      } else {
+        loserDelta = calculateCalibrationDelta(loserRatingBefore, winnerRatingBefore, 0);
+      }
+
+      const winnerRatingAfter = winnerWasCalibrated
+        ? winner.rating + winnerDelta
+        : winner.calibratedRating + winnerDelta;
+      const loserRatingAfter = loserWasCalibrated
+        ? loser.rating + loserDelta
+        : loser.calibratedRating + loserDelta;
       const entry: MatchTimelineEntry = {
         ...match,
         winnerName: winnerPlayer.name,
         loserName: loserPlayer.name,
         winnerDelta,
-        loserDelta: delta.loserDelta,
+        loserDelta,
         streakBreakerBonus,
         winStreakBonus,
-        winnerRatingAfter: winner.rating + winnerDelta,
-        loserRatingAfter: loser.rating + delta.loserDelta,
+        winnerRatingAfter,
+        loserRatingAfter,
       };
 
-      winner.rating += winnerDelta;
-      winner.wins += 1;
-      winner.currentWinStreak += 1;
-      winner.currentLossStreak = 0;
-      winner.bestWinStreak = Math.max(winner.bestWinStreak, winner.currentWinStreak);
-      winner.lastMatchAt = match.createdAt;
-      loser.rating += delta.loserDelta;
-      loser.losses += 1;
-      loser.currentLossStreak += 1;
-      loser.currentWinStreak = 0;
-      loser.worstLossStreak = Math.max(loser.worstLossStreak, loser.currentLossStreak);
-      loser.lastMatchAt = match.createdAt;
+      applyMonthlyMatch(winner, loser, match.createdAt);
 
       return entry;
     })
-    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
-    .reverse();
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+
+  closeActiveMonth();
+
+  return timeline.reverse();
 }
