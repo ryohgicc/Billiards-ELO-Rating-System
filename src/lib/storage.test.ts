@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   createEmptyState,
+  exportMatchRecordsCsv,
   exportState,
   importState,
   loadState,
@@ -135,5 +136,54 @@ describe("storage helpers", () => {
 
   it("rejects invalid imported payloads", () => {
     expect(() => importState('{"players":"bad"}')).toThrowError("导入文件格式不正确");
+  });
+
+  it("exports monthly match records as CSV with rating details", () => {
+    const state: AppState = {
+      ...createEmptyState(),
+      players: [
+        {
+          id: "p1",
+          name: "Alice",
+          createdAt: "2026-04-01T10:00:00.000Z",
+          isActive: true,
+        },
+        {
+          id: "p2",
+          name: "Bob, Jr.",
+          createdAt: "2026-04-01T10:00:00.000Z",
+          isActive: true,
+        },
+      ],
+      matches: [
+        {
+          id: "m1",
+          winnerId: "p1",
+          loserId: "p2",
+          createdAt: "2026-04-27T11:00:00.000Z",
+          winnerMoments: ["clearance_runout"],
+          loserMoments: ["scratch_black_8"],
+          winnerNote: "开球后一路收完",
+          loserNote: '输在"黑八"',
+        },
+        {
+          id: "m2",
+          winnerId: "p2",
+          loserId: "p1",
+          createdAt: "2026-05-01T11:00:00.000Z",
+          winnerMoments: [],
+          loserMoments: [],
+          winnerNote: "",
+          loserNote: "",
+        },
+      ],
+    };
+
+    const csv = exportMatchRecordsCsv(state, "2026-04");
+
+    expect(csv).toContain("序号,比赛ID,比赛时间,月份,胜者,负者");
+    expect(csv).toContain("1,m1,2026-04-27T11:00:00.000Z,2026-04,Alice,\"Bob, Jr.\",+75,-38");
+    expect(csv).toContain("一杆清台,误进黑八,开球后一路收完,\"输在\"\"黑八\"\"\"");
+    expect(csv).not.toContain("m2");
   });
 });

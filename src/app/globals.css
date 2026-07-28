@@ -564,6 +564,10 @@ button {
   justify-content: space-between;
 }
 
+.button-row--end {
+  justify-content: flex-end;
+}
+
 .ranking-card__top strong {
   font-size: 1.5rem;
   color: var(--accent);

@@ -3,8 +3,9 @@
 import { ChangeEvent, useRef, useState } from "react";
 
 import { formatDateTime } from "@/lib/format";
-import { exportState } from "@/lib/storage";
+import { exportMatchRecordsCsv, exportState } from "@/lib/storage";
 import { useAppState } from "@/lib/app-state";
+import { getLocalMonthKey } from "@/lib/rating";
 
 function TitleEditor({
   currentTitle,
@@ -51,6 +52,15 @@ export function SettingsView() {
   const [aiModelsInput, setAiModelsInput] = useState("");
   const [isEditingAiModels, setIsEditingAiModels] = useState(false);
   const persistedAiModelsInput = state.aiModels.map((entry) => entry.model).join("\n");
+  const availableMatchMonths = [...new Set(state.matches.map((match) => getLocalMonthKey(match.createdAt)))].sort(
+    (left, right) => right.localeCompare(left),
+  );
+  const [selectedMatchExportMonth, setSelectedMatchExportMonth] = useState(
+    availableMatchMonths[0] ?? "",
+  );
+  const activeMatchExportMonth = availableMatchMonths.includes(selectedMatchExportMonth)
+    ? selectedMatchExportMonth
+    : availableMatchMonths[0] ?? "";
 
   function normalizeAiModelInput(raw: string) {
     return raw
@@ -60,15 +70,31 @@ export function SettingsView() {
   }
 
   function handleExport() {
-    const blob = new Blob([exportState(state)], { type: "application/json" });
+    downloadTextFile(exportState(state), "billiards-score-data.json", "application/json");
+    setFeedback("已导出当前数据 JSON。");
+    setError("");
+  }
+
+  function downloadTextFile(content: string, fileName: string, type: string) {
+    const blob = new Blob([content], { type });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
 
     link.href = url;
-    link.download = "billiards-score-data.json";
+    link.download = fileName;
     link.click();
     URL.revokeObjectURL(url);
-    setFeedback("已导出当前数据 JSON。");
+  }
+
+  function handleMatchRecordExport(monthKey?: string) {
+    downloadTextFile(
+      exportMatchRecordsCsv(state, monthKey),
+      monthKey
+        ? `billiards-match-records-${monthKey}.csv`
+        : "billiards-match-records-all.csv",
+      "text/csv;charset=utf-8",
+    );
+    setFeedback(monthKey ? `已导出 ${monthKey} 对战记录 CSV。` : "已导出全部对战记录 CSV。");
     setError("");
   }
 
@@ -243,6 +269,55 @@ export function SettingsView() {
             onChange={handleImport}
             type="file"
           />
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Match Records</p>
+            <h2>对战记录导出</h2>
+          </div>
+          <span className="section-note">{state.matches.length} 场历史比赛</span>
+        </div>
+
+        <div className="form-grid">
+          <label className="field">
+            <span>月份</span>
+            <select
+              disabled={availableMatchMonths.length === 0}
+              onChange={(event) => setSelectedMatchExportMonth(event.target.value)}
+              value={activeMatchExportMonth}
+            >
+              {availableMatchMonths.length > 0 ? (
+                availableMatchMonths.map((monthKey) => (
+                  <option key={monthKey} value={monthKey}>
+                    {monthKey}
+                  </option>
+                ))
+              ) : (
+                <option value="">暂无比赛记录</option>
+              )}
+            </select>
+          </label>
+          <div className="button-row button-row--end">
+            <button
+              className="button button--primary"
+              disabled={!activeMatchExportMonth}
+              onClick={() => handleMatchRecordExport(activeMatchExportMonth)}
+              type="button"
+            >
+              导出所选月份
+            </button>
+            <button
+              className="button"
+              disabled={state.matches.length === 0}
+              onClick={() => handleMatchRecordExport()}
+              type="button"
+            >
+              导出全部历史
+            </button>
+          </div>
         </div>
       </section>
 

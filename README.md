@@ -10,7 +10,7 @@
 - 查看球员预览、AI 锐评、台球规则速查、训练小课和实战技巧
 - 提供 Slack 机器人战报接口，可按日期生成当日 Markdown 战报
 - 所有用户共享同一个 Cloudflare D1 数据库
-- 支持导出/导入 JSON 备份
+- 支持导出/导入 JSON 备份，并可按月或全部历史导出对战记录 CSV
 - 可部署到 Cloudflare Workers 静态资源站点
 
 ## 功能概览
@@ -82,6 +82,7 @@ curl -H "Accept: application/json" "https://your-domain.example/api/slack/battle
 - 修改站点标题
 - 导出 JSON 备份
 - 导入 JSON 恢复
+- 按月或导出全部历史对战记录 CSV，包含胜负方、积分变化、赛后积分、关键瞬间和备注
 - 清空当前浏览器中的本地数据
 - 配置 AI 模型池和接口路由
 - AI 后台生成请求最多等待 60 秒；小米 MiMo 模型会显式关闭 `thinking` 并使用 `max_completion_tokens`，返回结构不正确时最多重试 10 次，历史 AI 补生成会逐场同步处理
@@ -224,6 +225,7 @@ npx wrangler d1 migrations list billiards-elo-db --remote
 - 球员名称校验
 - 比赛录入校验
 - 本地存储导入导出
+- 对战记录 CSV 导出
 
 ## 更新日志
 
