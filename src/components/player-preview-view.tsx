@@ -14,7 +14,7 @@ import {
   getCurrentLocalMonthKey,
   getLocalMonthKey,
 } from "@/lib/rating";
-import { buildPlayerProfiles } from "@/lib/player-honors";
+import { buildPlayerProfiles, mergeAiProfilesIntoPlayerProfiles } from "@/lib/player-honors";
 
 export function PlayerPreviewView() {
   const { state, profilesByPlayerId, isLoaded } = useAppState();
@@ -33,6 +33,12 @@ export function PlayerPreviewView() {
     DEFAULT_K_FACTOR,
   );
   const currentMonthKey = getCurrentLocalMonthKey();
+  const totalProfilesByPlayerId = useMemo(() => {
+    return mergeAiProfilesIntoPlayerProfiles(
+      buildPlayerProfiles(state.players, state.matches, state.photos, DEFAULT_K_FACTOR),
+      state.aiProfiles,
+    );
+  }, [state.aiProfiles, state.matches, state.photos, state.players]);
   const monthOptions = [
     {
       monthKey: currentMonthKey,
@@ -48,9 +54,6 @@ export function PlayerPreviewView() {
       (match) => getLocalMonthKey(match.createdAt) === selectedMonthKey,
     );
   }, [state.matches, selectedMonthKey]);
-
-  // 计算总战绩（所有月份）
-  const totalProfilesByPlayerId = profilesByPlayerId;
 
   // 计算当月战绩
   const monthlyProfilesByPlayerId = useMemo(() => {

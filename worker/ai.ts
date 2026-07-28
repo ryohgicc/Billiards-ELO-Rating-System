@@ -126,7 +126,7 @@ function formatPlayerBundle(label: string, bundle: PlayerBundle) {
 
   return [
     `${label}：${player.name}`,
-    `ELO ${profile.rating}，总战绩 ${profile.wins} 胜 ${profile.losses} 负，胜率 ${Math.round(profile.winRate * 100)}%`,
+    `ELO ${profile.rating}，赛季战绩 ${profile.wins} 胜 ${profile.losses} 负，胜率 ${Math.round(profile.winRate * 100)}%`,
     `当前连胜 ${profile.currentWinStreak}，当前连败 ${profile.currentLossStreak}，最长连胜 ${profile.bestWinStreak}，最长连败 ${profile.worstLossStreak}`,
     `当前规则称号：${currentTitle}`,
     `当前规则估值：$${profile.marketValue.amountUsd}（${profile.marketValue.tier}）`,

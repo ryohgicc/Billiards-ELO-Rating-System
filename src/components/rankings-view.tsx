@@ -2,7 +2,7 @@
 
 import { Activity, ArrowDown, ArrowUp, Gauge, Medal, Trophy } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { EmptyState } from "@/components/empty-state";
 import { PlayerPhotoFrame } from "@/components/player-photo-frame";
@@ -10,6 +10,7 @@ import { DEFAULT_K_FACTOR } from "@/lib/constants";
 import { formatCurrency, formatDateTime, formatPercent } from "@/lib/format";
 import { useAppState } from "@/lib/app-state";
 import { buildLeaderInsight } from "@/lib/leader-insight";
+import { buildPlayerProfiles } from "@/lib/player-honors";
 import {
   buildMonthlyRankingSnapshots,
   buildPlayerRankDayCounts,
@@ -143,10 +144,29 @@ export function RankingsView() {
     selectedMonthMatches,
     DEFAULT_K_FACTOR,
   );
+  const selectedProfilesByPlayerId = useMemo(() => {
+    if (selectedMonthKey === currentMonthKey) {
+      return profilesByPlayerId;
+    }
+
+    return buildPlayerProfiles(
+      state.players,
+      selectedMonthMatches,
+      state.photos,
+      DEFAULT_K_FACTOR,
+    );
+  }, [
+    currentMonthKey,
+    profilesByPlayerId,
+    selectedMonthKey,
+    selectedMonthMatches,
+    state.photos,
+    state.players,
+  ]);
   const rankingMovements = buildRankingMovements(visibleRankings, previousRankings);
   const leader = visibleRankings[0];
   const leaderInsight = buildLeaderInsight(visibleRankings);
-  const leaderProfile = leader ? profilesByPlayerId[leader.player.id] : null;
+  const leaderProfile = leader ? selectedProfilesByPlayerId[leader.player.id] : null;
 
   if (!isLoaded) {
     return <section className="panel">正在读取共享积分数据...</section>;
@@ -299,7 +319,7 @@ export function RankingsView() {
 
         <div className="ranking-list ranking-list--mobile">
           {visibleRankings.map((entry) => {
-            const profile = profilesByPlayerId[entry.player.id];
+            const profile = selectedProfilesByPlayerId[entry.player.id];
 
             return (
               <article
@@ -375,7 +395,7 @@ export function RankingsView() {
             </thead>
             <tbody>
               {visibleRankings.map((entry) => {
-                const profile = profilesByPlayerId[entry.player.id];
+                const profile = selectedProfilesByPlayerId[entry.player.id];
 
                 return (
                   <tr
