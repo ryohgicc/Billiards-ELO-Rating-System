@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { buildPlayerProfiles, mergeAiProfilesIntoPlayerProfiles } from "@/lib/player-honors";
+import {
+  buildPlayerProfiles,
+  buildPlayerRecordTotals,
+  mergeAiProfilesIntoPlayerProfiles,
+} from "@/lib/player-honors";
 import type { MatchRecord, Player, PlayerAiProfile, PlayerPhoto } from "@/lib/types";
 
 const players: Player[] = [
@@ -35,6 +39,51 @@ function createMatch(match: Partial<MatchRecord> & Pick<MatchRecord, "id" | "win
 }
 
 describe("buildPlayerProfiles", () => {
+  it("keeps all-time record totals separate from monthly profile records", () => {
+    const matches = [
+      createMatch({
+        id: "m1",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-29T11:00:00.000Z",
+      }),
+      createMatch({
+        id: "m2",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-30T11:00:00.000Z",
+      }),
+      createMatch({
+        id: "m3",
+        winnerId: "p2",
+        loserId: "p1",
+        createdAt: "2026-05-01T11:00:00.000Z",
+      }),
+    ];
+
+    const monthlyProfiles = buildPlayerProfiles(
+      players.slice(0, 2),
+      matches,
+      [],
+      undefined,
+      undefined,
+      "2026-05",
+    );
+    const recordTotals = buildPlayerRecordTotals(players.slice(0, 2), matches);
+
+    expect(monthlyProfiles.p1).toMatchObject({
+      wins: 0,
+      losses: 1,
+      totalMatches: 1,
+    });
+    expect(recordTotals.p1).toMatchObject({
+      wins: 2,
+      losses: 1,
+      totalMatches: 3,
+      winRate: 2 / 3,
+    });
+  });
+
   it("derives titles, streaks, and ai hooks from history", () => {
     const profiles = buildPlayerProfiles(players, [
       createMatch({

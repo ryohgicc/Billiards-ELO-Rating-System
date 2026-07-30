@@ -46,6 +46,16 @@ type TitleCandidate = PlayerTitle & {
   score: number;
 };
 
+type TotalPlayerStats = {
+  wins: number;
+  losses: number;
+  currentWinStreak: number;
+  currentLossStreak: number;
+  bestWinStreak: number;
+  worstLossStreak: number;
+  lastMatchAt?: string;
+};
+
 type TitleRule = {
   key: string;
   label: string;
@@ -589,6 +599,44 @@ function buildMarketValue(
   };
 }
 
+function buildTotalPlayerStats(players: Player[], matches: MatchRecord[]) {
+  const stats = players.reduce<Record<string, TotalPlayerStats>>((accumulator, player) => {
+    accumulator[player.id] = {
+      wins: 0,
+      losses: 0,
+      currentWinStreak: 0,
+      currentLossStreak: 0,
+      bestWinStreak: 0,
+      worstLossStreak: 0,
+    };
+
+    return accumulator;
+  }, {});
+
+  for (const match of [...matches].sort((left, right) => left.createdAt.localeCompare(right.createdAt))) {
+    const winner = stats[match.winnerId];
+    const loser = stats[match.loserId];
+
+    if (winner) {
+      winner.wins += 1;
+      winner.currentWinStreak += 1;
+      winner.currentLossStreak = 0;
+      winner.bestWinStreak = Math.max(winner.bestWinStreak, winner.currentWinStreak);
+      winner.lastMatchAt = match.createdAt;
+    }
+
+    if (loser) {
+      loser.losses += 1;
+      loser.currentLossStreak += 1;
+      loser.currentWinStreak = 0;
+      loser.worstLossStreak = Math.max(loser.worstLossStreak, loser.currentLossStreak);
+      loser.lastMatchAt = match.createdAt;
+    }
+  }
+
+  return stats;
+}
+
 export function buildPlayerProfiles(
   players: Player[],
   matches: MatchRecord[],
@@ -749,6 +797,33 @@ export function buildPlayerProfiles(
         achievements,
         notesByPlayer[player.id] ?? [],
       ),
+    };
+
+    return accumulator;
+  }, {});
+}
+
+export function buildPlayerRecordTotals(players: Player[], matches: MatchRecord[]) {
+  const stats = buildTotalPlayerStats(players, matches);
+
+  return players.reduce<Record<string, {
+    wins: number;
+    losses: number;
+    totalMatches: number;
+    winRate: number;
+    lastMatchAt?: string;
+  }>>((accumulator, player) => {
+    const stat = stats[player.id];
+    const wins = stat?.wins ?? 0;
+    const losses = stat?.losses ?? 0;
+    const totalMatches = wins + losses;
+
+    accumulator[player.id] = {
+      wins,
+      losses,
+      totalMatches,
+      winRate: totalMatches === 0 ? 0 : wins / totalMatches,
+      lastMatchAt: stat?.lastMatchAt,
     };
 
     return accumulator;

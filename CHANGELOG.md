@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 ### Added
+- 新增 `docs/algorithm-rating-update.md`，用机制图说明“隐藏分 + 定分赛 + 正式赛”的新积分算法。
 - 预约页每日排序带上历史记录，可按日期查看从首位启用球员创建日到今天的每一天排序。
 - 新增 `GET /api/reservation-order?date=YYYY-MM-DD`，返回指定上海日期的每日排序 JSON，供 Slack 机器人读取抽签顺序。
 - 新增 `GET /api/slack/battle-report?date=YYYY-MM-DD`，返回指定上海日期的 Slack 今日战报 JSON，包含可直接发送的 Markdown 文案、逐场积分变化和当日胜负榜。
@@ -22,6 +23,7 @@ All notable changes to this project will be documented in this file.
 - 为 `2026-06-01` 每日排序追加公开重置盐值 `reset-6`，强制重新生成当天随机顺序。
 
 ### Changed
+- 积分算法改为月度隐藏分校准：月初隐藏分取最近 3 个月月末最终分加权平均，前 5 场使用 `K_cal=150` 定分，第 6 场起正式赛固定 `K_formal=100` 并沿用现有正式加减分逻辑。
 - 新增 `docs/agent-workflow.md` 作为可复用的 agent 工作流模板，并将 `AGENTS.md` 收窄为当前项目的适配层；通用流程现在要求新项目自动创建并持续维护 `README.md`。
 - 将 `/_next/static/*` 恢复为长期 immutable 缓存，并把 HTML 页面入口改为 `no-cache` 校验，移除常驻 `Clear-Site-Data`，减少代理和弱网环境下重复下载前端资源。
 - 固定赛季评分统一使用 `DEFAULT_K_FACTOR=100`，排行榜月度归档、球员预览和 Worker 状态接口都会忽略 D1 中遗留的旧 `settings.kFactor`，避免历史页与排行榜分数不一致。

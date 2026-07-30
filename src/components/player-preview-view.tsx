@@ -13,7 +13,11 @@ import {
   buildMonthlyRankingSnapshots,
   getCurrentLocalMonthKey,
 } from "@/lib/rating";
-import { buildPlayerProfiles, mergeAiProfilesIntoPlayerProfiles } from "@/lib/player-honors";
+import {
+  buildPlayerProfiles,
+  buildPlayerRecordTotals,
+  mergeAiProfilesIntoPlayerProfiles,
+} from "@/lib/player-honors";
 
 export function PlayerPreviewView() {
   const { state, profilesByPlayerId, isLoaded } = useAppState();
@@ -38,6 +42,10 @@ export function PlayerPreviewView() {
       state.aiProfiles,
     );
   }, [state.aiProfiles, state.matches, state.photos, state.players]);
+  const totalRecordTotalsByPlayerId = useMemo(
+    () => buildPlayerRecordTotals(state.players, state.matches),
+    [state.matches, state.players],
+  );
   const monthOptions = [
     {
       monthKey: currentMonthKey,
@@ -84,6 +92,7 @@ export function PlayerPreviewView() {
       : filteredPlayers[0]?.id ?? "";
   const selectedPlayer = filteredPlayers.find((player) => player.id === activePlayerId) ?? filteredPlayers[0];
   const totalProfile = selectedPlayer ? totalProfilesByPlayerId[selectedPlayer.id] : null;
+  const totalRecordTotals = selectedPlayer ? totalRecordTotalsByPlayerId[selectedPlayer.id] : null;
   const monthlyProfile = selectedPlayer ? monthlyProfilesByPlayerId[selectedPlayer.id] : null;
   const monthlyRanking = monthlyProfile ? monthlyProfile.monthlyRating : null;
 
@@ -254,9 +263,9 @@ export function PlayerPreviewView() {
                   <article className="preview-stat-card">
                     <span>总战绩</span>
                     <strong>
-                      {totalProfile.wins}-{totalProfile.losses}
+                      {totalRecordTotals?.wins ?? 0}-{totalRecordTotals?.losses ?? 0}
                     </strong>
-                    <p>总胜率 {formatPercent(totalProfile.winRate)}</p>
+                    <p>总胜率 {formatPercent(totalRecordTotals?.winRate ?? 0)}</p>
                   </article>
                   <article className="preview-stat-card">
                     <span>连串纪录</span>

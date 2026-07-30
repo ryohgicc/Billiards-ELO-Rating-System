@@ -17,6 +17,7 @@ import {
   buildRankingMovements,
   buildRankingsForMonth,
   getCurrentLocalMonthKey,
+  getLocalDateKey,
   getLocalMonthKey,
 } from "@/lib/rating";
 import type { RankingMovement } from "@/lib/types";
@@ -100,7 +101,7 @@ function RankingMovementBadge({ movement }: { movement: RankingMovement }) {
 
 function RankDayTags({ bottomDays, topDays }: { bottomDays: number; topDays: number }) {
   return (
-    <span className="ranking-day-tags" title="按有比赛的日期快照统计">
+    <span className="ranking-day-tags" title="按排行榜生效的日历日统计">
       <span className="ranking-day-tag ranking-day-tag--top">登顶 {topDays} 天</span>
       <span className="ranking-day-tag ranking-day-tag--bottom">垫底 {bottomDays} 天</span>
     </span>
@@ -139,9 +140,15 @@ export function RankingsView() {
   const selectedMonthMatches = state.matches.filter(
     (match) => getLocalMonthKey(match.createdAt) === selectedMonthKey,
   );
+  const rankDayCountEndDateKey =
+    selectedMonthKey === currentMonthKey
+      ? getLocalDateKey(new Date().toISOString())
+      : selectedSnapshot?.snapshotDateKey;
   const rankDayCounts = buildPlayerRankDayCounts(
     state.players,
-    selectedMonthMatches,
+    state.matches,
+    selectedMonthKey,
+    rankDayCountEndDateKey,
     DEFAULT_K_FACTOR,
   );
   const selectedProfilesByPlayerId = useMemo(() => {

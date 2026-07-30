@@ -576,9 +576,34 @@ export type PlayerRankDayCounts = {
   bottomDays: number;
 };
 
+function addLocalDays(dateKey: string, days: number) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  date.setDate(date.getDate() + days);
+
+  return getLocalDateKey(date.toISOString());
+}
+
+function buildLocalDateRange(startDateKey: string, endDateKey: string) {
+  const dateKeys: string[] = [];
+
+  for (
+    let dateKey = startDateKey;
+    dateKey <= endDateKey;
+    dateKey = addLocalDays(dateKey, 1)
+  ) {
+    dateKeys.push(dateKey);
+  }
+
+  return dateKeys;
+}
+
 export function buildPlayerRankDayCounts(
   players: Player[],
   matches: MatchRecord[],
+  monthKey?: string,
+  endDateKey?: string,
   kFactor = DEFAULT_K_FACTOR,
 ): Record<string, PlayerRankDayCounts> {
   const counts = players.reduce<Record<string, PlayerRankDayCounts>>((accumulator, player) => {
@@ -589,9 +614,23 @@ export function buildPlayerRankDayCounts(
 
     return accumulator;
   }, {});
-  const matchDateKeys = [...new Set(matches.map((match) => getLocalDateKey(match.createdAt)))].sort();
+  const monthlyMatchDateKeys = [
+    ...new Set(
+      matches
+        .map((match) => getLocalDateKey(match.createdAt))
+        .filter((dateKey) => !monthKey || dateKey.startsWith(`${monthKey}-`)),
+    ),
+  ].sort();
 
-  for (const dateKey of matchDateKeys) {
+  if (monthlyMatchDateKeys.length === 0) {
+    return counts;
+  }
+
+  const firstDateKey = monthlyMatchDateKeys[0];
+  const lastDateKey = endDateKey ?? monthlyMatchDateKeys[monthlyMatchDateKeys.length - 1];
+  const dateKeys = buildLocalDateRange(firstDateKey, lastDateKey);
+
+  for (const dateKey of dateKeys) {
     const rankings = buildRankingsThroughLocalDay(players, matches, dateKey, kFactor);
     const topPlayerId = rankings[0]?.player.id;
     const bottomPlayerId = rankings.at(-1)?.player.id;

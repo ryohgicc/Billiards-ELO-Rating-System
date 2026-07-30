@@ -633,7 +633,7 @@ describe("monthly season rankings", () => {
 });
 
 describe("buildPlayerRankDayCounts", () => {
-  it("counts top and bottom days from daily ranking snapshots", () => {
+  it("counts top and bottom days across calendar days after the first monthly match", () => {
     const matches: MatchRecord[] = [
       createMatch({
         id: "m1",
@@ -651,16 +651,46 @@ describe("buildPlayerRankDayCounts", () => {
         id: "m3",
         winnerId: "p3",
         loserId: "p2",
-        createdAt: "2026-04-29T11:00:00.000Z",
+        createdAt: "2026-04-30T11:00:00.000Z",
       }),
     ];
 
-    const counts = buildPlayerRankDayCounts(players, matches);
+    const counts = buildPlayerRankDayCounts(players, matches, "2026-04", "2026-04-30");
 
     expect(counts).toEqual({
-      p1: { topDays: 1, bottomDays: 1 },
-      p2: { topDays: 1, bottomDays: 2 },
+      p1: { topDays: 1, bottomDays: 2 },
+      p2: { topDays: 2, bottomDays: 2 },
       p3: { topDays: 1, bottomDays: 0 },
+    });
+  });
+
+  it("uses full match history when counting days for a selected month", () => {
+    const matches: MatchRecord[] = [
+      createMatch({
+        id: "m1",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-29T11:00:00.000Z",
+      }),
+      createMatch({
+        id: "m2",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-30T11:00:00.000Z",
+      }),
+      createMatch({
+        id: "m3",
+        winnerId: "p2",
+        loserId: "p1",
+        createdAt: "2026-05-01T11:00:00.000Z",
+      }),
+    ];
+
+    const counts = buildPlayerRankDayCounts(players.slice(0, 2), matches, "2026-05", "2026-05-02");
+
+    expect(counts).toEqual({
+      p1: { topDays: 0, bottomDays: 2 },
+      p2: { topDays: 2, bottomDays: 0 },
     });
   });
 });
