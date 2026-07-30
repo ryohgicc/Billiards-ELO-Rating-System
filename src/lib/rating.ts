@@ -682,6 +682,26 @@ export function buildRankingMovements(
   }, {});
 }
 
+export function buildPreviousMonthlyRankings(
+  players: Player[],
+  matches: MatchRecord[],
+  monthKey: string,
+  currentDateKey: string,
+  kFactor = DEFAULT_K_FACTOR,
+) {
+  const previousDateKey = [
+    ...new Set(
+      matches
+        .map((match) => getLocalDateKey(match.createdAt))
+        .filter((dateKey) => dateKey.startsWith(`${monthKey}-`) && dateKey < currentDateKey),
+    ),
+  ].sort().at(-1);
+
+  return previousDateKey
+    ? buildRankingsThroughLocalDay(players, matches, previousDateKey, kFactor)
+    : null;
+}
+
 export function getPreviousRankingDateKey(
   dailyGroups: Array<{ dateKey: string }>,
   selectedViewKey: string,

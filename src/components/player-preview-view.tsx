@@ -95,6 +95,9 @@ export function PlayerPreviewView() {
   const totalRecordTotals = selectedPlayer ? totalRecordTotalsByPlayerId[selectedPlayer.id] : null;
   const monthlyProfile = selectedPlayer ? monthlyProfilesByPlayerId[selectedPlayer.id] : null;
   const monthlyRanking = monthlyProfile ? monthlyProfile.monthlyRating : null;
+  const calibrationRatingChange = monthlyRanking
+    ? monthlyRanking.calibratedRating - monthlyRanking.seedHiddenRating
+    : 0;
 
   if (!isLoaded) {
     return <section className="panel">正在读取球员预览数据...</section>;
@@ -275,13 +278,18 @@ export function PlayerPreviewView() {
                     <p>最长连胜 / 最长连败</p>
                   </article>
                   <article className="preview-stat-card">
-                    <span>月度隐藏分</span>
-                    <strong>{monthlyRanking?.finalRating ?? monthlyProfile.rating}</strong>
+                    <span>本月初始分</span>
+                    <strong>{monthlyRanking?.seedHiddenRating ?? monthlyProfile.rating}</strong>
                     <p>
                       {monthlyRanking?.isCalibrated
-                        ? `定分 ${monthlyRanking.calibrationMatches} 场 · 起始 ${monthlyRanking.formalStartRating ?? monthlyRanking.seedHiddenRating}`
-                        : `校准中 ${monthlyRanking?.calibrationMatches ?? 0}/5`}
+                        ? `正式起跑 ${monthlyRanking.formalStartRating ?? monthlyRanking.seedHiddenRating}`
+                        : "月初隐藏分种子"}
                     </p>
+                  </article>
+                  <article className="preview-stat-card">
+                    <span>定分赛积分变化</span>
+                    <strong>{calibrationRatingChange >= 0 ? `+${calibrationRatingChange}` : calibrationRatingChange}</strong>
+                    <p>定分赛 {monthlyRanking?.calibrationMatches ?? 0}/5</p>
                   </article>
                 </div>
 

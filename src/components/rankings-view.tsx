@@ -14,6 +14,7 @@ import { buildPlayerProfiles } from "@/lib/player-honors";
 import {
   buildMonthlyRankingSnapshots,
   buildPlayerRankDayCounts,
+  buildPreviousMonthlyRankings,
   buildRankingMovements,
   buildRankingsForMonth,
   getCurrentLocalMonthKey,
@@ -133,10 +134,6 @@ export function RankingsView() {
     },
     ...monthlySnapshots.filter((snapshot) => snapshot.monthKey !== currentMonthKey),
   ];
-  const selectedMonthIndex = monthOptions.findIndex((option) => option.monthKey === selectedMonthKey);
-  const previousRankings = selectedMonthIndex >= 0
-    ? monthOptions[selectedMonthIndex + 1]?.rankings ?? null
-    : null;
   const selectedMonthMatches = state.matches.filter(
     (match) => getLocalMonthKey(match.createdAt) === selectedMonthKey,
   );
@@ -144,6 +141,15 @@ export function RankingsView() {
     selectedMonthKey === currentMonthKey
       ? getLocalDateKey(new Date().toISOString())
       : selectedSnapshot?.snapshotDateKey;
+  const previousRankings = rankDayCountEndDateKey
+    ? buildPreviousMonthlyRankings(
+      state.players,
+      state.matches,
+      selectedMonthKey,
+      rankDayCountEndDateKey,
+      DEFAULT_K_FACTOR,
+    )
+    : null;
   const rankDayCounts = buildPlayerRankDayCounts(
     state.players,
     state.matches,

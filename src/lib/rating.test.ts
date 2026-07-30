@@ -8,6 +8,7 @@ import {
   buildRankings,
   buildRankingsForMonth,
   buildRankingsThroughLocalDay,
+  buildPreviousMonthlyRankings,
   calculatePlayerRatingDelta,
   calculateMatchDelta,
   calculateStreakBreakerBonus,
@@ -732,6 +733,43 @@ describe("buildRankingMovements", () => {
 
     expect(movements).toEqual({
       p1: { status: "same", places: 0 },
+    });
+  });
+});
+
+describe("buildPreviousMonthlyRankings", () => {
+  it("compares the current monthly ranking with the previous match day in the same month", () => {
+    const matches: MatchRecord[] = [
+      createMatch({
+        id: "m1",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-06-30T11:00:00.000Z",
+      }),
+      createMatch({
+        id: "m2",
+        winnerId: "p2",
+        loserId: "p1",
+        createdAt: "2026-07-29T11:00:00.000Z",
+      }),
+      createMatch({
+        id: "m3",
+        winnerId: "p3",
+        loserId: "p2",
+        createdAt: "2026-07-30T11:00:00.000Z",
+      }),
+    ];
+
+    const current = buildRankingsThroughLocalDay(players, matches, "2026-07-30");
+    const previous = buildPreviousMonthlyRankings(players, matches, "2026-07", "2026-07-30");
+    const movements = buildRankingMovements(current, previous);
+
+    expect(current.map((entry) => entry.player.id)).toEqual(["p3", "p1", "p2"]);
+    expect(previous?.map((entry) => entry.player.id)).toEqual(["p2", "p3", "p1"]);
+    expect(movements).toEqual({
+      p3: { status: "up", places: 1 },
+      p1: { status: "up", places: 1 },
+      p2: { status: "down", places: 2 },
     });
   });
 });

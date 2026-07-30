@@ -23,6 +23,7 @@ All notable changes to this project will be documented in this file.
 - 为 `2026-06-01` 每日排序追加公开重置盐值 `reset-6`，强制重新生成当天随机顺序。
 
 ### Changed
+- 球员预览页将“月度隐藏分”卡片拆为“本月初始分”和“定分赛积分变化”，更直接展示月初种子和定分阶段表现。
 - 积分算法改为月度隐藏分校准：月初隐藏分取最近 3 个月月末最终分加权平均，前 5 场使用 `K_cal=150` 定分，第 6 场起正式赛固定 `K_formal=100` 并沿用现有正式加减分逻辑。
 - 新增 `docs/agent-workflow.md` 作为可复用的 agent 工作流模板，并将 `AGENTS.md` 收窄为当前项目的适配层；通用流程现在要求新项目自动创建并持续维护 `README.md`。
 - 将 `/_next/static/*` 恢复为长期 immutable 缓存，并把 HTML 页面入口改为 `no-cache` 校验，移除常驻 `Clear-Site-Data`，减少代理和弱网环境下重复下载前端资源。
@@ -47,6 +48,7 @@ All notable changes to this project will be documented in this file.
 - AI 赛后锐评 prompt 现在会传入比赛标签含义和事实边界，减少把未勾选标签、比分或额外剧情写成事实的情况。
 
 ### Fixed
+- 修复排行榜“较前日”误与上个月归档榜比较的问题，现在改为与所选月份内前一个比赛日比较。
 - 修复球员预览和月度排行榜中总战绩、赛季画像混用的问题，并将 AI 赛后 prompt 的月度记录文案从总战绩改为赛季战绩。
 - 修复预约页每日排序历史日期在桌面端被压缩成省略号的问题，并统一使用排序名单行展示，确保球员名称在桌面和手机端都可见。
 - Slack 战报接口改为使用与网页历史页一致的固定赛季 K 值，避免 D1 旧 `settings.kFactor` 导致同一场比赛积分变化与网页不一致。
