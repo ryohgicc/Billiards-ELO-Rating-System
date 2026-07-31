@@ -35,6 +35,7 @@ type Env = {
   OPENAI_MODEL?: string;
   OPENAI_API_URL?: string;
   OPEN_AI_URL?: string;
+  ADMIN_API_TOKEN?: string;
 };
 
 type PlayerRow = {
@@ -115,6 +116,38 @@ const RESERVATION_ORDER_ALGORITHM = "fnv1a32-v1";
 const PLAYER_SLACK_USER_IDS: Record<string, string> = {
   "player-df56bb1c-8f28-4668-b167-b47961e8b922": "U09A9LMK1UG",
 };
+const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+function getAdminApiToken(env: Env) {
+  return env.ADMIN_API_TOKEN?.trim() ?? "";
+}
+
+function readBearerToken(request: Request) {
+  const authorization = request.headers.get("authorization") ?? "";
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+
+  return match?.[1]?.trim() ?? "";
+}
+
+function isWriteRequest(request: Request) {
+  return WRITE_METHODS.has(request.method);
+}
+
+function authorizeWriteRequest(request: Request, env: Env) {
+  const expectedToken = getAdminApiToken(env);
+
+  if (!expectedToken) {
+    return errorResponse("服务器未配置管理员口令", 500);
+  }
+
+  const actualToken = readBearerToken(request);
+
+  if (!actualToken || actualToken !== expectedToken) {
+    return errorResponse("未授权访问", 401);
+  }
+
+  return null;
+}
 
 function jsonResponse(payload: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(payload), {
@@ -1011,6 +1044,14 @@ const worker = {
     const url = new URL(request.url);
 
     try {
+      if (isWriteRequest(request)) {
+        const unauthorizedResponse = authorizeWriteRequest(request, env);
+
+        if (unauthorizedResponse) {
+          return unauthorizedResponse;
+        }
+      }
+
       if (url.pathname === "/api/state" && request.method === "GET") {
         return cachedStateResponse(request, env, ctx);
       }

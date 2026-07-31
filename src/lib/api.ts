@@ -1,12 +1,33 @@
 import type { AppState, MatchMomentKey, PlayerPhotoRole } from "@/lib/types";
+import { ADMIN_TOKEN_STORAGE_KEY } from "@/lib/constants";
+
+let adminToken = "";
+
+function loadAdminToken() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) ?? "";
+}
+
+if (typeof window !== "undefined") {
+  adminToken = loadAdminToken();
+}
 
 async function requestState(path: string, init?: RequestInit): Promise<AppState> {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    ...(init?.headers ? Object.fromEntries(new Headers(init.headers).entries()) : {}),
+  };
+
+  if (adminToken) {
+    headers.authorization = `Bearer ${adminToken}`;
+  }
+
   const response = await fetch(path, {
     ...init,
-    headers: {
-      "content-type": "application/json",
-      ...init?.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -128,5 +149,15 @@ export const api = {
     return requestState("/api/state", {
       method: "DELETE",
     });
+  },
+  getAdminToken() {
+    return adminToken;
+  },
+  setAdminToken(token: string) {
+    adminToken = token.trim();
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, adminToken);
+    }
   },
 };

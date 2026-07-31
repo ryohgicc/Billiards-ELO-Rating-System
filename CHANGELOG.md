@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - 新增 `docs/algorithm-rating-update.md`，用机制图说明“隐藏分 + 定分赛 + 正式赛”的新积分算法。
+- Worker 写接口新增管理员口令鉴权，`/api/state` 的整体覆盖、清空，以及其它写入型 API 现在都需要 `Authorization: Bearer <token>`。
 - 预约页每日排序带上历史记录，可按日期查看从首位启用球员创建日到今天的每一天排序。
 - 新增 `GET /api/reservation-order?date=YYYY-MM-DD`，返回指定上海日期的每日排序 JSON，供 Slack 机器人读取抽签顺序。
 - 新增 `GET /api/slack/battle-report?date=YYYY-MM-DD`，返回指定上海日期的 Slack 今日战报 JSON，包含可直接发送的 Markdown 文案、逐场积分变化和当日胜负榜。

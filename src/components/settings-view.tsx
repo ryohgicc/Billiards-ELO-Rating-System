@@ -2,6 +2,7 @@
 
 import { ChangeEvent, useRef, useState } from "react";
 
+import { ADMIN_TOKEN_STORAGE_KEY } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format";
 import { exportMatchRecordsCsv, exportState } from "@/lib/storage";
 import { useAppState } from "@/lib/app-state";
@@ -42,6 +43,7 @@ export function SettingsView() {
   const {
     state,
     updateTitle,
+    updateAdminToken,
     replaceAiModels,
     resetAiModel,
     replaceStateFromImport,
@@ -49,6 +51,13 @@ export function SettingsView() {
   } = useAppState();
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
+  const [adminToken, setAdminToken] = useState(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+
+    return window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) ?? "";
+  });
   const [aiModelsInput, setAiModelsInput] = useState("");
   const [isEditingAiModels, setIsEditingAiModels] = useState(false);
   const persistedAiModelsInput = state.aiModels.map((entry) => entry.model).join("\n");
@@ -145,6 +154,35 @@ export function SettingsView() {
             }}
           />
         </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Access Control</p>
+            <h2>管理员口令</h2>
+          </div>
+          <span className="section-note">用于写接口鉴权</span>
+        </div>
+
+        <div className="form-grid">
+          <label className="field">
+            <span>Bearer Token</span>
+            <input
+              autoComplete="off"
+              onChange={(event) => {
+                const nextToken = event.target.value;
+                setAdminToken(nextToken);
+                updateAdminToken(nextToken);
+              }}
+              placeholder="部署到 Worker 的管理员口令"
+              value={adminToken}
+            />
+          </label>
+        </div>
+        <p className="algorithm-note">
+          保存后，当前浏览器会在写入 `/api/*` 请求时自动带上 `Authorization` 头。
+        </p>
       </section>
 
       <section className="panel">

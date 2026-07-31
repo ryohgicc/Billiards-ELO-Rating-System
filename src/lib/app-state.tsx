@@ -104,6 +104,7 @@ type AppStateContextValue = {
   removeMatch: (matchId: string) => Promise<void>;
   moveMatch: (matchId: string, targetMatchId: string) => Promise<void>;
   updateTitle: (title: string) => Promise<void>;
+  updateAdminToken: (token: string) => void;
   replaceStateFromImport: (payload: string) => Promise<void>;
   clearAllData: () => Promise<void>;
 };
@@ -341,6 +342,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     async updateTitle(title) {
       const normalized = title.trim();
       applyServerState(await api.updateTitle(normalized || DEFAULT_SETTINGS.title));
+    },
+    updateAdminToken(token) {
+      api.setAdminToken(token);
     },
     async replaceStateFromImport(payload) {
       const nextState = importState(payload);
