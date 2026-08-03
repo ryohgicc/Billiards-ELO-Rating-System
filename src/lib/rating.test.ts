@@ -570,6 +570,24 @@ describe("monthly season rankings", () => {
     ]);
   });
 
+  it("uses weighted hidden seeds for a month with no matches", () => {
+    const matches: MatchRecord[] = [
+      createMatch({
+        id: "m1",
+        winnerId: "p1",
+        loserId: "p2",
+        createdAt: "2026-04-30T11:00:00.000Z",
+      }),
+    ];
+
+    const rankings = buildRankingsForMonth(players.slice(0, 2), matches, "2026-05");
+
+    expect(rankings.map((entry) => [entry.player.id, entry.rating, entry.wins, entry.losses])).toEqual([
+      ["p1", 1075, 0, 0],
+      ["p2", 925, 0, 0],
+    ]);
+  });
+
   it("keeps month-end snapshots on the last match day of each month", () => {
     const matches: MatchRecord[] = [
       createMatch({

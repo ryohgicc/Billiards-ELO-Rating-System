@@ -310,11 +310,19 @@ function applyMonthlyMatch(
 function buildMonthlyRatingState(
   players: Player[],
   matches: MatchRecord[],
+  targetMonthKey?: string,
 ) {
   const sortedMatches = [...matches].sort((left, right) =>
     left.createdAt.localeCompare(right.createdAt),
   );
-  const monthKeys = [...new Set(sortedMatches.map((match) => getLocalMonthKey(match.createdAt)))].sort();
+  const monthKeys = [
+    ...new Set([
+      ...sortedMatches.map((match) => getLocalMonthKey(match.createdAt)),
+      ...(targetMonthKey ? [targetMonthKey] : []),
+    ]),
+  ]
+    .filter((monthKey) => !targetMonthKey || monthKey <= targetMonthKey)
+    .sort();
   const monthEndRatingHistory = players.reduce<Record<string, number[]>>((accumulator, player) => {
     accumulator[player.id] = [];
     return accumulator;
@@ -365,14 +373,7 @@ export function getMonthlyPlayerRating(
   matches: MatchRecord[],
   monthKey: string,
 ) {
-  return buildMonthlyRatingState(players, matches)[monthKey] ?? createInitialMonthlyStats(
-    players,
-    players.reduce<Record<string, number>>((accumulator, player) => {
-      accumulator[player.id] = DEFAULT_RATING;
-      return accumulator;
-    }, {}),
-    monthKey,
-  );
+  return buildMonthlyRatingState(players, matches, monthKey)[monthKey];
 }
 
 export function replayMatches(
