@@ -179,7 +179,6 @@ output: "export"
 - Build command: `npm run build`
 - Deploy command: `npx wrangler deploy`
 - Root directory: `/`
-- 生产环境请设置 `ADMIN_API_TOKEN`，建议用 Cloudflare secret 或环境变量；写接口会通过 `Authorization: Bearer <token>` 鉴权，设置页里的“管理员口令”会自动帮当前浏览器带上这个头。
 
 首次部署前需要创建 D1 数据库，并把 `wrangler.jsonc` 里的 `database_id` 改成自己的数据库 ID。
 

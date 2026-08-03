@@ -115,69 +115,6 @@ describe("worker state API", () => {
     expect(response.status).toBe(200);
     expect(body.settings.kFactor).toBe(100);
   });
-
-  it("rejects state writes without the admin token", async () => {
-    const response = await worker.fetch(
-      new Request("https://score.example.com/api/state", {
-        method: "PUT",
-        body: JSON.stringify({
-          players: [],
-          matches: [],
-          photos: [],
-          aiProfiles: [],
-          aiReviews: [],
-          aiModels: [],
-          settings: {
-            title: "台球积分榜",
-            kFactor: 100,
-          },
-        }),
-      }),
-      {
-        DB: createDb({
-          players: basePlayers,
-          settings: [{ key: "kFactor", value: "100" }],
-        }),
-        ADMIN_API_TOKEN: "secret-token",
-      },
-      createCtx(),
-    );
-
-    expect(response.status).toBe(401);
-  });
-
-  it("allows state writes with the admin token", async () => {
-    const response = await worker.fetch(
-      new Request("https://score.example.com/api/state", {
-        method: "PUT",
-        headers: {
-          authorization: "Bearer secret-token",
-        },
-        body: JSON.stringify({
-          players: [],
-          matches: [],
-          photos: [],
-          aiProfiles: [],
-          aiReviews: [],
-          aiModels: [],
-          settings: {
-            title: "台球积分榜",
-            kFactor: 100,
-          },
-        }),
-      }),
-      {
-        DB: createDb({
-          players: basePlayers,
-          settings: [{ key: "kFactor", value: "100" }],
-        }),
-        ADMIN_API_TOKEN: "secret-token",
-      },
-      createCtx(),
-    );
-
-    expect(response.status).toBe(200);
-  });
 });
 
 describe("worker Slack battle report API", () => {
@@ -432,7 +369,6 @@ describe("worker match API", () => {
         method: "PUT",
         headers: {
           "content-type": "application/json",
-          authorization: "Bearer secret-token",
         },
         body: JSON.stringify({
           winnerId: "player-ppz",
@@ -443,10 +379,7 @@ describe("worker match API", () => {
           loserNote: "黑八失手",
         }),
       }),
-      {
-        DB: db,
-        ADMIN_API_TOKEN: "secret-token",
-      },
+      { DB: db },
       createCtx(),
     );
 
@@ -527,14 +460,10 @@ describe("worker match API", () => {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          authorization: "Bearer secret-token",
         },
         body: JSON.stringify({ targetMatchId: "match-001" }),
       }),
-      {
-        DB: db,
-        ADMIN_API_TOKEN: "secret-token",
-      },
+      { DB: db },
       createCtx(),
     );
 
