@@ -1453,6 +1453,10 @@ button {
   width: fit-content;
 }
 
+.ranking-calibration-pill--spotlight {
+  margin-top: 0.45rem;
+}
+
 .badge-list {
   display: flex;
   gap: 0.45rem;

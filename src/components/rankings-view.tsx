@@ -109,12 +109,22 @@ function RankDayTags({ bottomDays, topDays }: { bottomDays: number; topDays: num
   );
 }
 
-function CalibrationBadge({ calibrationMatches }: { calibrationMatches: number }) {
+function CalibrationBadge({
+  calibrationMatches,
+  className = "",
+}: {
+  calibrationMatches: number;
+  className?: string;
+}) {
   if (calibrationMatches >= 5) {
     return null;
   }
 
-  return <span className="title-pill title-pill--legend ranking-calibration-pill">定级中</span>;
+  return (
+    <span className={`title-pill title-pill--legend ranking-calibration-pill ${className}`.trim()}>
+      定级中
+    </span>
+  );
 }
 
 export function RankingsView() {
@@ -229,6 +239,10 @@ export function RankingsView() {
                   {leader.player.name}
                 </Link>
               </h2>
+              <CalibrationBadge
+                calibrationMatches={leaderProfile?.monthlyRating.calibrationMatches ?? 5}
+                className="ranking-calibration-pill--spotlight"
+              />
               {leaderProfile?.title ? (
                 <span
                   className={
