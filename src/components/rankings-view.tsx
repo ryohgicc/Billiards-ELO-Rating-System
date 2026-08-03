@@ -109,6 +109,14 @@ function RankDayTags({ bottomDays, topDays }: { bottomDays: number; topDays: num
   );
 }
 
+function CalibrationBadge({ calibrationMatches }: { calibrationMatches: number }) {
+  if (calibrationMatches >= 5) {
+    return null;
+  }
+
+  return <span className="title-pill title-pill--legend ranking-calibration-pill">定级中</span>;
+}
+
 export function RankingsView() {
   const { rankings, state, isLoaded, profilesByPlayerId } = useAppState();
   const currentMonthKey = getCurrentLocalMonthKey();
@@ -368,6 +376,7 @@ export function RankingsView() {
                       </h3>
                       <PodiumBadge rank={entry.rank} />
                     </div>
+                    <CalibrationBadge calibrationMatches={profile?.monthlyRating.calibrationMatches ?? 5} />
                     {profile?.title ? (
                       <p className="ranking-card__title-note">{profile.title.label}</p>
                     ) : null}
@@ -444,6 +453,7 @@ export function RankingsView() {
                           <Link href={`/preview?player=${encodeURIComponent(entry.player.id)}`}>
                             {entry.player.name}
                           </Link>
+                          <CalibrationBadge calibrationMatches={profile?.monthlyRating.calibrationMatches ?? 5} />
                           {profile?.title ? <small>{profile.title.label}</small> : null}
                           <RankDayTags
                             bottomDays={rankDayCounts[entry.player.id]?.bottomDays ?? 0}

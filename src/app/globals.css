@@ -1448,6 +1448,11 @@ button {
   color: #bdf4d7;
 }
 
+.ranking-calibration-pill {
+  margin-top: 0.28rem;
+  width: fit-content;
+}
+
 .badge-list {
   display: flex;
   gap: 0.45rem;
