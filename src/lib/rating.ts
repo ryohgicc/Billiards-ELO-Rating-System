@@ -198,10 +198,61 @@ function getVisibleRating(entry: MonthlyPlayerRating) {
   return entry.isCalibrated ? entry.rating : entry.calibratedRating;
 }
 
-function calculateCalibrationDelta(playerRating: number, opponentRating: number, actualScore: 0 | 1) {
+function calculateStandardEloDelta(
+  playerRating: number,
+  opponentRating: number,
+  playerKFactor: number,
+  actualScore: 0 | 1,
+) {
   return roundRatingDelta(
-    CALIBRATION_K_FACTOR * (actualScore - getExpectedScore(playerRating, opponentRating)),
+    playerKFactor * (actualScore - getExpectedScore(playerRating, opponentRating)),
   );
+}
+
+function calculateMonthlyMatchDeltas({
+  winnerRatingBefore,
+  loserRatingBefore,
+  winnerWasCalibrated,
+  loserWasCalibrated,
+  winnerWinStreak,
+  loserWinStreak,
+}: {
+  winnerRatingBefore: number;
+  loserRatingBefore: number;
+  winnerWasCalibrated: boolean;
+  loserWasCalibrated: boolean;
+  winnerWinStreak: number;
+  loserWinStreak: number;
+}) {
+  if (!winnerWasCalibrated || !loserWasCalibrated) {
+    return {
+      winnerDelta: calculateStandardEloDelta(
+        winnerRatingBefore,
+        loserRatingBefore,
+        winnerWasCalibrated ? FORMAL_K_FACTOR : CALIBRATION_K_FACTOR,
+        1,
+      ),
+      loserDelta: calculateStandardEloDelta(
+        loserRatingBefore,
+        winnerRatingBefore,
+        loserWasCalibrated ? FORMAL_K_FACTOR : CALIBRATION_K_FACTOR,
+        0,
+      ),
+      streakBreakerBonus: 0,
+      winStreakBonus: 0,
+    };
+  }
+
+  const delta = calculateMatchDelta(winnerRatingBefore, loserRatingBefore, FORMAL_K_FACTOR);
+  const streakBreakerBonus = calculateStreakBreakerBonus(loserWinStreak, FORMAL_K_FACTOR);
+  const winStreakBonus = calculateWinStreakBonus(winnerWinStreak, FORMAL_K_FACTOR);
+
+  return {
+    winnerDelta: delta.winnerDelta + streakBreakerBonus + winStreakBonus,
+    loserDelta: delta.loserDelta,
+    streakBreakerBonus,
+    winStreakBonus,
+  };
 }
 
 function finalizeCalibration(entry: MonthlyPlayerRating) {
@@ -258,26 +309,22 @@ function applyMonthlyMatch(
   const loserWasCalibrated = loser.isCalibrated;
   const winnerRatingBefore = getVisibleRating(winner);
   const loserRatingBefore = getVisibleRating(loser);
+  const { winnerDelta, loserDelta } = calculateMonthlyMatchDeltas({
+    winnerRatingBefore,
+    loserRatingBefore,
+    winnerWasCalibrated,
+    loserWasCalibrated,
+    winnerWinStreak: winner.currentWinStreak,
+    loserWinStreak: loser.currentWinStreak,
+  });
 
   if (!winnerWasCalibrated) {
-    const winnerCalibrationDelta = calculateCalibrationDelta(
-      winnerRatingBefore,
-      loserRatingBefore,
-      1,
-    );
-
-    winner.calibratedRating += winnerCalibrationDelta;
+    winner.calibratedRating += winnerDelta;
     winner.calibrationMatches += 1;
   }
 
   if (!loserWasCalibrated) {
-    const loserCalibrationDelta = calculateCalibrationDelta(
-      loserRatingBefore,
-      winnerRatingBefore,
-      0,
-    );
-
-    loser.calibratedRating += loserCalibrationDelta;
+    loser.calibratedRating += loserDelta;
     loser.calibrationMatches += 1;
   }
 
@@ -285,23 +332,13 @@ function applyMonthlyMatch(
   finalizeCalibration(loser);
 
   if (winnerWasCalibrated) {
-    const delta = calculateMatchDelta(winnerRatingBefore, loserRatingBefore, FORMAL_K_FACTOR);
-    const streakBreakerBonus = calculateStreakBreakerBonus(
-      loser.currentWinStreak,
-      FORMAL_K_FACTOR,
-    );
-    const winStreakBonus = calculateWinStreakBonus(winner.currentWinStreak, FORMAL_K_FACTOR);
-    const winnerDelta = delta.winnerDelta + streakBreakerBonus + winStreakBonus;
-
     winner.rating += winnerDelta;
     winner.formalRatingDelta += winnerDelta;
   }
 
   if (loserWasCalibrated) {
-    const delta = calculateMatchDelta(winnerRatingBefore, loserRatingBefore, FORMAL_K_FACTOR);
-
-    loser.rating += delta.loserDelta;
-    loser.formalRatingDelta += delta.loserDelta;
+    loser.rating += loserDelta;
+    loser.formalRatingDelta += loserDelta;
   }
 
   updateStreaks(winner, loser, createdAt);
@@ -783,32 +820,19 @@ export function buildMatchTimeline(
       const loserWasCalibrated = loser.isCalibrated;
       const winnerRatingBefore = getVisibleRating(winner);
       const loserRatingBefore = getVisibleRating(loser);
-      let winnerDelta = 0;
-      let loserDelta = 0;
-      let streakBreakerBonus = 0;
-      let winStreakBonus = 0;
-
-      if (winnerWasCalibrated) {
-        const delta = calculateMatchDelta(winnerRatingBefore, loserRatingBefore, FORMAL_K_FACTOR);
-        streakBreakerBonus = calculateStreakBreakerBonus(
-          loser.currentWinStreak,
-          FORMAL_K_FACTOR,
-        );
-        winStreakBonus = calculateWinStreakBonus(winner.currentWinStreak, FORMAL_K_FACTOR);
-        winnerDelta = delta.winnerDelta + streakBreakerBonus + winStreakBonus;
-      } else {
-        winnerDelta = calculateCalibrationDelta(winnerRatingBefore, loserRatingBefore, 1);
-      }
-
-      if (loserWasCalibrated) {
-        loserDelta = calculateMatchDelta(
-          winnerRatingBefore,
-          loserRatingBefore,
-          FORMAL_K_FACTOR,
-        ).loserDelta;
-      } else {
-        loserDelta = calculateCalibrationDelta(loserRatingBefore, winnerRatingBefore, 0);
-      }
+      const {
+        winnerDelta,
+        loserDelta,
+        streakBreakerBonus,
+        winStreakBonus,
+      } = calculateMonthlyMatchDeltas({
+        winnerRatingBefore,
+        loserRatingBefore,
+        winnerWasCalibrated,
+        loserWasCalibrated,
+        winnerWinStreak: winner.currentWinStreak,
+        loserWinStreak: loser.currentWinStreak,
+      });
 
       const winnerRatingAfter = winnerWasCalibrated
         ? winner.rating + winnerDelta

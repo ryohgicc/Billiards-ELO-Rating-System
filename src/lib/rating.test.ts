@@ -649,6 +649,41 @@ describe("monthly season rankings", () => {
     expect(timeline[0].winnerRatingAfter).toBe(1031);
     expect(timeline[0].loserRatingAfter).toBe(969);
   });
+
+  it("treats mixed calibration matches as calibration games without formal bonuses", () => {
+    const matches: MatchRecord[] = [
+      ...Array.from({ length: 5 }, (_, index) =>
+        createMatch({
+          id: `m${index + 1}`,
+          winnerId: "p1",
+          loserId: "p2",
+          createdAt: `2026-04-27T11:0${index}:00.000Z`,
+        }),
+      ),
+      createMatch({
+        id: "m6",
+        winnerId: "p1",
+        loserId: "p3",
+        createdAt: "2026-04-27T11:06:00.000Z",
+      }),
+    ];
+
+    const rankings = buildRankingsForMonth(players, matches, "2026-04");
+    const timeline = buildMatchTimeline(players, matches);
+    const mixedMatch = timeline.find((entry) => entry.id === "m6");
+
+    expect(mixedMatch).toMatchObject({
+      winnerDelta: 34,
+      loserDelta: -51,
+      streakBreakerBonus: 0,
+      winStreakBonus: 0,
+    });
+    expect(rankings.map((entry) => [entry.player.id, entry.rating])).toEqual([
+      ["p1", 1148],
+      ["p3", 949],
+      ["p2", 886],
+    ]);
+  });
 });
 
 describe("buildPlayerRankDayCounts", () => {
