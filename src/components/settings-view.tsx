@@ -3,9 +3,10 @@
 import { ChangeEvent, useRef, useState } from "react";
 
 import { formatDateTime } from "@/lib/format";
-import { exportMatchRecordsCsv, exportState } from "@/lib/storage";
+import { exportMatchRecordsCsv, exportReservationOrderCsv, exportState } from "@/lib/storage";
 import { useAppState } from "@/lib/app-state";
 import { getLocalMonthKey } from "@/lib/rating";
+import { getLocalDateKey } from "@/lib/reservation-order";
 
 function TitleEditor({
   currentTitle,
@@ -61,6 +62,8 @@ export function SettingsView() {
   const activeMatchExportMonth = availableMatchMonths.includes(selectedMatchExportMonth)
     ? selectedMatchExportMonth
     : availableMatchMonths[0] ?? "";
+  const activePlayerCount = state.players.filter((player) => player.isActive).length;
+  const canExportReservationOrders = activePlayerCount > 0;
 
   function normalizeAiModelInput(raw: string) {
     return raw
@@ -95,6 +98,20 @@ export function SettingsView() {
       "text/csv;charset=utf-8",
     );
     setFeedback(monthKey ? `已导出 ${monthKey} 对战记录 CSV。` : "已导出全部对战记录 CSV。");
+    setError("");
+  }
+
+  function handleReservationOrderExport(dateKey?: string) {
+    downloadTextFile(
+      exportReservationOrderCsv(state, dateKey),
+      dateKey
+        ? `billiards-reservation-order-${dateKey}.csv`
+        : "billiards-reservation-order-history.csv",
+      "text/csv;charset=utf-8",
+    );
+    setFeedback(
+      dateKey ? `已导出 ${dateKey} 预约记录 CSV。` : "已导出全部预约记录 CSV。",
+    );
     setError("");
   }
 
@@ -144,6 +161,35 @@ export function SettingsView() {
               }
             }}
           />
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Reservation Records</p>
+            <h2>预约记录导出</h2>
+          </div>
+          <span className="section-note">{activePlayerCount} 位启用球员</span>
+        </div>
+
+        <div className="button-row button-row--end">
+          <button
+            className="button button--primary"
+            disabled={!canExportReservationOrders}
+            onClick={() => handleReservationOrderExport(getLocalDateKey())}
+            type="button"
+          >
+            导出今日预约
+          </button>
+          <button
+            className="button"
+            disabled={!canExportReservationOrders}
+            onClick={() => handleReservationOrderExport()}
+            type="button"
+          >
+            导出全部预约历史
+          </button>
         </div>
       </section>
 

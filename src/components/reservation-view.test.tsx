@@ -40,11 +40,4 @@ describe("ReservationView", () => {
     expect(within(orderList).getByText("Sinyu")).toBeVisible();
     expect(within(orderList).getByText("cwj")).toBeVisible();
   });
-
-  it("shows export actions in the queue header", () => {
-    render(<ReservationView />);
-
-    expect(screen.getAllByRole("button", { name: "导出当天" })).toHaveLength(1);
-    expect(screen.getAllByRole("button", { name: "导出全部" })).toHaveLength(1);
-  });
 });
