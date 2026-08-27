@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   createEmptyState,
   exportMatchRecordsCsv,
+  exportReservationOrderCsv,
   exportState,
   importState,
   loadState,
@@ -185,5 +186,31 @@ describe("storage helpers", () => {
     expect(csv).toContain("1,m1,2026-04-27T11:00:00.000Z,2026-04,Alice,\"Bob, Jr.\",+75,-75");
     expect(csv).toContain("一杆清台,误进黑八,开球后一路收完,\"输在\"\"黑八\"\"\"");
     expect(csv).not.toContain("m2");
+  });
+
+  it("exports reservation history as CSV with daily order details", () => {
+    const state: AppState = {
+      ...createEmptyState(),
+      players: [
+        {
+          id: "p1",
+          name: "Alice",
+          createdAt: "2026-04-01T10:00:00.000Z",
+          isActive: true,
+        },
+        {
+          id: "p2",
+          name: "Bob",
+          createdAt: "2026-04-01T10:00:00.000Z",
+          isActive: true,
+        },
+      ],
+    };
+
+    const csv = exportReservationOrderCsv(state, "2026-04-27");
+
+    expect(csv).toContain("日期,日期标签,名次,球员ID,球员,创建时间,抽签种子,哈希输入,随机签号,随机数");
+    expect(csv).toContain("2026-04-27,2026年4月27日,1,p1,Alice,2026-04-01T10:00:00.000Z");
+    expect(csv).toContain("2026-04-27,2026年4月27日,2,p2,Bob,2026-04-01T10:00:00.000Z");
   });
 });

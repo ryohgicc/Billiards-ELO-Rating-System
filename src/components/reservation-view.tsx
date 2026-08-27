@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, Hash, TimerReset } from "lucide-react";
+import { Download, CalendarClock, Hash, TimerReset } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
 import { useAppState } from "@/lib/app-state";
@@ -10,6 +10,7 @@ import {
   calculateMillisecondsUntilNextLocalMidnight,
   getLocalDateKey,
 } from "@/lib/reservation-order";
+import { exportReservationOrderCsv } from "@/lib/storage";
 
 function formatCountdown(milliseconds: number) {
   const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
@@ -23,10 +24,11 @@ function formatCountdown(milliseconds: number) {
 }
 
 export function ReservationView() {
-  const { activePlayers, isLoaded } = useAppState();
+  const { activePlayers, isLoaded, state } = useAppState();
   const [now, setNow] = useState(() => new Date());
   const [dateSeed, setDateSeed] = useState(() => getLocalDateKey());
   const [selectedDateKey, setSelectedDateKey] = useState(dateSeed);
+  const [feedback, setFeedback] = useState("");
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -61,6 +63,30 @@ export function ReservationView() {
   const visibleDay = selectedDay ?? reservationHistory[0];
   const reservationOrder = visibleDay?.entries ?? [];
   const millisecondsUntilRefresh = calculateMillisecondsUntilNextLocalMidnight(now);
+
+  function downloadTextFile(content: string, fileName: string, type: string) {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleExportReservationOrder(dateKey?: string) {
+    downloadTextFile(
+      exportReservationOrderCsv(state, dateKey),
+      dateKey
+        ? `billiards-reservation-order-${dateKey}.csv`
+        : "billiards-reservation-order-history.csv",
+      "text/csv;charset=utf-8",
+    );
+    setFeedback(
+      dateKey ? `已导出 ${dateKey} 预约记录 CSV。` : "已导出全部预约记录 CSV。",
+    );
+  }
 
   return (
     <div className="stack">
@@ -98,7 +124,18 @@ export function ReservationView() {
             <p className="eyebrow">Queue</p>
             <h2>每日排序</h2>
           </div>
-          <span className="section-note">{visibleDay?.dateLabel ?? "仅启用球员参与"}</span>
+          <div className="section-actions">
+            <span className="section-note">{visibleDay?.dateLabel ?? "仅启用球员参与"}</span>
+            <button
+              className="button button--icon"
+              disabled={reservationHistory.length === 0}
+              onClick={() => handleExportReservationOrder(visibleDay?.dateKey)}
+              type="button"
+            >
+              <Download aria-hidden="true" size={16} />
+              导出
+            </button>
+          </div>
         </div>
 
         {!isLoaded ? <p>正在读取云端球员数据...</p> : null}
@@ -140,6 +177,18 @@ export function ReservationView() {
             ))}
           </div>
         ) : null}
+
+        {reservationHistory.length > 0 ? (
+          <div className="button-row button-row--end">
+            <button
+              className="button"
+              onClick={() => handleExportReservationOrder()}
+              type="button"
+            >
+              导出全部历史
+            </button>
+          </div>
+        ) : null}
       </section>
 
       <section className="panel">
@@ -168,6 +217,8 @@ export function ReservationView() {
           </p>
         </div>
       </section>
+
+      {feedback ? <p className="feedback feedback--success">{feedback}</p> : null}
     </div>
   );
 }

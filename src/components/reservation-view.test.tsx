@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ReservationView } from "@/components/reservation-view";
+import { createEmptyState } from "@/lib/storage";
 import type { Player } from "@/lib/types";
 
 const activePlayers: Player[] = [
@@ -23,6 +24,7 @@ vi.mock("@/lib/app-state", () => ({
   useAppState: () => ({
     activePlayers,
     isLoaded: true,
+    state: createEmptyState(),
   }),
 }));
 
