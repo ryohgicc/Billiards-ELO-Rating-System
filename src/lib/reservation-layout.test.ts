@@ -23,4 +23,12 @@ describe("reservation layout styles", () => {
       "text-overflow: clip",
     );
   });
+
+  it("keeps reservation hero metrics compact on narrow desktop panes", () => {
+    expect(cssBlock(".reservation-hero__meta")).toContain(
+      "grid-template-columns: repeat(3, minmax(0, 1fr))",
+    );
+    expect(cssBlock(".reservation-hero__meta span")).toContain("min-height: 3.15rem");
+    expect(cssBlock(".reservation-hero__copy h2")).toContain("font-size: 1.55rem");
+  });
 });
