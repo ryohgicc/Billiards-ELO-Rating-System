@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 ### Added
+- 每日排序新增公平约束：基础随机排序后参考前一天名单，避免同一球员连续进入前二或后二。
 - 数据设置页支持导出今日或全部历史预约记录 CSV，包含日期、名次、球员、抽签种子、哈希输入和随机签号。
 - 新增 `docs/algorithm-rating-update.md`，用机制图说明“隐藏分 + 定分赛 + 正式赛”的新积分算法。
 - 预约页每日排序带上历史记录，可按日期查看从首位启用球员创建日到今天的每一天排序。
@@ -42,7 +43,7 @@ All notable changes to this project will be documented in this file.
 - 球员列表改为胜利/失败双图展示布局，上传入口直接贴合对应图片位。
 - 球员预览页同步使用胜利/失败双图布局；排名页缩略图只展示胜利或失败图片，不再回退到普通照片。
 - 球员预览移除顶部资产概览和单独最近战绩模块，页面直接进入球探面板、对阵分析和完整比赛记录。
-- 预约排序模块改名为每日排序，并移除活跃度加权、前日名次补偿、防连续前二和指定日期重 roll 规则。
+- 预约排序模块改名为每日排序，并移除活跃度加权、前日名次补偿和指定日期重 roll 规则。
 - 将 AI 请求超时时间从 12 秒延长到 60 秒，兼容响应较慢的 OpenAI 协议模型网关。
 - 按小米 MiMo 文档改用 `max_completion_tokens`、`response_format: { type: "json_object" }`，并传入 `thinking: { type: "disabled" }` 关闭默认深度思考，避免推理预算耗尽后返回空内容。
 - 历史 AI 补生成接口改为同步处理单场比赛，避免 Cloudflare 取消较慢的 `waitUntil()` 后台任务。

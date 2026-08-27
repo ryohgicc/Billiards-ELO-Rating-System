@@ -18,6 +18,8 @@ export type ReservationOrderDay = {
 
 type HashFunction = (input: string) => number;
 
+const FAIRNESS_ZONE_SIZE = 2;
+
 function padNumber(value: number) {
   return value.toString().padStart(2, "0");
 }
@@ -69,11 +71,60 @@ function formatDrawNumber(drawNumber: number) {
   return drawNumber.toString(16).toUpperCase().padStart(8, "0");
 }
 
-export function buildReservationOrder(
+function assignOrder(entries: ReservationOrderEntry[]) {
+  return entries.map((entry, index) => ({
+    ...entry,
+    order: index + 1,
+  }));
+}
+
+function getPreviousZoneIds(previousOrder: ReservationOrderEntry[], zone: "top" | "bottom") {
+  const zoneSize = Math.min(FAIRNESS_ZONE_SIZE, Math.floor(previousOrder.length / 2));
+  const zoneEntries =
+    zone === "top" ? previousOrder.slice(0, zoneSize) : previousOrder.slice(-zoneSize);
+
+  return new Set(zoneEntries.map((entry) => entry.player.id));
+}
+
+function applyConsecutiveZoneGuard(
+  baseOrder: ReservationOrderEntry[],
+  previousOrder?: ReservationOrderEntry[],
+) {
+  const zoneSize = Math.min(FAIRNESS_ZONE_SIZE, Math.floor(baseOrder.length / 2));
+
+  if (!previousOrder || zoneSize < FAIRNESS_ZONE_SIZE) {
+    return baseOrder;
+  }
+
+  const previousTopIds = getPreviousZoneIds(previousOrder, "top");
+  const previousBottomIds = getPreviousZoneIds(previousOrder, "bottom");
+  const topEntries = baseOrder.filter((entry) => !previousTopIds.has(entry.player.id)).slice(0, zoneSize);
+
+  if (topEntries.length < zoneSize) {
+    return baseOrder;
+  }
+
+  const topIds = new Set(topEntries.map((entry) => entry.player.id));
+  const remainingAfterTop = baseOrder.filter((entry) => !topIds.has(entry.player.id));
+  const bottomEntries = remainingAfterTop
+    .filter((entry) => !previousBottomIds.has(entry.player.id))
+    .slice(-zoneSize);
+
+  if (bottomEntries.length < zoneSize) {
+    return baseOrder;
+  }
+
+  const bottomIds = new Set(bottomEntries.map((entry) => entry.player.id));
+  const middleEntries = remainingAfterTop.filter((entry) => !bottomIds.has(entry.player.id));
+
+  return [...topEntries, ...middleEntries, ...bottomEntries];
+}
+
+function buildBaseReservationOrder(
   players: Player[],
   dateSeed = getLocalDateKey(),
   hashFunction: HashFunction = fnv1a32,
-): ReservationOrderEntry[] {
+) {
   const drawSeed = getReservationDrawSeed(dateSeed);
 
   return players
@@ -104,11 +155,19 @@ export function buildReservationOrder(
       }
 
       return left.player.id.localeCompare(right.player.id);
-    })
-    .map((entry, index) => ({
-      ...entry,
-      order: index + 1,
-    }));
+    });
+}
+
+export function buildReservationOrder(
+  players: Player[],
+  dateSeed = getLocalDateKey(),
+  hashFunction: HashFunction = fnv1a32,
+  previousOrder?: ReservationOrderEntry[],
+): ReservationOrderEntry[] {
+  return assignOrder(applyConsecutiveZoneGuard(
+    buildBaseReservationOrder(players, dateSeed, hashFunction),
+    previousOrder,
+  ));
 }
 
 function parseLocalDateKey(dateKey: string) {
@@ -140,22 +199,25 @@ export function buildReservationOrderHistory(
   const firstDate = parseLocalDateKey(firstPlayerDateKey);
   const today = parseLocalDateKey(todayDateKey);
   const days: ReservationOrderDay[] = [];
+  let nextDayOrder: ReservationOrderEntry[] | undefined;
 
   for (
-    let cursor = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    cursor.getTime() >= firstDate.getTime();
-    cursor.setDate(cursor.getDate() - 1)
+    let cursor = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate());
+    cursor.getTime() <= today.getTime();
+    cursor.setDate(cursor.getDate() + 1)
   ) {
     const dateKey = getLocalDateKey(cursor);
     const playersForDay = activePlayers.filter(
       (player) => getLocalDateKey(new Date(player.createdAt)) <= dateKey,
     );
+    const entries = buildReservationOrder(playersForDay, dateKey, hashFunction, nextDayOrder);
 
-    days.push({
+    days.unshift({
       dateKey,
       dateLabel: formatDateLabel(dateKey),
-      entries: buildReservationOrder(playersForDay, dateKey, hashFunction),
+      entries,
     });
+    nextDayOrder = entries;
   }
 
   return days;

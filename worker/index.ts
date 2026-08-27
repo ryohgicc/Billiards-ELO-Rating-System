@@ -2,7 +2,10 @@ import { DEFAULT_SETTINGS } from "../src/lib/constants";
 import { normalizeMatchMomentKeys, normalizeMatchNote } from "../src/lib/match-moments";
 import { buildPlayerProfiles } from "../src/lib/player-honors";
 import { normalizePlayerPhotoImageData, normalizePlayerPhotoRole } from "../src/lib/player-photos";
-import { buildReservationOrder, getReservationDrawSeed } from "../src/lib/reservation-order";
+import {
+  buildReservationOrderHistory,
+  getReservationDrawSeed,
+} from "../src/lib/reservation-order";
 import {
   buildSlackBattleReport,
   getShanghaiTodayKey,
@@ -111,7 +114,7 @@ const STATE_CACHE_HEADERS = {
   "cloudflare-cdn-cache-control": `max-age=${STATE_CACHE_TTL_SECONDS}`,
 };
 const TIMEZONE = "Asia/Shanghai";
-const RESERVATION_ORDER_ALGORITHM = "fnv1a32-v1";
+const RESERVATION_ORDER_ALGORITHM = "fnv1a32-fair-zones-v2";
 const PLAYER_SLACK_USER_IDS: Record<string, string> = {
   "player-df56bb1c-8f28-4668-b167-b47961e8b922": "U09A9LMK1UG",
 };
@@ -987,7 +990,10 @@ async function getReservationOrderReport(request: Request, env: Env) {
   }
 
   const state = await loadState(env.DB);
-  const entries = buildReservationOrder(state.players, dateSeed).map((entry) => ({
+  const reservationDay = buildReservationOrderHistory(state.players, dateSeed).find(
+    (day) => day.dateKey === dateSeed,
+  );
+  const entries = (reservationDay?.entries ?? []).map((entry) => ({
     order: entry.order,
     playerId: entry.player.id,
     name: entry.player.name,

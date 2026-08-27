@@ -7,6 +7,7 @@ import {
   getNextLocalMidnight,
   getReservationDrawSeed,
 } from "@/lib/reservation-order";
+import type { ReservationOrderEntry } from "@/lib/reservation-order";
 import type { Player } from "@/lib/types";
 
 const players: Player[] = [
@@ -37,7 +38,7 @@ const players: Player[] = [
 ];
 
 describe("buildReservationOrder", () => {
-  it("returns a stable pure-random order for the same local day and players", () => {
+  it("returns a stable base-random order for the same local day and players", () => {
     const firstOrder = buildReservationOrder(players, "2026-04-27");
     const secondOrder = buildReservationOrder([...players].reverse(), "2026-04-27");
 
@@ -126,7 +127,7 @@ describe("buildReservationOrder", () => {
     expect(order.map((entry) => entry.player.id)).toEqual(["alpha", "beta", "later"]);
   });
 
-  it("does not adjust the order for activity, previous bottoms, repeated top two, or player names", () => {
+  it("prevents players from staying in the top two on consecutive days", () => {
     const fourPlayers: Player[] = [
       {
         id: "p1",
@@ -168,11 +169,94 @@ describe("buildReservationOrder", () => {
 
       return 40;
     };
+    const previousOrder = [
+      { player: fourPlayers[0], order: 1 },
+      { player: fourPlayers[1], order: 2 },
+      { player: fourPlayers[2], order: 3 },
+      { player: fourPlayers[3], order: 4 },
+    ] as ReservationOrderEntry[];
 
-    const order = buildReservationOrder(fourPlayers, "2026-05-08", drawByPlayer);
+    const order = buildReservationOrder(fourPlayers, "2026-05-08", drawByPlayer, previousOrder);
 
-    expect(order.map((entry) => entry.player.id)).toEqual(["p1", "gjj-id", "p3", "p4"]);
-    expect(order.slice(0, 2).map((entry) => entry.player.name)).toEqual(["Alice", "gjj"]);
+    expect(order.map((entry) => entry.player.id)).toEqual(["p3", "p4", "p1", "gjj-id"]);
+    expect(order.slice(0, 2).map((entry) => entry.player.name)).toEqual(["Cara", "Dino"]);
+  });
+
+  it("prevents players from staying in the bottom two on consecutive days", () => {
+    const fourPlayers: Player[] = [
+      {
+        id: "p1",
+        name: "Alice",
+        createdAt: "2026-05-07T10:00:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "p2",
+        name: "Bob",
+        createdAt: "2026-05-07T10:01:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "p3",
+        name: "Cara",
+        createdAt: "2026-05-07T10:02:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "p4",
+        name: "Dino",
+        createdAt: "2026-05-07T10:03:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "p5",
+        name: "Eve",
+        createdAt: "2026-05-07T10:04:00.000Z",
+        isActive: true,
+      },
+      {
+        id: "p6",
+        name: "Finn",
+        createdAt: "2026-05-07T10:05:00.000Z",
+        isActive: true,
+      },
+    ];
+    const drawByPlayer = (input: string) => {
+      if (input.includes("|p1|")) {
+        return 10;
+      }
+
+      if (input.includes("|p2|")) {
+        return 20;
+      }
+
+      if (input.includes("|p3|")) {
+        return 30;
+      }
+
+      if (input.includes("|p4|")) {
+        return 40;
+      }
+
+      if (input.includes("|p5|")) {
+        return 50;
+      }
+
+      return 60;
+    };
+    const previousOrder = [
+      { player: fourPlayers[0], order: 1 },
+      { player: fourPlayers[1], order: 2 },
+      { player: fourPlayers[2], order: 3 },
+      { player: fourPlayers[3], order: 4 },
+      { player: fourPlayers[4], order: 5 },
+      { player: fourPlayers[5], order: 6 },
+    ] as ReservationOrderEntry[];
+
+    const order = buildReservationOrder(fourPlayers, "2026-05-08", drawByPlayer, previousOrder);
+
+    expect(order.map((entry) => entry.player.id)).toEqual(["p3", "p4", "p5", "p6", "p1", "p2"]);
+    expect(order.slice(-2).map((entry) => entry.player.id)).toEqual(["p1", "p2"]);
   });
 });
 

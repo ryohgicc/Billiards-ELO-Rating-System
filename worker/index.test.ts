@@ -278,7 +278,7 @@ describe("worker reservation order API", () => {
       dateSeed: "2026-06-30",
       drawSeed: "2026-06-30",
       timezone: "Asia/Shanghai",
-      algorithm: "fnv1a32-v1",
+      algorithm: "fnv1a32-fair-zones-v2",
       entries: [
         {
           order: 1,

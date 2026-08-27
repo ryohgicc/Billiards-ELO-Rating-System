@@ -70,7 +70,7 @@ export function ReservationView() {
           <h2>每日排序</h2>
           <p>
             每天 0 点用当天日期和启用球员名单重新随机排序。同一天内顺序保持稳定，
-            不参考战绩、活跃度或历史排序。
+            不参考战绩或活跃度，并会避免同一球员连续进入前二或后二。
           </p>
         </div>
         <div className="reservation-hero__meta" aria-label="预约抽签状态">
@@ -153,7 +153,7 @@ export function ReservationView() {
         <div className="algorithm-copy">
           <p>
             每天 0 点页面会重新生成当天排序：先取当时所有启用中的球员，再为每个人生成一个当天随机签号。
-            签号越小越靠前，除此之外不使用战绩、活跃天数、昨天名次或指定球员规则。
+            基础签号越小越靠前，随后系统会参考前一天结果，避免同一球员连续进入前二或后二。
           </p>
           <p>
             每天的日期种子是浏览器本地日期，格式为 <code>YYYY-MM-DD</code>。参与名单只包含当前启用中的球员。
