@@ -28,10 +28,9 @@ function headersFor(route: string) {
 }
 
 describe("static deploy headers", () => {
-  it("keeps content-hashed Next static assets cached long term", () => {
-    expect(headersFor("/_next/static/*")).toContain(
-      "Cache-Control: public, max-age=31536000, immutable",
-    );
+  it("validates Next static assets so hydrated UI cannot reuse stale chunks", () => {
+    expect(headersFor("/_next/static/*")).toContain("Cache-Control: no-cache");
+    expect(headersFor("/_next/*")).toContain("Cache-Control: no-cache");
   });
 
   it("validates HTML entry points without clearing the full browser cache", () => {

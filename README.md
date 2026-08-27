@@ -205,7 +205,7 @@ npx wrangler d1 migrations list billiards-elo-db --remote
 - 为 `/_next/static/*` 配置长期 immutable 缓存，为 HTML 入口配置 `no-cache`
 - 为 `/api/*` 配置跳过缓存，避免录入比赛后数据长时间不刷新
 
-仓库里的 `public/_headers` 已经为 Next.js chunk、静态资源和 HTML 配置了缓存兜底；带 hash 的 `/_next/static/*` 使用长期 immutable 缓存，HTML 入口使用 `no-cache` 以便每次校验最新构建引用，避免长期使用 `Clear-Site-Data` 反复清空浏览器缓存；`/api/state` 在 Worker 内有 10 秒短缓存，并会在写入后清理。更详细的免费加速清单见 `docs/deployment/cloudflare-free-acceleration.md`。
+仓库里的 `public/_headers` 已经为 Next.js chunk、静态资源和 HTML 配置了缓存兜底；`/_next/static/*`、`/_next/*` 和 HTML 入口都使用 `no-cache`，避免浏览器在水合阶段复用旧 JS/CSS 后把新页面切回旧界面；`/api/state` 在 Worker 内有 10 秒短缓存，并会在写入后清理。更详细的免费加速清单见 `docs/deployment/cloudflare-free-acceleration.md`。
 
 ## 数据说明
 
@@ -233,6 +233,7 @@ npx wrangler d1 migrations list billiards-elo-db --remote
 ### 2026-08-27
 - 预约页新增当前日期和全部历史预约记录 CSV 导出，导出内容包含日期、名次、球员、抽签种子、哈希输入和随机签号。
 - 收紧预约页每日排序布局，将导出当天和导出全部操作放到排序标题区，避免首屏空白过大且导出入口不明显。
+- 修复刷新时先看到新页面、随后被旧样式接管的问题：Next 静态资源改为 `no-cache`，防止浏览器复用旧 chunk。
 
 ### 2026-06-01
 - 积分系统改为自然月赛季：每月从 1000 分重新开始，排行榜默认展示本月，旧月份以月度归档保留该月最后一个比赛日快照。

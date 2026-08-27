@@ -45,8 +45,7 @@ The Worker already gives `/api/state` a 10 second edge cache and clears that cac
 
 The repository includes `public/_headers` as a deploy-time fallback for static asset caching:
 
-- `/_next/static/*` uses a long immutable cache because these files are content-addressed by the build output.
-- other `/_next/*` files keep a short 5 minute cache as a conservative fallback.
+- `/_next/static/*` and other `/_next/*` files use `no-cache`, so the browser validates JS/CSS before hydration and cannot keep running stale chunks after a deploy.
 - common image/icon assets are cached for 7 days.
 - HTML and route entry points use `no-cache`, so browsers can reuse the local copy only after checking whether the deployed entry changed.
 

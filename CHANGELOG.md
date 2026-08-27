@@ -50,6 +50,7 @@ All notable changes to this project will be documented in this file.
 - AI 赛后锐评 prompt 现在会传入比赛标签含义和事实边界，减少把未勾选标签、比分或额外剧情写成事实的情况。
 
 ### Fixed
+- 修复部署后刷新时先显示新样式、随后又被旧界面接管的问题：Next 静态 chunk 不再使用长期 immutable 缓存，避免水合阶段复用旧 JS/CSS。
 - 收紧预约页每日排序布局，并将导出当天和导出全部操作放入排序标题区，避免首屏出现大面积空白且看不见导出入口。
 - 修复本月暂无比赛时，月初隐藏分回退为 `1000` 而不是继承近 3 个月加权隐藏分的问题。
 - 修复排行榜“较前日”误与上个月归档榜比较的问题，现在改为与所选月份内前一个比赛日比较。
@@ -67,6 +68,7 @@ All notable changes to this project will be documented in this file.
 - 调整比赛历史顺序会清理旧球员 AI 概览，避免赛季积分回放改变后继续展示旧评价。
 
 ### Tested
+- `npx vitest run src/lib/static-headers.test.ts`
 - `npx vitest run src/components/reservation-view.test.tsx src/lib/storage.test.ts`
 - `npm test -- worker/index.test.ts`
 - `npx vitest run src/lib/rating.test.ts`
