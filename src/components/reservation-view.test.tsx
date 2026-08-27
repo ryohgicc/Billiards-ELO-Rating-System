@@ -1,5 +1,5 @@
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ReservationView } from "@/components/reservation-view";
 import { createEmptyState } from "@/lib/storage";
@@ -29,11 +29,22 @@ vi.mock("@/lib/app-state", () => ({
 }));
 
 describe("ReservationView", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it("shows player names in the daily order list", () => {
     render(<ReservationView />);
     const orderList = screen.getByLabelText("每日排序名单");
 
     expect(within(orderList).getByText("Sinyu")).toBeVisible();
     expect(within(orderList).getByText("cwj")).toBeVisible();
+  });
+
+  it("shows export actions in the queue header", () => {
+    render(<ReservationView />);
+
+    expect(screen.getAllByRole("button", { name: "导出当天" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "导出全部" })).toHaveLength(1);
   });
 });

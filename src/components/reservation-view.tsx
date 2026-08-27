@@ -133,7 +133,15 @@ export function ReservationView() {
               type="button"
             >
               <Download aria-hidden="true" size={16} />
-              导出
+              导出当天
+            </button>
+            <button
+              className="button"
+              disabled={reservationHistory.length === 0}
+              onClick={() => handleExportReservationOrder()}
+              type="button"
+            >
+              导出全部
             </button>
           </div>
         </div>
@@ -175,18 +183,6 @@ export function ReservationView() {
                 </div>
               </article>
             ))}
-          </div>
-        ) : null}
-
-        {reservationHistory.length > 0 ? (
-          <div className="button-row button-row--end">
-            <button
-              className="button"
-              onClick={() => handleExportReservationOrder()}
-              type="button"
-            >
-              导出全部历史
-            </button>
           </div>
         ) : null}
       </section>

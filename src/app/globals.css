@@ -574,6 +574,11 @@ button {
   gap: 0.75rem;
   flex-wrap: wrap;
   justify-content: flex-end;
+  min-width: 0;
+}
+
+.section-actions .section-note {
+  white-space: nowrap;
 }
 
 .ranking-card__top strong {
@@ -1836,6 +1841,7 @@ button {
   gap: 1rem;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 0.48fr);
   align-items: stretch;
+  padding: 0.95rem 1rem;
   border-color: rgba(255, 216, 77, 0.18);
   background:
     radial-gradient(circle at 88% 20%, rgba(255, 216, 77, 0.12), transparent 10rem),
@@ -1846,24 +1852,26 @@ button {
 .reservation-hero__copy {
   display: grid;
   gap: 0.6rem;
-  align-content: center;
+  align-content: start;
+  justify-content: start;
 }
 
 .reservation-hero__copy h2 {
   color: var(--accent);
-  font-size: clamp(2rem, 4vw, 3.6rem);
-  line-height: 1.06;
+  font-size: 2.4rem;
+  line-height: 1.02;
 }
 
 .reservation-hero__copy p,
 .reservation-card p {
   color: var(--muted);
-  line-height: 1.7;
+  line-height: 1.5;
 }
 
 .reservation-hero__meta {
   display: grid;
   gap: 0.65rem;
+  align-content: start;
 }
 
 .reservation-hero__meta span {
