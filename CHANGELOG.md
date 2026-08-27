@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 ### Added
+- 预约页支持导出当前日期或全部历史预约记录 CSV，包含日期、名次、球员、抽签种子、哈希输入和随机签号。
 - 新增 `docs/algorithm-rating-update.md`，用机制图说明“隐藏分 + 定分赛 + 正式赛”的新积分算法。
 - 预约页每日排序带上历史记录，可按日期查看从首位启用球员创建日到今天的每一天排序。
 - 新增 `GET /api/reservation-order?date=YYYY-MM-DD`，返回指定上海日期的每日排序 JSON，供 Slack 机器人读取抽签顺序。
@@ -49,6 +50,7 @@ All notable changes to this project will be documented in this file.
 - AI 赛后锐评 prompt 现在会传入比赛标签含义和事实边界，减少把未勾选标签、比分或额外剧情写成事实的情况。
 
 ### Fixed
+- 收紧预约页每日排序布局，并将导出当天和导出全部操作放入排序标题区，避免首屏出现大面积空白且看不见导出入口。
 - 修复本月暂无比赛时，月初隐藏分回退为 `1000` 而不是继承近 3 个月加权隐藏分的问题。
 - 修复排行榜“较前日”误与上个月归档榜比较的问题，现在改为与所选月份内前一个比赛日比较。
 - 修复球员预览和月度排行榜中总战绩、赛季画像混用的问题，并将 AI 赛后 prompt 的月度记录文案从总战绩改为赛季战绩。
@@ -65,6 +67,7 @@ All notable changes to this project will be documented in this file.
 - 调整比赛历史顺序会清理旧球员 AI 概览，避免赛季积分回放改变后继续展示旧评价。
 
 ### Tested
+- `npx vitest run src/components/reservation-view.test.tsx src/lib/storage.test.ts`
 - `npm test -- worker/index.test.ts`
 - `npx vitest run src/lib/rating.test.ts`
 - `npm test` — 更新测试用例以匹配动态扣分系数
